@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8"?>
+<caches clazz="com.octopus.tools.cache.impl.CacheManager">
+    <defs>
+        <def xmlid="cache" clazz="com.octopus.tools.cache.impl.cache.DefaultCache"/>
+    </defs>
+    <!-- 主机实例管理对具体调用方法的注册
+    <invocationhandler clazz="com.octopus.tools.jvminsmgr.invokehandler.ExtendInstanceInvokeHandler" targetxmlids="cache" targetids="" desc="扩展实例方法调用">
+        <action seq="1" path="com.octopus.tools.jvminsmgr.invokehandler.RemoteCalLocalResourceInvokeAction" targetmethods="cache#add" desc="计算当前主机资源判断是否扩展调用，可以则扩展调用，本地不调用"/>
+        <action seq="2" path="com.octopus.tools.jvminsmgr.invokehandler.RemoteInvokeAction" targetmethods="cache#update,cache#delete,cache#get" desc="直接扩展调用，调用成功本地不调用，扩展中一个成功即为成功，失败调用本地"/>
+        <action seq="3" path="com.octopus.tools.jvminsmgr.invokehandler.MargeResultInvokeAction" targetmethods="cache#query" desc="直接扩展调用和本地调用，合并返回结果"/>
+    </invocationhandler>  -->
+    <!-- 缓存管理监听 -->
+    <listeners>
+        <listener clazz="" seq=""/>
+    </listeners>
+
+    <cache key="cache.test" xmlid="cache">
+        <!-- 缓存监听 -->
+        <listeners>
+             <listener clazz="" seq=""/>
+        </listeners>
+        <!-- 指定缓存放的主机信息，这个信息在cache中配置，但被invocationhandler使用 -->
+        <instance>
+
+        </instance>
+        <!-- 缓存操作事件 -->
+        <events>
+             <event auto="before" clazz="com.octopus.tools.cache.impl.EventMaxCountLimit" seq="1" maxcount="-1" maxmemsize="-1" alarmtype="immediate">
+                <alarmget/>
+             </event>
+        </events>
+    </cache>
+    <cache key="buy_stocks" xmlid="cache"/>
+    <cache key="sale_stocks" xmlid="cache"/>
+    <cache key="user_fun" xmlid="cache"/>
+    <cache key="temp_cache" xmlid="cache"/>
+
+    <cache key="user_info" xmlid="cache">
+        <!-- 缓存监听 -->
+        <listeners>
+            <listener clazz="" cronexpression="" seq=""/>
+        </listeners>
+        <!-- 指定缓存放的主机信息，这个信息在cache中配置，但被nvocationhandler使用 -->
+        <instance>
+
+        </instance>
+        <!-- 缓存操作事件
+        <events>
+            <event clazz="com.octopus.tools.cache.impl.SynStoreEvent" seq="1">
+                <mapping clazz="com.octopus.tools.dataclient.utils.DataMapping">
+                    <m field="USER_CODE">userCode</m>
+                    <m field="USER_TXPWD">tongXinPwd</m>
+                    <m field="USER_TRANPWD">transPwd</m>
+                    <m field="TRANS_SYSTE">transSys</m>
+                    <m field="USER_TRANPWD2">transPwd2</m>
+                </mapping>
+            </event>
+        </events>
+        -->
+    </cache>
+    <!--<cache key="user_account" xmlid="cache">
+        &lt;!&ndash; 缓存监听 &ndash;&gt;
+        <listeners>
+            <listener clazz="" cronexpression="" seq=""/>
+        </listeners>
+        &lt;!&ndash; 指定缓存放的主机信息，这个信息在cache中配置，但被nvocationhandler使用 &ndash;&gt;
+        <instance>
+
+        </instance>
+        &lt;!&ndash; 缓存操作事件 &ndash;&gt;
+        <events>
+            <event clazz="com.octopus.tools.cache.impl.SynStoreEvent" seq="1">
+                <mapping clazz="com.octopus.tools.dataclient.utils.DataMapping">
+                    <m field="S_NAME">name</m>
+                    <m field="S_CODE">code</m>
+                    <m field="S_PY">pingyin</m>
+                    <m field="S_TYPE">type</m>
+                    <m field="S_SUB_TYPE">subType</m>
+                </mapping>
+            </event>
+        </events>
+    </cache>-->
+    <cache key="user_balance" xmlid="cache"></cache>
+    <cache key="user_token" xmlid="cache">
+        <!-- 缓存监听 -->
+        <listeners>
+            <listener clazz="" seq=""/>
+        </listeners>
+        <!-- 指定缓存放的主机信息，这个信息在cache中配置，但被invocationhandler使用 -->
+        <instance>
+
+        </instance>
+        <!-- 缓存操作事件 -->
+        <!--<events>
+            <event clazz="com.octopus.tools.cache.impl.EventMaxCountLimit" seq="1" maxcount="-1" maxmemsize="-1" alarmtype="immediate">
+                <alarmget/>
+            </event>
+        </events>-->
+    </cache>
+    <cache key="user_rule" xmlid="cache">
+        <!-- 缓存监听 -->
+        <listeners>
+            <listener clazz="" seq=""/>
+        </listeners>
+        <!-- 指定缓存放的主机信息，这个信息在cache中配置，但被invocationhandler使用 -->
+        <instance>
+
+        </instance>
+        <!-- 缓存操作事件 -->
+        <!--<events>
+            <event clazz="com.octopus.tools.cache.impl.EventMaxCountLimit" seq="1" maxcount="-1" maxmemsize="-1" alarmtype="immediate">
+                <alarmget/>
+            </event>
+        </events>-->
+    </cache>
+    <!--<cache key="user_stock" xmlid="cache">
+        &lt;!&ndash; 缓存监听 &ndash;&gt;
+        <listeners>
+            <listener clazz="" seq=""/>
+        </listeners>
+        &lt;!&ndash; 指定缓存放的主机信息，这个信息在cache中配置，但被invocationhandler使用 &ndash;&gt;
+        <instance>
+
+        </instance>
+        &lt;!&ndash; 缓存操作事件 &ndash;&gt;
+        <events>
+            <event clazz="com.octopus.tools.cache.impl.EventMaxCountLimit" seq="1" maxcount="-1" maxmemsize="-1" alarmtype="immediate">
+                <alarmget/>
+            </event>
+        </events>
+    </cache>-->
+    <cache key="stock_data" clazz="com.octopus.tools.cache.impl.cache.DefaultLinkedCache">
+        <!-- 缓存监听 -->
+        <listeners>
+            <listener clazz="" seq=""/>
+        </listeners>
+        <!-- 指定缓存放的主机信息，这个信息在cache中配置，但被invocationhandler使用 -->
+        <instance>
+
+        </instance>
+        <!-- 缓存操作事件 -->
+
+            <event auto="before" isenable="true" clazz="com.octopus.tools.cache.impl.AmortizeStoreEvent" batchhandle="isp.dataoperator" intervalsecond="30" limitsize="1000">
+                <mapping clazz="com.octopus.tools.dataclient.utils.DataMapping">
+                    <m field="S_CODE">stockCode</m>
+                    <m field="D_ZRSP">zrsp</m>
+                    <m field="D_JYJ">jyj</m>
+                    <m field="I_JYL">jyl</m>
+                    <m field="D_SALE_PRICE">sj</m>
+                    <m field="D_BUY_PRICE">bj</m>
+                    <m field="C_DATE">date</m>
+                    <m field="I_SALE_NUM">sl</m>
+                    <m field="I_BUY_NUM">bl</m>
+                </mapping>
+            </event>
+
+
+    </cache>
+    <cache key="stock_company" xmlid="cache">
+        <event auto="before" isenable="true" clazz="com.octopus.tools.cache.impl.AmortizeStoreEvent" batchhandle="isp.dataoperator" intervalsecond="30" limitsize="1000">
+            <mapping clazz="com.octopus.tools.dataclient.utils.DataMapping">
+                <m field="incomeGrowth">incomeGrowthRate</m>
+                <m field="totalGrowth">totalGrowthRate</m>
+                <m field="profitGrowth">profitGrowthRate</m>
+                <m field="netProfitGrowth">netProfitGrowthRate</m>
+                <m field="netAssetsGrowth">netAssetsGrowthRate</m>
+                <m field="C_DATE">c_date</m>
+                <m field="S_CODE">code</m>
+            </mapping>
+        </event>
+    </cache>
+    <cache key="stock_info" xmlid="cache">
+        <!-- 缓存监听 -->
+        <listeners>
+            <listener clazz="" cronexpression="" seq=""/>
+        </listeners>
+        <!-- 指定缓存放的主机信息，这个信息在cache中配置，但被invocationhandler使用 -->
+        <instance>
+
+        </instance>
+        <!-- 缓存操作事件 -->
+        <event auto="before" isenable="true" clazz="com.octopus.tools.cache.impl.AmortizeStoreEvent" batchhandle="isp.dataoperator" intervalsecond="30" limitsize="1000">
+            <mapping clazz="com.octopus.tools.dataclient.utils.DataMapping">
+                <m field="S_TYPE">stockType</m>
+                <m field="S_CODE">code</m>
+                <m field="S_NAME">name</m>
+                <m field="S_PY">pingyin</m>
+                <m field="exchange_Type">exchangeType</m>
+                <m field="S_SUB_TYPE">subType</m>
+                <m field="C_DATE">c_date</m>
+            </mapping>
+        </event>
+    </cache>
+    <cache key="stock_jyj_avg" xmlid="cache"/>
+    <cache key="stock_info_data" xmlid="cache">
+        <event auto="before" isenable="true" clazz="com.octopus.tools.cache.impl.AmortizeStoreEvent" batchhandle="isp.dataoperator" intervalsecond="30" limitsize="1000">
+            <mapping clazz="com.octopus.tools.dataclient.utils.DataMapping">
+                <m field="sjw5">sjw5</m>
+                <m field="ssl5">ssl5</m>
+                <m field="sjw4">sjw4</m>
+                <m field="ssl4">ssl4</m>
+                <m field="sjw3">sjw3</m>
+                <m field="ssl3">ssl3</m>
+                <m field="sjw2">sjw2</m>
+                <m field="ssl2">ssl2</m>
+                <m field="sjw1">sjw1</m>
+                <m field="ssl1">ssl1</m>
+                <m field="bjw1">bjw1</m>
+                <m field="bsl1">bsl1</m>
+                <m field="bjw2">bjw2</m>
+                <m field="bsl2">bsl2</m>
+                <m field="bjw3">bjw3</m>
+                <m field="bsl3">bsl3</m>
+                <m field="bjw4">bjw4</m>
+                <m field="bsl4">bsl4</m>
+                <m field="bjw5">bjw5</m>
+                <m field="bsl5">bsl5</m>
+                <m field="wb">wb</m>
+                <m field="wc">wc</m>
+                <m field="zjcj">zjcj</m>
+                <m field="cjje">cjje</m>
+                <m field="zd">zd</m>
+                <m field="jrkp">jrkp</m>
+                <m field="zf">zf</m>
+                <m field="zgcj">zgcj</m>
+                <m field="cjsl">cjsl</m>
+                <m field="zdcj">zdcj</m>
+                <m field="xs">xs</m>
+                <m field="lb">lb</m>
+                <m field="zt">zt</m>
+                <m field="dt">dt</m>
+                <m field="zrsp">zrsp</m>
+                <m field="sy">sy</m>
+                <m field="gb">gb</m>
+                <m field="hs">hs</m>
+                <m field="ltsl">ltsl</m>
+                <m field="jz">jz</m>
+                <m field="mgsy">mgsy</m>
+                <m field="syjd">syjd</m>
+                <m field="zqjc">zqjc</m>
+                <m field="tp">tp</m>
+                <m field="fullprice">fullprice</m>
+                <m field="np">np</m>
+                <m field="wp">wp</m>
+                <m field="C_DATE">c_date</m>
+                <m field="S_CODE">code</m>
+            </mapping>
+        </event>
+    </cache>
+    <cache key="stock_zhishu" xmlid="cache">
+        <event auto="before" isenable="true" clazz="com.octopus.tools.cache.impl.AmortizeStoreEvent" batchhandle="isp.dataoperator" intervalsecond="30" limitsize="1000">
+            <mapping clazz="com.octopus.tools.dataclient.utils.DataMapping">
+                <m field="sotck_code">sotck_code</m>
+                <m field="stock_name">stock_name</m>
+                <m field="zhishu">zhishu</m>
+                <m field="no1">no1</m>
+                <m field="upnum">upnum</m>
+                <m field="no2">no2</m>
+                <m field="C_DATE">c_date</m>
+            </mapping>
+        </event>
+    </cache>
+    <!-- 存放用户选择购买的股票 -->
+    <cache key="user_sel_stocks" xmlid="cache"/>
+    <cache key="user_login" xmlid="cache">
+        <store clazz="com.octopus.tools.cache.impl.RedisStore">
+            <redis>keeplogin</redis>
+        </store>
+    </cache>
+    <cache key="stock_yesterday" xmlid="cache">
+        <listeners>
+            <listener clazz="" />
+        </listeners>
+    </cache>
+    <cache key="stock_his_data" clazz="com.octopus.tools.cache.impl.cache.DefaultLinkedCache">
+        <event auto="before" isenable="true" clazz="com.octopus.tools.cache.impl.AmortizeStoreEvent" batchhandle="isp.dataoperator" intervalsecond="30" limitsize="1000">
+            <mapping clazz="com.octopus.tools.dataclient.utils.DataMapping">
+                <m field="s_code">code</m>
+                <m field="s_day">day</m>
+                <m field="startPrice">startPrice</m>
+                <m field="endPrice">endPrice</m>
+                <m field="heightPrice">heightPrice</m>
+                <m field="lowPrice">lowPrice</m>
+                <m field="C_DATE">c_date</m>
+            </mapping>
+        </event>
+    </cache>
+</caches>

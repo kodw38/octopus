@@ -1,0 +1,25 @@
+{
+name:'SetVariable',
+package:'com.octopus.isp.actions',
+desc:'设置一个变量值',
+input:{
+check:{@desc:'表达式判断，结果为true时，才进入该方法，为false不进入该方法',@value:},
+op:{@desc:'设置变量操作',@enum:[{newList:{@desc:'新建一个LinkedList对象'}},{newMap:{@desc:'新建一个LinkedHashMap对象'}}]},
+value:{@desc:'对象值'}
+},
+config:{
+
+},
+output:{
+check:{@desc:'表达式判断，为true时返回结果，为false时不返回结果',@value:},
+format:{@desc:'对结果做格式化',@value:},
+filter:{@desc:'对结果做过滤',@value:}
+},
+error:{},
+depend:{},
+scene:{},
+example:{
+1.构造一个变量结构:'input {value:{a:\'a\',b:\'b\'}} '
+,2.新建一个类型变量:'input {op:\'newList\'}'
+}
+}

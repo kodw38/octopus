@@ -1,0 +1,135 @@
+package com.octopus.isp.bridge.launchers.impl.wsext;
+
+import com.octopus.utils.alone.ArrayUtils;
+import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.cls.ClassUtils;
+import org.apache.axis2.context.ConfigurationContext;
+import org.apache.axis2.deployment.AbstractDeployer;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import java.util.*;
+
+/**
+ * User: wfgao_000
+ * Date: 15-8-7
+ * Time: 下午3:13
+ */
+public class WSISPDeployer extends AbstractDeployer {
+    transient static Log log = LogFactory.getLog(WSISPDeployer.class);
+    static String className="com.octopus.isp.Services";
+    WSServiceData data=null;
+    @Override
+    public void init(ConfigurationContext configurationContext) {
+        data = new WSServiceData(configurationContext);
+        generatorAllPOJO();
+        generatorAllMethods();
+        List<ServiceInfo> ss =data.getServices();
+        for(ServiceInfo s:ss){
+            addService(configurationContext,s);
+        }
+    }
+
+
+    void generatorAllPOJO(){
+        Map<String,Map<String,String>> map = data.getPoJoMap();
+        if(null !=map){
+            Iterator<String> its = map.keySet().iterator();
+            while(its.hasNext()){
+                String classname = its.next();
+                generatorPOJO(classname,map);
+            }
+        }
+
+    }
+    void generatorPOJO(String classname,Map<String,Map<String,String>> map){
+        Map<String,String> fields = map.get(classname);
+        if(null != fields && fields.size()>0){
+            Iterator ik = fields.keySet().iterator();
+            while(ik.hasNext()){
+                String v = fields.get(ik.next());
+                if(map.containsKey(v)){
+                    generatorPOJO(v,map);
+                }
+            }
+            ClassUtils.generatorPOJOClass(classname,fields);
+        }
+    }
+    void generatorAllMethods(){
+        try{
+            List<ServiceInfo> li = data.getServices();
+            for(ServiceInfo s:li){
+                List<ServiceInfo.ClassInfo> cs = s.getClassList();
+                generatorClass(cs);
+            }
+        }catch (Exception e){
+            log.error(e);
+        }
+
+    }
+    public static void addService(ConfigurationContext context,ServiceInfo s){
+        generatorClass(s.getClassList());
+        List<ServiceInfo.ClassInfo> cs = s.getClassList();
+        for(ServiceInfo.ClassInfo c:cs){
+            try{
+                String classname = c.getClassName();
+                if(classname.equals("")||classname.equalsIgnoreCase("default"))
+                    classname= className;
+                List<ServiceInfo.MethodInfo> ms =c.getMethodList();
+                List<String> mns = new ArrayList<String>();
+                for(ServiceInfo.MethodInfo m:ms)
+                    mns.add(m.getMethodName());
+
+                AxisServiceFactory.createAxisService(context,context.getClass().getClassLoader(),classname,mns.toArray(new String[0]),s.getServiceName(),s.getDesc());
+                log.info("load webservice service "+classname+" " +ArrayUtils.toJoinString(mns));
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+    static void generatorClass(List<ServiceInfo.ClassInfo> cs){
+        for(ServiceInfo.ClassInfo c:cs) {
+            String classname=c.getClassName();
+            if(classname.equals("")|| classname.equalsIgnoreCase("default")){
+                classname=className;
+            }
+            List<ServiceInfo.MethodInfo> ms = c.getMethodList();
+            HashMap bodys = new HashMap();
+            for(ServiceInfo.MethodInfo m:ms){
+                String body = assemble(m.getMethodName(),m.getParInfos(),m.getReturnType());
+                bodys.put(m.getMethodName(),body);
+            }
+            if(!ClassUtils.exist(classname))
+                ClassUtils.generatorClass(classname,null,bodys);
+        }
+    }
+
+    static String assemble(String metodName,List<ServiceInfo.ParInfo> pars,String returnType){
+        if(StringUtils.isBlank(returnType))
+            returnType = "void";
+        StringBuffer p = new StringBuffer();
+        if(null != pars){
+            for(ServiceInfo.ParInfo par :pars){
+                if(p.length()!=0){
+                    p.append(",");
+                }
+                p.append(par.getTye()).append(" ").append(par.getName());
+            }
+        }
+        String mothodBody = "public "+returnType+" "+metodName
+                +"("+p.toString()+"){"+(returnType.equals("void")?"":"return null;")+"}";
+
+        return mothodBody;
+    }
+
+
+    @Override
+    public void setDirectory(String s) {
+        //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void setExtension(String s) {
+        //To change body of implemented methods use File | Settings | File Templates.
+    }
+}

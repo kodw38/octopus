@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- cell 的作用是提供一个完整的能力，业务能力由规则配置产生，无需编写代码，入口为默认的flow,由flow的Executor执行 -->
+<cell clazz="com.octopus.isp.cell.impl.Cell">
+    <!-- cell的命名，主要功能:版本管理 -->
+    <namespace clazz="com.octopus.utils.namespace.impl.Namespace">CRM.PRIVATE.ORDER</namespace>
+
+    <!-- 定义该cell中使用到的XMLObject,XMLDoObject对象，通过引用xmlid实例化,当该cell中使用的XMLObject和isp中定义的实现类不一致时可以在该cell的作用域内继续定义 -->
+    <!--<defs>
+        <def xmlid="Flows"  clazz="com.octopus.utils.flow.impl.FlowMgr"/>
+        <def xmlid="Flow"  clazz="com.octopus.utils.flow.impl.Flow"/>
+        <def xmlid="Node"  clazz="com.octopus.utils.bftask.impl.BFTask"/>
+        <def xmlid="RuleExecutor"  clazz="com.octopus.isp.executors.RuleBFExecutor"/>
+        <def xmlid="ActionExecutor"  clazz="com.octopus.isp.executors.ActionExecutor"/>
+        <def xmlid="DataClient"  clazz="com.octopus.tools.dataclient.impl.DataClient"/>
+        <def xmlid="InvokeHandler"  clazz="com.octopus.utils.xml.handle.XMLObjectHandlerdefs>-->
+
+    <!-- 设置该cell中接口方法监控 -->
+    <!--<invocationhandler xmlid="InvokeHandler">
+        <before>
+            <action seq="1" path="" desc=""/>
+        </before>
+        <after>
+            <action seq="1" path="com.octopus.tools.statistic.InvocationStatistic" desc="每一个调用做统计"/>
+        </after>
+    </invocationhandler>-->
+
+    <!-- 自己的监听 -->
+    <listeners>
+        <listener></listener>
+    </listeners>
+    <!-- 自己的属性 -->
+    <properties>
+        <propertie key=""></propertie>
+    </properties>
+    <!-- 自己的方法 -->
+    <actions>
+       <action xmlid="Flow" key="">
+           <executor xmlid="RuleExecutor"/>
+           <node xmlid="Node" type="normal" seq="-1">
+               <before>
+                   <step seq="-2" action="ruleCode1" desc=""/>
+               </before>
+           </node>
+           <node xmlid="Node" type="normal" seq="0">
+               <before>
+                   <step seq="-1" action="RuleCode2" desc=""/>
+               </before>
+           </node>
+       </action>
+    </actions>
+
+    <!-- 自己的执行流程 -->
+    <flows xmlid="Flows">
+        <executor xmlid="ActionExecutor"/>
+        <flow xmlid="Flow" key="default" >
+            <node xmlid="Node" type="normal" seq="-1">
+                <before>
+                    <step seq="0" action="com.octopus.isp.cell.impl.ParameterConvert" desc="把参数分解、转换为一个或多个规则参数、并行执行"/>
+                </before>
+            </node>
+            <node xmlid="Node" type="normal" seq="-1">
+                <before>
+                    <step seq="1" action="com.octopus.isp.cell.impl.AuthCheck" desc="权限判断"/>
+                </before>
+            </node>
+            <node xmlid="Node" type="fork" seq="-1">
+                <before>
+                    <step seq="2" action="com.octopus.isp.cell.impl.ActionInvoke" desc="并行执行"/>
+                </before>
+            </node>
+            <node xmlid="Node" type="collection" seq="-1">
+                <before>
+                    <step seq="2" action="com.octopus.isp.cell.impl.ActionInvoke" desc="结果处理"/>
+                </before>
+            </node>
+        </flow>
+    </flows>
+
+</cell>

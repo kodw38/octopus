@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- cell 的作用是提供一个完整的能力，业务能力由规则配置产生，无需编写代码，入口为默认的flow,由flow的Executor执行 -->
+<cell key="PageFrame" clazz="com.octopus.isp.bridge.launchers.impl.WebPageFrameLauncher">
+    <!-- cell的命名，主要功能:版本管理 -->
+    <namespace clazz="com.octopus.utils.namespace.impl.Namespace">if.pageframe</namespace>
+    <!-- 自己的属性 -->
+    <properties>
+        <!--<propertie key="SessionKey">JSESSIONID</propertie>-->
+        <propertie key="SessionKey">PAGEFRAMEID</propertie>
+    </properties>
+
+    <statHandler ref="StatHandler"/>
+    <!-- 自己的方法 -->
+    <actions>
+        <action key="HttpUtils" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.util.HttpUtils">
+            <property name="pagecodepathmapping">com.octopus.octopus.actions.PageCodePathMapping</property>
+            <property name="startwith">page</property>
+            <property name="cachepage">false</property>
+            <property name="pagesuffix">html,htm</property>
+            <property name="errorpage">error.html</property>
+        </action>
+        <action key="PageFrameError" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.PageFrameError"/>
+        <action key="SessionManager" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.SessionManager">
+            <!-- session timeout 600 seconds -->
+            <property name="sessionTimeout">600</property>
+            <property name="jvmroute">jvm</property>
+            <property name="inactiveinterval"></property>
+        </action>
+    </actions>
+
+    <!-- 自己的监听 worktime="{crons:['0 15 9 ? * MON-FRI']}"-->
+    <listeners></listeners>
+
+    <!-- 自己的执行流程 -->
+    <flows xmlid="Flows">
+        <executor xmlid="ISPExecutor"/>
+        <flow xmlid="Flow" key="input" >
+            <node xmlid="Node" type="normal" seq="0">
+                <before>
+                    <step seq="1" key="URLSecurityCheck" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.URLSecurityCheck" desc="检查URL是否合法">
+                        document.cookie|href|script|select |select/|select\(|select\*|insert |insert/|insert\(|insert\*|update |update/|update\(|update\*|delete |delete/|delete\(|delete\*|truncate |truncate/|truncate\(|truncate\*|exec |exec/|exec\(|exec\*|drop |drop/|drop\(|drop\*
+                    </step>
+                    <step seq="2" key="URLHome" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.URLHome" desc="访问home页面">
+                        <home>sign-in.html</home>
+                    </step>
+                    <!--<step seq="2.1" key="ISAction" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.IsAction" desc="判断请求是否是Action请求，而非页面资源请求"/>
+                    -->
+                    <step seq="3" key = "HttpProxy" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.HttpProxy"
+                         input="{Pattern:'571'
+                                ,Method:'${requestProperties}.Method'
+                                ,Scheme:'${requestProperties}.Scheme'
+                                ,ServerName:'${requestProperties}.ServerName'
+                                ,ServerPort:'${requestProperties}.ServerPort'
+                                ,ContextPath:'${requestProperties}.ContextPath'
+                                ,RequestURI:'${requestURI}'
+                                ,QueryString:'${queryString}'
+                                ,Headers:'${requestHeaders}'
+                                ,Request:'${request}'
+                                ,Response:'${response}'
+                                }" desc="他系统资源代理">
+                        <proxys>
+                            <proxy key="2oldcrm">
+                                <proxyhosts>
+                                    <proxyhost pattern="0">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="571">http://10.70.5.16:8080</proxyhost>
+                                    <proxyhost pattern="572">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="573">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="574">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="575">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="576">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="577">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="578">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="579">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="580">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                    <proxyhost pattern="581">http://cscrm.array.yw.zj.chinamobile.com</proxyhost>
+                                </proxyhosts>
+                                <encoding>GBK</encoding>
+                                <startwith>ADGallery,bankIcbc,bce,colorbox,crm,ext,images,jsv2,misc,secframe,webframe,workflow,business,listdatasourcequery,gridturnpage,crossgridaction,baseserver,dbformrefresh,dbtreerefresh,VerifyCodeLoginServlet,dbtreenewservlet,ServletUpload,vertifycodeservlet</startwith>
+                            </proxy>
+                        </proxys>
+                    </step>
+                    <step seq="4" key="ExpiresFile" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.ExpiresFile" desc="设置客户端缓存文件时间">
+                        <property name="*.gif" value="A28800"/>
+                        <property name="*.jpg" value="A28800"/>
+                        <property name="*.png" value="A28800"/>
+                        <property name="*.js" value="A28800"/>
+                        <property name="*.css" value="A28800"/>
+                        <property name="*.tpl" value="A28800"/>
+                        <property name="*.swf" value="A28800"/>
+                        <property name="*.html" value="A0"/>
+                    </step>
+                    <step seq="5" key="URLPathCheck" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.URLPathCheck" desc="检查请求的URL是否允许不登陆状态访问">
+                        <uncheckurl>
+                            <property>/ecl/</property>
+                            <property>/jcl/</property>
+                            <property>.js</property>
+                            <property>.css</property>
+                            <property>.ico</property>
+                            <property>.png</property>
+                            <property>.gif</property>
+                            <property>.ttf</property>
+                            <property>.jpg</property>
+                            <property>.woff</property>
+                            <property>.eot</property>
+                            <property>/wait.html</property>
+                            <property>/icons.svg</property>
+                            <property>/contact.html</property>
+                            <property>/error.html</property>
+                            <property>/sign-in.html</property>
+                            <property>/sign-up.html</property>
+                            <property>/websocket</property>
+                            <property>/Test2.html</property>
+                            <property>/Test3.html</property>
+                        </uncheckurl>
+                    </step>
+                    <!--
+                                    <beforetask sort="3" task="com.octopus.pageframe.srv.channel.ETagCheck" desc="检查请求资源是否缓存" />
+                    -->
+                    <step seq="6" key="SsoChannel" isenable="false" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.SsoChannel" desc="单点登录支持">
+                        <sso isenable="true">
+                            <isGrayRoute>N</isGrayRoute><!-- 是否进行灰白路由 -->
+                            <servername-portal>http://cscrmsso.yw.zj.chinamobile.com:30101/</servername-portal><!-- crm sso 地址 -->
+                            <servername-4asso>http://cs4asso.array.yw.zj.chinamobile.com</servername-4asso><!-- 4A sso 地址 -->
+                            <impl-classname>com.octopus.sso.SSOClientImpl</impl-classname>
+                            <islog>false</islog><!-- 是否记录日志 -->
+                            <allowpath>ssoLoginDemo.html;login.jsp;lib/jquery/jquery.js;service</allowpath><!-- 允许通过的路径 -->
+                            <successGray-Home>http://gray.yw.zj.chinamobile.com:8080/pageframe/ssoLoginSuccess.html</successGray-Home><!-- 灰色路由主页 -->
+                            <success-home>http://wfscrm.yw.zj.chinamobile.com:8080/ssoLoginSuccess.html</success-home><!-- sso登录成功后跳转到本系统的页面 -->
+                        </sso>
+                    </step>
+                    <step seq="7" key="LoginCheck" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.LoginCheck" desc="登陆校验,Session中心判断是否登录,获取用户信息" />
+                    <step seq="8" key="checkAccessPage" clazz="com.octopus.octopus.actions.CheckPageUrlAuth" desc="检查是否有访问该页面的权限" />
+                    <step seq="9" key="isExist" action="RedisClient" input="{check:'#{(${requestResourceName})=download &amp; #{case(isnotnull(getvalue(${queryStringMap},file)),[[true,\'substr(getvalue(${queryStringMap},file),indexof(getvalue(${queryStringMap},file),.,-1))\'],[false,tt]])=.xlsx}}',db:'CountTimes',op:'contains',key:'substr(getvalue(${queryStringMap},file),#{indexof(getvalue(${queryStringMap},file),/,-1)+1})' }" output="{check:{check:'#{(${return})=false}',error:'the file is updating by other operator'}}" desc="" />
+                    <step seq="10" key="countTimes" action="RedisClient" input="{check:'#{(${requestResourceName})=download &amp; #{case(isnotnull(getvalue(${queryStringMap},file)),[[true,\'substr(getvalue(${queryStringMap},file),indexof(getvalue(${queryStringMap},file),.,-1))\'],[false,tt]])=.xlsx}}',db:'CountTimes',op:'add',key:'substr(getvalue(${queryStringMap},file),#{indexof(getvalue(${queryStringMap},file),/,-1)+1})' ,value:'(${session}.KEY_SESSION_ID)'}" desc="" />
+                    <step seq="11" key="Download" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.Download" input="{path:'(${env}.(${queryStringMap},business))'}" desc="下载文件" />
+                    <step seq="12" key="AccessPage" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.AccessPage" desc="访问需要登陆状态下的页面" />
+                </before>
+            </node>
+            <node xmlid="Node" type="error" seq="-1">
+                <before>
+                    <step seq="1" action="PageFrameError"/>
+                </before>
+            </node>
+        </flow>
+        <flow xmlid="Flow" key="output" >
+            <node xmlid="Node" type="normal" seq="0">
+               <before>
+                   <step seq="1" key="SessionData" clazz="com.octopus.isp.bridge.launchers.impl.pageframe.channel.SessionData" desc="session data">
+                       <property name="LoginUserNameKey">UserName</property>
+                       <property name="LoginUserPwdKey">UserPwd</property>
+<!--                    //根据返回结果加入附加属性到session中
+                       <dataquery key="fields" input="{op:'query',table:'isp_session_data',fields:['key_code','service_name','get_clazz','data_path'],conds:{STATE:'1'}}" />
+-->
+                   </step>
+                   <step seq="2" key="Return2JSONString" clazz="com.octopus.isp.bridge.launchers.convert.ConvertObject2JSONString" desc="session 资料变更"/>
+               </before>
+            </node>
+            <node xmlid="Node" type="error" seq="-1">
+                <before>
+                    <step seq="1" action="PageFrameError"/>
+                </before>
+            </node>
+        </flow>
+    </flows>
+
+</cell>

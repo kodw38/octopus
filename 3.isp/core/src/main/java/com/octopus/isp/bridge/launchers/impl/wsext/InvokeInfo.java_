@@ -1,0 +1,88 @@
+package com.octopus.isp.bridge.launchers.impl.wsext;
+
+import com.octopus.utils.alone.StringUtils;
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.soap.SOAPHeader;
+import org.apache.axis2.context.MessageContext;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
+
+/**
+ * User: wfgao_000
+ * Date: 15-8-10
+ * Time: 上午9:48
+ */
+public class InvokeInfo {
+    public String className,methodName;
+    Object pars;
+    Map<String,String> header= new HashMap();
+    Properties properties = new Properties();
+    public InvokeInfo(MessageContext inMessage,String className,String methodName,Object pars){
+        this.className=className;
+        this.methodName=methodName;
+        this.pars=pars;
+        if(null != inMessage.getEnvelope() && null != inMessage.getEnvelope().getHeader().getFirstElement()){
+        SOAPHeader hd = inMessage.getEnvelope().getHeader();
+            if(null !=hd){
+                Iterator its = hd.getChildElements();
+                while(its.hasNext()){
+                    OMElement element = (OMElement) its.next();
+                    if(StringUtils.isNotBlank(element.getLocalName()) && StringUtils.isNotBlank(element.getText()));
+                    header.put(element.getLocalName(),element.getText());
+                }
+            }
+        }
+        Iterator<String> its = inMessage.getPropertyNames();
+        if(null != its){
+            while(its.hasNext()){
+                String k = its.next();
+                Object v = inMessage.getProperty(k);
+                if(null != v)
+                    properties.put(k,v);
+            }
+        }
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
+    public Map<String, String> getHeader() {
+        return header;
+    }
+
+    public void setHeader(Map<String, String> header) {
+        this.header = header;
+    }
+
+    public Properties getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Properties properties) {
+        this.properties = properties;
+    }
+
+    public void setClassName(String className) {
+        this.className = className;
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public void setMethodName(String methodName) {
+        this.methodName = methodName;
+    }
+
+    public Object getPars() {
+        return pars;
+    }
+
+    public void setPars(Object pars) {
+        this.pars = pars;
+    }
+}

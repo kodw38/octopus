@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 负责各种协议的方法调用 -->
+<cell key="Cache" clazz="com.octopus.isp.cell.impl.Cell">
+    <namespace clazz="com.octopus.utils.namespace.impl.Namespace">cell.cache</namespace>
+    <actions>
+        <action key="action.cache" xml="classpath:com/octopus/tools/cache/cache.xml"/>
+    </actions>
+
+    <!-- 自己的执行流程 -->
+    <flows xmlid="Flows">
+        <executor xmlid="ISPExecutor"/>
+        <flow xmlid="Flow" key="cache.flow" >
+            <node xmlid="Node" type="normal" seq="0" desc="">
+                <before>
+                    <step seq="1" action="action.cache" desc=""/>
+                </before>
+            </node>
+        </flow>
+    </flows>
+
+</cell>

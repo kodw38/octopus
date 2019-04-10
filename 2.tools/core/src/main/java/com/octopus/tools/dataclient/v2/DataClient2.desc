@@ -1,0 +1,44 @@
+{
+name:'DataClient2',
+package:'com.octopus.tools.dataclient.v2',
+desc:'数据操作目前支持mysql数据库和Excel文件存储\n  Excel文件存储时table参数为sheet名称,每一个sheet第一行为列名称，支持query,add,update,delete操作',
+input:{
+check:{@desc:'表达式判断，结果为true时，才进入该方法，为false不进入该方法',@value:},
+ds:{@desc:'数据源在dataclient.xml中配置的key值',@isMust:'yes',@type:'String',@check:,@value:},
+op:{@desc:'对数据库的某种操作',@isMust:'yes',@type:'String',@check:,@enum:[{add:{@depend:'datas',@desc:'向数据库中增加一条数据,如果是List则是批量增加'}},{query:{@desc:'根据条件查询数据'}},{count:{@desc:'根据条件求记录数'}},{createTable:{@depend:'structure',@desc:'创建表'}},{truncate:{@depend:'table',@desc:'把某个表清空'}},{exist:{@desc:'根据条件判断是否有数据存在'}},{delete:{@desc:'根据条件删除数据'}},{update:{@desc:'根据条件更新数据'}},{upadd:{@desc:'更新或增加数据'}}],@value:},
+conds:{@desc:'k:,是空; k:v, k=v; k:[], k in list;limit:[0,10],limit 1 10;k:{M:v1,L:v2}, k between v1 and v2;k:{M:v1}, k > v1;k:{L:v2}, k < v2;',@type:'Map',@value:},
+fields:{@depend:'table',@desc:'需要查询的字段',@type:'List',@value:},
+keyfields:{@depend:'op.upadd',@desc:'关键字段，根据这些关键字段的值判断是新增还是更新',@type:'List',@value:},
+structure:{@desc:'field:{fieldCode:,DBFieldType:,fieldLen:},notNull:true/false,usedTypes:[P,I,Q,O]',@type:'List<Map>',@value:},
+start:{@desc:'分页查询的起始',@type:'String',@value:},
+end:{@desc:'分页查询的结束',@type:'String',@value:},
+format:{@desc:'如order by :xxx，是放在查询最后的拼接条件',@type:'Map',@value:},
+datas:{@desc:'数据对象/数据集',@type:'Map',@value:},
+sqls:{@desc:'查询的sql集,变量来源于XMLRequestParameter',@type:'List'}}},
+table:{@desc:'操作的表名称',@type:'String',@value:}}}
+},
+config:{
+
+},
+output:{
+check:{@desc:'表达式判断，为true时返回结果，为false时不返回结果',@value:},
+format:{@desc:'对结果做格式化',@value:},
+filter:{@desc:'对结果做过滤',@value:}
+},
+error:{},
+depend:{},
+scene:{},
+example:{
+1.单表查询:'input {ds:\'dataclient.xml中的key值\',op:\'query\',table:\'xx\',conds:{x:x,x:{M:v1,L:v2},x:}} '
+,2.SQL查询:'input {ds:\'dataclient.xml中的key值\',op:\'query\',sqls:[xxxx],start:s,end:d}'
+,3.新增:'input {ds:\'dataclient.xml中的key值\',op:\'add\',datas:\'数据\'}'
+,4.删除:'input {ds:\'dataclient.xml中的key值\',op:\'delete\',conds:{}}'
+,5.修改:'input {ds:\'dataclient.xml中的key值\',op:\'update\',conds:{},datas:{}}'
+,6.新增修改:'input {ds:\'dataclient.xml中的key值\',op:\'upadd\',datas:{},keyfields:[]}'
+,7.清除表数据:'input {ds:\'dataclient.xml中的key值\',op:\'truncate\',table:\'xxx\'}'
+,8.创建表:'input {ds:\'dataclient.xml中的key值\',op:\'createTable\',structure:{}}'
+,9.求记录数:'input {ds:\'dataclient.xml中的key值\',op:\'count\',table:\'xxx\',conds:{}}'
+,10.某记录是否存在:'input {ds:\'dataclient.xml中的key值\',op:\'exist\',table:\'xxx\',conds:{}}'
+,11.数据迁移'{op:\'migration\',src_ds:\'sec\',src_table:\'sec_staff\',target_ds:\'res\',target_table:\'syn_sec_staff\'}'
+}
+}

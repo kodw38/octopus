@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<httpclient clazz="com.octopus.tools.client.http.impl.HttpClient3"
+            proxy="" redirect="true" connectiontimeout="5000" readtimeout="3000"  removerequestcookies="" saveresponsecookies="" mapping="" json=""/>

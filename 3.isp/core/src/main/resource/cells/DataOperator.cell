@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 负责各种协议的方法调用 -->
+<cell key="DataOperator" clazz="com.octopus.isp.cell.impl.Cell">
+    <namespace clazz="com.octopus.utils.namespace.impl.Namespace">cell.dataOperator</namespace>
+    <actions>
+        <action key="action.op" xml="classpath:com/octopus/tools/dataclient/v2/dataclient2.xml"/>
+    </actions>
+
+    <!-- 自己的执行流程 -->
+    <flows xmlid="Flows">
+        <executor xmlid="ISPExecutor"/>
+        <flow xmlid="Flow" key="op.flow" >
+            <node xmlid="Node" type="normal" seq="0" desc="">
+                <before>
+                    <step seq="1" action="action.op" desc=""/>
+                </before>
+            </node>
+        </flow>
+    </flows>
+
+</cell>

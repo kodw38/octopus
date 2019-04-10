@@ -1,0 +1,42 @@
+{
+ name:'CacheManager',
+ package:'com.tb.cache',
+ desc:'',
+ input:{
+     check:{@desc:'表达式判断，结果为true时，才进入该方法，为false不进入该方法',@value:},
+     cache:{@desc:'从cache.xml中选择一个key，作为操作的缓存实例',@isMust:'yes',@type:'String',@check:,@value:},
+     op:{@desc:'对缓存实例的某种操作',@isMust:'yes',@type:'String',@check:,@enum:[{clearAll:{@desc:'清除所有缓存实例中的数据'}},{add:{@desc:'向缓存实例中增加一个元素'}},{getall:{@desc:'获取缓存实例Map对象'}},{exist:{@depend:'key',@desc:'判断key值在实例中是否存在'}},{del:{@desc:'如果有key属性，则删除该ikey；如果没有key属性，则清除实例中的所有keys'}},{size:{@desc:'获取该实例的key数量'}},{switch:{@depend:'isback',@desc:'依赖isback属性,切换备份和当前存储,使当前变为备份，备份变为当前'}},{get:{@desc:'如果有key属性，则为取出key值的数据；如果没有key属性，则取出所有的keys'}},{addList:{@desc:'向value为List的对象中增加元素'}}],@value:},
+     key:{@desc:'存放到缓存实例中的key值',@isMust:'yes',@type:'String',@value:},
+     unique:{@desc:'value为list时，根据元素(Map)的某个key值过滤，如果key值已经存在则不再缓存实例中增加该元素，value取value.Map中的某个key',@depend:'op.addList',@type:'String',@value:},
+     isback:{@desc:'缓存有一个当前操作容器和一个备份容易，主要用于数据量大时，先对备份容器做数据操作，然后通过switch操作切换到当前容器。是否对备份存储操作,true/false',@value:},
+     group:{@desc:'value为list时，根据元素(Map)的某个key值分组',@depend:'op.addList',@value:{by:{@desc:'根据存储value中的一个key,根据这个key值分组',@value:},sum:{@desc:'根据存储value中的一个key,根据分组求这个key其他字段的和',@value:},set:{@desc:'更新根据by分组的所得数据中为set中key的值为这个元素的对应的值',@depend:'value.Map.key',@value:}}},
+     value:{@desc:'可以是一个对象，或一个List'}
+ },
+ config:{
+
+ },
+ output:{
+  check:{@desc:'表达式判断，为true时返回结果，为false时不返回结果',@value:},
+  format:{@desc:'对结果做格式化',@value:},
+  filter:{@desc:'对结果做过滤',@value:}
+ },
+ error:{},
+ depend:{},
+ scene:{},
+ example:{
+    1.清除所有缓存:'input {op:\'clearAll\'} '
+    ,2.获取所有缓存对象Map:'input {op:\'getall\'}'
+    ,3.判断key是否存在:'input {op:\'exist\',cache:\'实例名称在cache.xml中配置\',key:\'存放到缓存实例中的key值\'}'
+    ,4.删除一个实例:'input {op:\'del\',cache:\'实例名称在cache.xml中配置\'}'
+    ,5.删除一个key:'input {op:\'del\',cache:\'实例名称在cache.xml中配置\',key:\'存放到缓存实例中的key值\'}'
+    ,6.key的数量:'input {op:\'size\',cache:\'实例名称在cache.xml中配置\'}'
+    ,7.切换到备:'input {op:\'switch\',cache:\'实例名称在cache.xml中配置\',isback:\'true\'}'
+    ,8.切换到主:'input {op:\'switch\',cache:\'实例名称在cache.xml中配置\',isback:\'false\'}'
+    ,9.获取某个key值:'input {op:\'get\',cache:\'实例名称在cache.xml中配置\',key:\'存放到缓存实例中的key值\'}'
+    ,10.获取某个实例Map:'input {op:\'get\',cache:\'实例名称在cache.xml中配置\'}'
+    ,11.向一个实例中增加元素:'input {op:\'add\',cache:\'实例名称在cache.xml中配置\',key:\'存放到缓存实例中的key值\',value:\'可以是一个对象\'} '
+    ,12.向一个Value为List中增加元素:'input {op:\'addList\',cache:\'实例名称在cache.xml中配置\',key:\'存放到缓存实例中的key值\',value:\'可以是一个对象\'} '
+    ,13.向一个Value为List<Map>中增加元素 如果List<Map> key存在则不增加:'input {op:\'addList\',cache:\'实例名称在cache.xml中配置\',key:\'存放到缓存实例中的key值\',value:\'可以是一个对象\',unique:\'List<Map>中Map的一个字段Key\'} '
+    ,14.向一个Value为List<Map>中增加元素 分组求和:'input {op:\'addList\',cache:\'实例名称在cache.xml中配置\',key:\'存放到缓存实例中的key值\',value:\'可以是一个对象\',group:{by:\'分组字段\',sum:\'求和字段并更新\',set:[\'需要同步的其他字段\']}} '
+}
+}

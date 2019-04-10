@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    i18n是提供根据某个数据计算和转换为另一个数据的功能
+    getter 为获取外部资源时，使用Resource获取外部资源
+    cache使用cache模块
+    item执行顺序 getter -> transport -> formate -> cache -> existstyle
+ -->
+<i18n clazz="com.octopus.tools.i18n.impl.I18N">
+    <defs>
+        <def xmlid="i18nitem" clazz="com.octopus.tools.i18n.impl.I18NItem"/>
+    </defs>
+    <!-- locale要素:
+         language - 语言
+         country  - 国家
+         currency - 货币
+         date     - 日期
+         datetime - 日期时间
+         calendar - 日历
+         zone     - 时区
+         holiday  - 节假日
+         worktime - 工作时间
+         race     - 种族
+         belief   - 信仰
+         group    - 社会群
+         position - 地理位置
+         tax      - 税制
+         contractcode - 合同号
+     -->
+    <locale clazz="com.octopus.tools.i18n.Locale"
+            language=""    country=""    currency=""    date=""          datetime=""
+            calendar=""    position=""   timezone=""
+            tax=""         holiday=""    worktime=""    race=""
+            belief=""      group=""      contractcode=""
+            locale="language.country.position.timezone.date.datetime.calendar.holiday.worktime.currency.tax.race.belief.group.contractcode"
+    />
+    <!--   date 根据系统或给定日期计算返回locale中时区的日期，如有除timezone以外的限制条件，修改transport -->
+    <item xmlid="i18nitem" key="date|en.us.US/Aleutian" desc="">
+        <getter clazz="com.octopus.tools.i18n.impl.date.SystemGlobalDateTimeGetter" basetimezone="Asia/Shanghai"/>
+        <transport clazz="com.octopus.tools.i18n.impl.date.TimeZoneTransport"/>
+        <formate clazz="com.octopus.tools.i18n.impl.date.DateFormate" pattern="dd/MM/yyyy"/>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+    <item xmlid="i18nitem" key="date|zh.cn" desc="">
+        <getter clazz="com.octopus.tools.i18n.impl.date.SystemGlobalDateTimeGetter" basetimezone="Asia/Shanghai"></getter>
+        <transport clazz="com.octopus.tools.i18n.impl.date.TimeZoneTransport"/>
+        <formate clazz="com.octopus.tools.i18n.impl.date.DateFormate" pattern="yyyy-MM-dd"></formate>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+    <!--   datetime 根据系统或给定时间计算返回locale中时区的时间，如有除timezone以外的限制条件，修改transport -->
+    <item xmlid="i18nitem" key="datetime|en.us" desc="">
+        <getter clazz="com.octopus.tools.i18n.impl.date.SystemGlobalDateTimeGetter" basetimezone="Asia/Shanghai"></getter>
+        <transport clazz="com.octopus.tools.i18n.impl.date.TimeZoneTransport"/>
+        <formate clazz="com.octopus.tools.i18n.impl.date.DateFormate" pattern="dd/MM/yyyy HH:mm:ss"/>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+    <item xmlid="i18nitem" key="datetime|zh.cn" desc="">
+        <getter clazz="com.octopus.tools.i18n.impl.date.SystemGlobalDateTimeGetter" basetimezone="Asia/Shanghai"></getter>
+        <transport clazz="com.octopus.tools.i18n.impl.date.TimeZoneTransport"/>
+        <formate clazz="com.octopus.tools.i18n.impl.date.DateFormate" pattern="yyyy-MM-dd HH:mm:ss"></formate>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+    <!-- multi language txt resource 根据给定一资源code返回locale中语言的文本 -->
+    <item xmlid="i18nitem" key="txt|zh" desc="">
+        <getter clazz="" ></getter>
+        <transport clazz=""/>
+        <formate clazz="" ></formate>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+    <!-- multi country calendar 日历为年、月、日、时、分、秒、星期、本月第几天、本年第几天。根据系统或给定的一个时间返回Locale中的Calendar对象 -->
+    <item xmlid="i18nitem"  key="calendar|cn" desc="">
+        <getter clazz="com.octopus.tools.i18n.impl.calendar.CalendarGetter" ></getter>
+        <transport clazz=""/>
+        <formate clazz="" ></formate>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+    <!-- multi country holiday 获取Locale中签约者的一年的节假日Holiday对象-->
+    <item xmlid="i18nitem"  key="holiday|cn" desc="">
+        <getter clazz="" ></getter>
+        <transport clazz=""/>
+        <formate clazz="" ></formate>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+    <!-- multi country worktime 获取Locale中签约者的工作时间WorkTime对象 -->
+    <item xmlid="i18nitem" key="worktime|cn" desc="">
+        <getter clazz="" ></getter>
+        <transport clazz=""/>
+        <formate clazz="" ></formate>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+    <!-- multi country currency 根据指定的数字，获取Locale的原货币符号计算为locale中的目标货币值-->
+    <item xmlid="i18nitem" key="currency|cn" desc="">
+        <getter clazz="" ></getter>
+        <transport clazz=""/>
+        <formate clazz="" ></formate>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+    <!-- multi country tax -->
+    <item xmlid="i18nitem" key="tax|cn" desc="">
+        <getter clazz="" ></getter>
+        <transport clazz=""/>
+        <formate clazz="" ></formate>
+        <cache clazz=""></cache>
+        <existstyle clazz=""></existstyle>
+    </item>
+</i18n>

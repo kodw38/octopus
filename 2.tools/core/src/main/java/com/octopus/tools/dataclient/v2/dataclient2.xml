@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- help
+   mysql routing http://dev.mysql.com/doc/mysql-router/en/mysql-router-general-features-connection-routing.html
+   mysql:http://dev.mysql.com/doc/connector-j/en/connector-j-usagenotes-j2ee-concepts-managing-load-balanced-connections.html
+   jdbc:mysql:loadbalance://[host1][:port],[host2][:port][,[host3][:port]]...[/[database]] » [?propertyName1=propertyValue1[&propertyName2=propertyValue2]...]
+    jdbc:mysql:replication://master,slave1,slave2,slave3/test
+-->
+<dataclient clazz="com.octopus.tools.dataclient.v2.DataClient2" base="mysql">
+    <defs>
+        <def xmlid="dbsource" clazz="com.octopus.tools.dataclient.v2.ds.DBDataSource"/>
+        <def xmlid="excelsource" clazz="com.octopus.tools.dataclient.v2.ds.ExcelDataSource"/>
+    </defs>
+    <datasources>
+        <datasource key="base" xmlid="dbsource" desc="Oracle 基础库">
+                <property name="driverClassName" value="oracle.jdbc.OracleDriver" />
+                <property name="url" value="jdbc:oracle:thin:@20.26.11.4:1521:CSHP01" />
+                <property name="username" value="base" />
+                <property name="password" value="base" />
+                <property name="initialSize" value="0" />
+                <property name="maxActive" value="20" />
+                <property name="maxIdle" value="20" />
+        </datasource>
+        <datasource key="mysql" xmlid="dbsource" desc="Mysql 本地库">
+            <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+            <property name="url" value="jdbc:mysql://127.0.0.1:3306/mysql?rewriteBatchedStatements=true&amp;cachePrepStmts=true&amp;useServerPrepStmts=true&amp;useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true&amp;failOverReadOnly=false" />
+            <property name="username" value="root" />
+            <property name="password" value="" />
+            <property name="initialSize" value="0" />
+            <property name="maxActive" value="20" />
+            <property name="maxIdle" value="20" />
+            <property name="testWhileIdle" value="true" />
+            <property name="validationQuery" value="SELECT COUNT(*) FROM DUAL" />
+            <property name="timeBetweenEvictionRunsMillis" value="60000" />
+            <property name="minEvictableIdleTimeMillis" value="10000" />
+            <property name="removeAbandoned" value="false" />
+        </datasource>
+
+        <datasource key="ad" xmlid="dbsource" desc="Mysql oss_base">
+            <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+            <property name="url" value="jdbc:mysql://10.11.20.83:3307/oss_base?rewriteBatchedStatements=true&amp;cachePrepStmts=true&amp;useServerPrepStmts=true&amp;useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true&amp;failOverReadOnly=false" />
+            <property name="username" value="OSS_BASE" />
+            <property name="password" value="tst03-123" />
+            <property name="initialSize" value="0" />
+            <property name="maxActive" value="20" />
+            <property name="maxIdle" value="20" />
+            <property name="testWhileIdle" value="true" />
+            <property name="validationQuery" value="SELECT COUNT(*) FROM DUAL" />
+            <property name="timeBetweenEvictionRunsMillis" value="60000" />
+            <property name="minEvictableIdleTimeMillis" value="10000" />
+            <property name="removeAbandoned" value="false" />
+        </datasource>
+        <datasource key="cm" xmlid="dbsource" desc="Mysql party">
+            <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+            <property name="url" value="jdbc:mysql://10.11.20.84:3407/party?rewriteBatchedStatements=true&amp;cachePrepStmts=true&amp;useServerPrepStmts=true&amp;useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true&amp;failOverReadOnly=false" />
+            <property name="username" value="AIQRY" />
+            <property name="password" value="AIQRY" />
+            <property name="initialSize" value="0" />
+            <property name="maxActive" value="20" />
+            <property name="maxIdle" value="20" />
+            <property name="testWhileIdle" value="true" />
+            <property name="validationQuery" value="SELECT COUNT(*) FROM DUAL" />
+            <property name="timeBetweenEvictionRunsMillis" value="60000" />
+            <property name="minEvictableIdleTimeMillis" value="10000" />
+            <property name="removeAbandoned" value="false" />
+        </datasource>
+        <datasource key="alistock" xmlid="dbsource" desc="Mysql Stock Online ">
+            <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+            <property name="url" value="jdbc:mysql://121.40.93.124:3306/stock?rewriteBatchedStatements=true&amp;cachePrepStmts=true&amp;useServerPrepStmts=true&amp;useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true&amp;failOverReadOnly=false" />
+            <property name="username" value="stock" />
+            <property name="password" value="stock@123" />
+            <property name="initialSize" value="0" />
+            <property name="maxActive" value="20" />
+            <property name="maxIdle" value="20" />
+            <property name="testWhileIdle" value="true" />
+            <property name="validationQuery" value="SELECT COUNT(*) FROM DUAL" />
+            <property name="timeBetweenEvictionRunsMillis" value="60000" />
+            <property name="minEvictableIdleTimeMillis" value="10000" />
+            <property name="removeAbandoned" value="false" />
+        </datasource>
+
+        <datasource key="deploy" xmlid="excelsource" desc="Excel Store ">
+            <property name="url" value="c:/log/test.xlsx" />
+        </datasource>
+    </datasources>
+    <sequence key="sequence" clazz="com.octopus.tools.dataclient.v2.DefaultSequence" table="isp_sequence"/>
+    <listeners>
+    </listeners>
+    <events>
+    </events>
+    <router clazz="com.octopus.tools.dataclient.v2.DataRouter" tablename="ISP_DICTIONARY_TABLE_ROUTER">
+        <tablecontainer clazz="com.octopus.tools.dataclient.v2.ds.TableContainer">
+<!--
+
+                        <property key="ISP_DICTIONARY_FIELD" value="{}"/>
+                        <property key="ISP_DICTIONARY_TABLE" value="{}"/>
+                        <property key="ISP_DICTIONARY_TABLE_APP" value="{}"/>
+                        <property key="ISP_DICTIONARY_TABLE_REL" value="{}"/>
+                        <property key="ISP_DICTIONARY_TABLE_ROUTER" value="{}"/>
+-->
+
+            <redis>ANGLE_QUERY</redis>
+        </tablecontainer>
+    </router>
+</dataclient>

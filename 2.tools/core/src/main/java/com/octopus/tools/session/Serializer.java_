@@ -1,0 +1,17 @@
+package com.octopus.tools.session;
+
+import javax.servlet.http.HttpSession;
+import java.io.IOException;
+
+/**
+ * User: wfgao_000
+ * Date: 15-8-24
+ * Time: 下午1:49
+ */
+public interface Serializer {
+    public void setClassLoader(ClassLoader paramClassLoader);
+
+    public byte[] serializeFrom(HttpSession paramHttpSession)throws IOException;
+
+    public HttpSession deserializeInto(byte[] paramArrayOfByte, HttpSession paramHttpSession)throws IOException, ClassNotFoundException;
+}

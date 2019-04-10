@@ -1,0 +1,45 @@
+{
+name:'RedisClient',
+package:'com.octopus.tools.dataclient.dataquery.redis',
+desc:'Redis缓存',
+input:{
+check:{@desc:'表达式判断，结果为true时，才进入该方法，为false不进入该方法',@value:},
+db:{@desc:'从redis.xml中选择一个key，作为操作的缓存实例',@isMust:'yes',@type:'java.lang.String',@check:,@value:},
+op:{@desc:'对缓存的某种操作',@isMust:'yes',@type:'String',@check:,@enum:[{
+    {add:{@desc:'向缓存实例中增加一个元素'}}
+    ,{lpush:{@desc:'命令将一个或多个值插入到列表头部'}}
+    ,{rpush:{@desc:'命令用于将一个或多个值插入到列表的尾部'}}
+    ,{contains:{@desc:'某个key是否存在'}}
+    ,{remove:{@desc:'删除某个key'}}
+    ,{keys:{@depend:'value',@desc:'查询值为value的所有key'}}
+    ,{clear:{@desc:'清除某个db的所有数据'}}
+    ,{lget:{@desc:'获取某个key的List数据'}}
+    ,{syn:{@desc:'把一个db数据同步到另一个db',@depend:'todb'}}}],@value:},
+key:{@desc:'存放到缓存实例中的key值',@isMust:'yes',@type:'String',@value:},
+expire:{@desc:'可以放在redis中的停留时间，单位为second',@type:'java.lang.Integer',@value:},
+keys:{@desc:'同步数据操作时，指定同步的keys,如果为空则同步所有',@depend:'op.syn',@type:'java.util.List',@value:},
+value:{@desc:'存放到Redis中的值',@isMust:'yes',@type:'java.lang.String'},
+remain:{@desc:'value为List时保留的数据数，超过时删除之前的数据',@depend:'op.lpush',@type:'java.lang.Integer'},
+todb:{@desc:'指定同步操作的目的存储库',@depend:'op.syn',@type:'java.lang.String'}
+},
+config:{
+
+},
+output:{
+check:{@desc:'表达式判断，为true时返回结果，为false时不返回结果',@value:},
+format:{@desc:'对结果做格式化',@value:},
+filter:{@desc:'对结果做过滤',@value:}
+},
+error:{},
+depend:{},
+scene:{},
+example:{
+1.新增一个数据:'input {db:\'1\',op:\'add\',key:\'kkk\',value:\'vvvv\',expire:60} '
+,2.新增一个Value为List的数据:'input {db:\'1\',op:\'lpush\',key=\'kk\',value:\'vvv\',remain:100}'
+,3.判断某个key是否存在:'input {db:\'1\',op:\'contains\',key=\'kk\'}'
+,4.删除某个key:'input {db:\'1\',op:\'remove\',key=\'kk\'}'
+,5.清除某个db:'input {db:\'1\',op:\'clear\'}'
+,6.获取某个List:'input {db:\'1\',op:\'lget\',key:\'k\'}'
+,7.获取某个List:'input {db:\'1\',op:\'syn\',todb:\'2\'}'
+}
+}

@@ -1,0 +1,269 @@
+package com.octopus.isp.bridge.launchers.impl.wsext;
+
+import org.apache.axiom.om.OMElement;
+import org.apache.axis2.Constants;
+import org.apache.axis2.context.ConfigurationContext;
+import org.apache.axis2.deployment.util.PhasesInfo;
+import org.apache.axis2.deployment.util.Utils;
+import org.apache.axis2.description.AxisOperation;
+import org.apache.axis2.description.AxisService;
+import org.apache.axis2.description.Parameter;
+import org.apache.axis2.description.WSDL2Constants;
+import org.apache.axis2.description.java2wsdl.DefaultSchemaGenerator;
+import org.apache.axis2.description.java2wsdl.DocLitBareSchemaGenerator;
+import org.apache.axis2.description.java2wsdl.Java2WSDLConstants;
+import org.apache.axis2.description.java2wsdl.SchemaGenerator;
+import org.apache.axis2.engine.MessageReceiver;
+import org.apache.axis2.util.Loader;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.ws.commons.schema.utils.NamespaceMap;
+
+import javax.xml.namespace.QName;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+
+/**
+ * User: wfgao_000
+ * Date: 15-8-7
+ * Time: 下午3:15
+ */
+public class AxisServiceFactory {
+    static final Log log = LogFactory.getLog(AxisServiceFactory.class);
+
+    public static HashMap<String, MessageReceiver> getDefaultMessageReceiverMap() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+        HashMap<String, MessageReceiver> messageReciverMap = new HashMap<String, MessageReceiver>();
+        Class inOnlyMessageReceiver = Loader.loadClass("org.apache.axis2.rpc.receivers.RPCInOnlyMessageReceiver");
+        MessageReceiver messageReceiver = (MessageReceiver) inOnlyMessageReceiver.newInstance();
+        messageReciverMap.put(WSDL2Constants.MEP_URI_IN_ONLY,messageReceiver);
+        Class inoutMessageReceiver = Loader.loadClass("org.apache.axis2.rpc.receivers.RPCMessageReceiver");
+        MessageReceiver inOutmessageReceiver = (MessageReceiver) inoutMessageReceiver.newInstance();
+        messageReciverMap.put(WSDL2Constants.MEP_URI_IN_OUT,inOutmessageReceiver);
+        messageReciverMap.put(WSDL2Constants.MEP_URI_ROBUST_IN_ONLY,inOutmessageReceiver);
+        return messageReciverMap;
+    }
+
+    public static boolean  isNotIn(String s,String[] ss){
+        for(String t:ss){
+            if(t.equals(s)){
+                return false;
+            }
+        }
+        return true;
+    }
+    public static SchemaGenerator getSchemaGenerator(AxisService service,ConfigurationContext configContext,ClassLoader loader,String className,String serviceName,String[] funs) throws Exception {
+        SchemaGenerator schemaGenerator;
+        ArrayList excludeOpeartion = new ArrayList();
+        try {
+            Parameter generateBare = service.getParameter(Java2WSDLConstants.DOC_LIT_BARE_PARAMETER);
+            if (generateBare != null && "true".equals(generateBare.getValue())) {
+                schemaGenerator = new DocLitBareSchemaGenerator(loader,className, null,Java2WSDLConstants.SCHEMA_NAMESPACE_PRFIX, service);
+            } else {
+                schemaGenerator = new DefaultSchemaGenerator(loader, className,null,Java2WSDLConstants.SCHEMA_NAMESPACE_PRFIX, service);
+            }
+
+            schemaGenerator.setElementFormDefault(Java2WSDLConstants.FORM_DEFAULT_QUALIFIED);
+            Utils.addExcludeMethods(excludeOpeartion);
+            if(null !=funs && funs.length>0 ){
+                Method[] methods = loader.loadClass(className).getMethods();
+                if(null != methods){
+                    for(Method m:methods){
+                        if(isNotIn(m.getName(),funs))
+                            excludeOpeartion.add(m.getName());
+                    }
+                }
+            }
+            schemaGenerator.setExcludeMethods(excludeOpeartion);
+
+            return schemaGenerator;
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    /*public static SchemaGenerator getStringSchemaGenerator(AxisService service,ConfigurationContext configContext,String serviceName,String funName,String parJson,String returnJson)throws Exception{
+        SchemaGenerator schemaGenerator;
+        ArrayList excludeOpeartion = new ArrayList();
+        try {
+            schemaGenerator = new StringSchemaGenerator(serviceName,funName,parJson,returnJson,Java2WSDLConstants.SCHEMA_NAMESPACE_PRFIX, service);
+            schemaGenerator.setElementFormDefault(Java2WSDLConstants.FORM_DEFAULT_QUALIFIED);
+            Utils.addExcludeMethods(excludeOpeartion);
+            excludeOpeartion.add(funName);
+            schemaGenerator.setExcludeMethods(excludeOpeartion);
+            return schemaGenerator;
+        } catch (Exception e) {
+            throw e;
+        }
+    }*/
+    public static NamespaceMap getNamespacemap(String serviceNameSpace){
+        NamespaceMap map = new NamespaceMap();
+        map.put(Java2WSDLConstants.AXIS2_NAMESPACE_PREFIX,Java2WSDLConstants.AXIS2_XSD);
+        map.put(Java2WSDLConstants.DEFAULT_SCHEMA_NAMESPACE_PREFIX,Java2WSDLConstants.URI_2001_SCHEMA_XSD);
+        return map;
+    }
+    public static Parameter getParameter(String className){
+        Parameter parameter = new Parameter(Constants.SERVICE_CLASS, className);
+        OMElement paraElement = Utils.getParameter(Constants.SERVICE_CLASS,className, false);
+        parameter.setParameterElement(paraElement);
+        return parameter;
+    }
+    /*public static void createAxisService(ConfigurationContext configContext,String serviceName,String desc,String funName,String parJsonDescription,String returnJsonDescription){
+        try{
+            AxisService service = new AxisService();
+            service.setParent(configContext.getAxisConfiguration());
+            service.setName(serviceName);
+            service.setDocumentation(desc);
+            ClassLoader loader=null;
+            if(null == loader)
+                loader = configContext.getAxisConfiguration().getServiceClassLoader();
+            if(null == loader)
+                loader=configContext.getAxisConfiguration().getSystemClassLoader();
+            service.setClassLoader(loader);
+            service.setUseDefaultChains(false);
+            Utils.processBeanPropertyExclude(service);
+            service.setElementFormDefault(true);
+            //service.addParameter(getParameter(className));
+            SchemaGenerator generateSchema= getStringSchemaGenerator(service,configContext,serviceName,funName,parJsonDescription,returnJsonDescription);
+
+            service.addSchema(generateSchema.generateSchema());
+
+            service.setSchemaTargetNamespace(generateSchema.getSchemaTargetNameSpace());
+
+            service.setTypeTable(generateSchema.getTypeTable());
+            String targetNamespace = generateSchema.getSchemaTargetNameSpace();
+
+            if (targetNamespace != null && !"".equals(targetNamespace)) {
+                service.setNamespaceMap(getNamespacemap(targetNamespace));
+                service.setTargetNamespace(targetNamespace);
+            }
+
+            String endpointName = service.getEndpointName();
+            if ((endpointName == null || endpointName.length() == 0)
+                    && service.getAxisConfiguration() != null) {
+                Utils.addEndpointsToService(service, service.getAxisConfiguration());
+            }
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }*/
+    public static void createAxisService(ConfigurationContext configContext,ClassLoader loader,String className,String[] funNames,String serviceName,String desc) throws Exception, ClassNotFoundException, InstantiationException, IllegalAccessException {
+        AxisService service = configContext.getAxisConfiguration().getService(serviceName);
+        boolean isexist = true;
+        if(null == service){
+            isexist= false;
+            service = new AxisService();
+            service.setParent(configContext.getAxisConfiguration());
+            service.setName(serviceName);
+
+            service.setDocumentation(desc);
+            if(null == loader)
+                loader = configContext.getAxisConfiguration().getServiceClassLoader();
+            if(null == loader)
+                loader=configContext.getAxisConfiguration().getSystemClassLoader();
+            service.setClassLoader(loader);
+            service.setUseDefaultChains(false);
+            Utils.processBeanPropertyExclude(service);
+            service.setElementFormDefault(true);
+        }
+        try {
+            service.addParameter(getParameter(className));
+
+            SchemaGenerator generateSchema= getSchemaGenerator(service,configContext,service.getClassLoader(),className,serviceName,funNames);
+
+            service.addSchema(generateSchema.generateSchema());
+
+            service.setSchemaTargetNamespace(generateSchema.getSchemaTargetNameSpace());
+
+            service.setTypeTable(generateSchema.getTypeTable());
+            String targetNamespace = generateSchema.getSchemaTargetNameSpace();
+
+            if (targetNamespace != null && !"".equals(targetNamespace)) {
+                service.setNamespaceMap(getNamespacemap(targetNamespace));
+                service.setTargetNamespace(targetNamespace);
+            }
+
+            for(String funName:funNames){
+                AxisOperation operation = service.getOperation(new QName(funName));
+                if(null != operation){
+                    String mep = operation.getMessageExchangePattern();
+
+                    MessageReceiver mr = configContext.getAxisConfiguration().getMessageReceiver(mep);
+                    if(null != mr){
+                        operation.setMessageReceiver(mr);
+                    }else{
+                        HashMap<String, MessageReceiver> messageReceiverClassMap = getDefaultMessageReceiverMap();
+                        if (messageReceiverClassMap != null) {
+                            if (messageReceiverClassMap.get(mep) != null) {
+                                Object obj = messageReceiverClassMap.get(mep);
+                                if (obj instanceof MessageReceiver) {
+                                    mr = (MessageReceiver) obj;
+                                    operation.setMessageReceiver(mr);
+                                } else {
+                                    log.error("Object is not an instance of MessageReceiver, thus, default MessageReceiver has been set");
+                                    mr = configContext.getAxisConfiguration().getMessageReceiver(operation.getMessageExchangePattern());
+                                    operation.setMessageReceiver(mr);
+                                }
+                            } else {
+                                log.error("Required MessageReceiver couldn't be found, thus, default MessageReceiver has been used");
+                                mr = configContext.getAxisConfiguration().getMessageReceiver(operation.getMessageExchangePattern());
+                                operation.setMessageReceiver(mr);
+                            }
+                        } else {
+                            log.error("MessageRecevierClassMap couldn't be found, thus, default MessageReceiver has been used");
+                            mr = configContext.getAxisConfiguration().getMessageReceiver(operation.getMessageExchangePattern());
+                            operation.setMessageReceiver(mr);
+                        }
+                    }
+                    PhasesInfo pinfo = configContext.getAxisConfiguration().getPhasesInfo();
+                    pinfo.setOperationPhases(operation);
+
+                    /*OMFactory omf = OMAbstractFactory.getOMFactory();
+                    SOAPHeaderMessage msg = new SOAPHeaderMessage();
+                    msg.setPart("wf");
+                    msg.setRequired(true);
+                    msg.setElement(QName.valueOf("com.asiainfo"));
+                    operation.getMessage("In").getSoapHeaders().add(msg);*/
+
+                    //service.addOperation(operation);
+                    /*IntConfig config = (IntConfig) ResourceUtil.getSelfResource("aiint.xml", IntConfig.class);
+                    if(null != config){
+                        Handler[] befInvoke= config.getBeforeHander(className);
+                        if(null != befInvoke){
+                            Phase p = new Phase("phase_beforeinvoke");
+                            for(Handler h:befInvoke)
+                                p.addHandler(h);
+                            operation.getRemainingPhasesInFlow().add(p);
+                        }
+                        Handler[] afterInvoke= config.getAfterHander(className);
+                        if(null != afterInvoke){
+                            Phase p = new Phase("phase_afterinvoke");
+                            for(Handler h:afterInvoke)
+                                p.addHandler(h);
+                            operation.getPhasesOutFlow().add(p);
+                        }
+                        Handler[] error= config.getErrorHander(className);
+                        if(null != error){
+                            Phase p = new Phase("phase_invokeerror");
+                            for(Handler h:error)
+                                p.addHandler(h);
+                            operation.getPhasesOutFaultFlow().add(p);
+                        }
+                    }*/
+                }
+            }
+            String endpointName = service.getEndpointName();
+            if ((endpointName == null || endpointName.length() == 0)
+                    && service.getAxisConfiguration() != null) {
+                Utils.addEndpointsToService(service, service.getAxisConfiguration());
+            }
+
+            if(!isexist){
+                configContext.getAxisConfiguration().addService(service);
+            }
+
+        } catch (Exception e) {
+            throw new Exception("register service "+serviceName +" error.",e);
+        }
+    }
+}

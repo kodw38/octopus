@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources clazz="">
+    <!-- 可以直接加入dataclient的配置，dataclient也只有resource中使用 -->
+    <dataclient clazz=""/>
+    <!-- 根据 -->
+    <formates clazz="">
+        <formate returntype="" receivetype="">opid,opids</formate>
+    </formates>
+
+    <!-- 提供各种缓存
+        1.预加载固定缓存，通过Listener实现定时刷新，可以根据分片规则加载
+        2.缓存主机预扩展
+        3.固定内存大小，冷热数据淘汰缓存。通过event实现冷热淘汰。
+        4.dataclient缓存操作平凡的数据放入固定大小的缓存中，保证缓存和数据库的一致性。dataclient和cache的选择由resource控制。
+        5.resource自有固定大小缓存，放入每次操作的信息，以供４使用。
+     -->
+    <caches>
+        <cache key="" xmlid="" >
+            <!-- 缓存监听 -->
+            <listeners>
+                <listener clazz="" seq="" desc="分片加载">
+                    <cron></cron>
+                    <loadrule></loadrule>
+                </listener>
+            </listeners>
+            <!-- 指定缓存放的主机信息，这个信息在cache中配置，但被invocationhandler使用 -->
+            <instance>
+
+            </instance>
+            <!-- 缓存操作事件 -->
+            <events>
+                <event clazz="com.octopus.tools.cache.impl.EventMaxCountLimit" seq="1" maxcount="-1" maxmemsize="-1" alarmtype="cache.MaxCountLimit">
+                    <alarm/>
+                </event>
+            </events>
+        </cache>
+    </caches>
+</resources>

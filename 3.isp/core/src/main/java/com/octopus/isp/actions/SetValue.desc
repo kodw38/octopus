@@ -1,0 +1,26 @@
+{
+name:'SetValue',
+package:'com.octopus.isp.actions',
+desc:'向一个对象中设置属性',
+input:{
+check:{@desc:'表达式判断，结果为true时，才进入该方法，为false不进入该方法',@value:},
+obj:{@desc:'操作的对象',@isMust:'yes',@type:'Object',@check:,@value:},
+path:{@desc:'操作对象的属性路径,如果没有设置path，obj为List时，增加value',@type:'java.lang.String',@value:},
+value:{@desc:'对象'}
+},
+config:{
+
+},
+output:{
+check:{@desc:'表达式判断，为true时返回结果，为false时不返回结果',@value:},
+format:{@desc:'对结果做格式化',@value:},
+filter:{@desc:'对结果做过滤',@value:}
+},
+error:{},
+depend:{},
+scene:{},
+example:{
+1.设置属性:'input {obj:\'obj\',path:\'p\',value:\'vv\'} '
+,2.增加一个对象:'input {obj:\'ListObj\',value:\'vv\'}'
+}
+}

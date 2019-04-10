@@ -1,0 +1,26 @@
+{
+name:'OPParameter',
+package:'com.octopus.isp.actions',
+desc:'向环境变量中放入一个变量',
+input:{
+check:{@desc:'表达式判断，结果为true时，才进入该方法，为false不进入该方法',@value:},
+op:{@desc:'某个操作',@isMust:'yes',@enum:[{add:{@desc:'增加一个变量'}},{clearAll:{@desc:'清除环境变量中的所有变量'}}]},
+key:{@desc:'一个key',@type:'java.lang.String',@value:},
+value:{@desc:'对象'}
+},
+config:{
+
+},
+output:{
+check:{@desc:'表达式判断，为true时返回结果，为false时不返回结果',@value:},
+format:{@desc:'对结果做格式化',@value:},
+filter:{@desc:'对结果做过滤',@value:}
+},
+error:{},
+depend:{},
+scene:{},
+example:{
+1.增加一个变量:'input {op:\'add\',key:\'k\',value:\'vv\'} '
+,2.清除所有变量:'input {op:\'clearAll\'}'
+}
+}

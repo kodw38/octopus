@@ -1,0 +1,29 @@
+package com.octopus.tools.jvminsmgr;
+
+import org.hyperic.sigar.CpuInfo;
+import org.hyperic.sigar.FileSystem;
+import org.hyperic.sigar.Mem;
+
+/**
+ * 本机资源判断
+ * User: Administrator
+ * Date: 14-9-28
+ * Time: 下午12:19
+ */
+public interface ResourceJudge {
+    public CpuInfo getCpu();
+
+    public Mem getMem();
+
+    public FileSystem getDisk();
+
+    public boolean isCpuAvailable();
+    public boolean isMemAvailable();
+    public boolean isDiskAvailable();
+
+    /**
+     * 综合判断该主机cpu,mem,disk是否可以继续增加使用。
+     * @return true可以继续增加使用，false不能增加使用需要扩展。
+     */
+    public boolean isAllAvailable();
+}

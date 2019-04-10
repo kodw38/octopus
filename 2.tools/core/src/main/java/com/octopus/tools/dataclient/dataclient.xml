@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dataclient clazz="com.octopus.tools.dataclient.impl.DataClient">
+    <defs>
+        <def xmlid="dbengine" clazz="com.octopus.tools.dataclient.impl.engines.DBPoolEngine"/>
+        <def xmlid="dbengine.dcs" clazz="com.octopus.tools.dataclient.impl.engines.DCS"/>
+        <def xmlid="dbengine.pool" clazz="com.octopus.tools.dataclient.impl.engines.impl.DBPool"/>
+        <def xmlid="dbengine.pool.match" clazz="com.octopus.tools.dataclient.impl.engines.impl.PoolMatch"/>
+        <def xmlid="dbengine.typer" clazz="com.octopus.tools.dataclient.impl.engines.impl.DBResultTyper"/>
+    </defs>
+
+    <transaction clazz="com.octopus.tools.dataclient.impl.trans.Transaction"/>
+
+    <router clazz="com.octopus.tools.dataclient.impl.route.Router">
+        <orms>
+            <orm  datasources="gs" engines="db.mysql"/>
+            <orm  datasources="local" engines="db.mysql"/>
+            <orm  datasources="mysql" engines="db.mysql"/>
+            <orm  datasources="test" engines="db.oracle,db.mysql,file.properties"/>
+        </orms>
+    </router>
+
+    <engines>
+        <engine id="db.oracle" xmlid="dbengine">
+            <dcs xmlid="dbengine.dcs" path="com/octopus/tools/dataclient/impl/engines/MainSQLOracle.xml"/>
+            <pools>
+                <pool key="base" xmlid="dbengine.pool" type="oracle">
+                    <conn>
+                        <property name="driverClassName" value="oracle.jdbc.OracleDriver" />
+                        <property name="url" value="jdbc:oracle:thin:@20.26.11.4:1521:CSHP01" />
+                        <property name="username" value="base" />
+                        <property name="password" value="base" />
+                        <property name="initialSize" value="0" />
+                        <property name="maxActive" value="2" />
+                        <property name="maxIdle" value="2" />
+                    </conn>
+                    <match xmlid="dbengine.pool.match">
+                        <evn parameter="" value=""/>
+                        <dc parameter="ds" value="$parent.parent.properties.key"/>
+                    </match>
+                </pool>
+            </pools>
+            <typer xmlid="dbengine.typer"/>
+        </engine>
+
+        <engine id="db.mysql" xmlid="dbengine">
+            <pools>
+                <pool key="mysql" xmlid="dbengine.pool" type="mysql">
+                    <conn>
+                        <property name="driverClassName" value="com.mysql.jdbc.Driver" />
+                        <property name="url" value="jdbc:mysql://127.0.0.1:3306/mysql?rewriteBatchedStatements=true&amp;cachePrepStmts=true&amp;useServerPrepStmts=true&amp;useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true&amp;failOverReadOnly=false" />
+                        <property name="username" value="root" />
+                        <property name="password" value="" />
+                        <property name="initialSize" value="0" />
+                        <property name="maxActive" value="2" />
+                        <property name="maxIdle" value="2" />
+                        <property name="testWhileIdle" value="true" />
+                        <property name="validationQuery" value="SELECT COUNT(*) FROM DUAL" />
+                        <property name="timeBetweenEvictionRunsMillis" value="60000" />
+                        <property name="minEvictableIdleTimeMillis" value="10000" />
+                        <property name="removeAbandoned" value="false" />
+                    </conn>
+                </pool>
+            </pools>
+            <typer xmlid="dbengine.typer"/>
+        </engine>
+
+        <engine id="file" clazz="com.octopus.tools.dataclient.impl.engines.FileEngine">
+            <dcs xmlid="dbengine.dcs" path="com/octopus/tools/dataclient/impl/engines/MainResource.xml"/>
+            <pools>
+                <pool key="" clazz="" desc="本地工程中的文件,classloader获取">
+                    <match></match>
+                </pool>
+                <pool key="" clazz="" type="ftp" desc="本地主机上的文件,File获取">
+                    <match></match>
+                </pool>
+            </pools>
+<!--
+            <typer clazz="com.octopus.tools.dataclient.impl.engines.impl."></typer>
+-->
+        </engine>
+        <engine id="file.ftp" clazz="com.octopus.tools.dataclient.impl.engines.FileEngine">
+        <dcs xmlid="dbengine.dcs" path="com/octopus/tools/dataclient/impl/engines/MainResource.xml"/>
+        <pools>
+            <pool key="" clazz="" type="ftp" desc="FTP上的文件">
+                <conn></conn>
+                <match></match>
+            </pool>
+        </pools>
+<!--
+            <typer clazz="com.octopus.tools.dataclient.impl.engines.impl."></typer>
+-->
+        </engine>
+    </engines>
+
+    <listeners>
+    </listeners>
+    <events>
+    </events>
+
+    <dictionary clazz="com.octopus.tools.dataclient.impl.Dictionary" datasource="gs" >
+        <!-- 字段名称(系统内唯一)，字段之间关系(同表、依赖) -->
+        <fields>mysql/ISP_DICTIONARY_FIELD</fields>
+        <tables>mysql/ISP_DICTIONARY_TABLE</tables>
+        <relations>mysql/ISP_DICTIONARY_TABLE_REL</relations>
+    </dictionary>
+
+</dataclient>

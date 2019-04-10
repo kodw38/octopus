@@ -1,0 +1,90 @@
+package com.octopus.isp.bridge.launchers.impl.wsext;
+
+import com.octopus.isp.bridge.ILauncher;
+import com.octopus.isp.bridge.launchers.impl.WebServiceLauncher;
+import org.apache.axiom.om.OMElement;
+import org.apache.axis2.AxisFault;
+import org.apache.axis2.description.AxisMessage;
+import org.apache.axis2.description.AxisOperation;
+import org.apache.axis2.rpc.receivers.RPCInOnlyMessageReceiver;
+import org.apache.axis2.rpc.receivers.RPCUtil;
+import org.apache.axis2.wsdl.WSDLConstants;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+/**
+ * Created by kod on 2016/12/19.
+ */
+public class RPCMessageInReceiver extends RPCInOnlyMessageReceiver {
+    transient static Log log = LogFactory.getLog(RPCMessageInReceiver.class) ;
+
+    public void invokeBusinessLogic(org.apache.axis2.context.MessageContext inMessage) throws org.apache.axis2.AxisFault{
+            Method method = null;
+            try {
+                // get the implementation class for the Web Service
+                Object obj = getTheImplementationObject(inMessage);
+
+                Class ImplClass = obj.getClass();
+
+                AxisOperation op = inMessage.getOperationContext().getAxisOperation();
+
+
+                OMElement methodElement = inMessage.getEnvelope().getBody()
+                        .getFirstElement();
+                AxisMessage inAxisMessage = op.getMessage(WSDLConstants.MESSAGE_LABEL_IN_VALUE);
+                String messageNameSpace = null;
+
+                String methodName = op.getName().getLocalPart();
+                Method[] methods = ImplClass.getMethods();
+                for (int i = 0; i < methods.length; i++) {
+                    if (methods[i].isBridge()) {
+                        continue;
+                    }
+                    if (methods[i].getName().equals(methodName)) {
+                        method = methods[i];
+                        break;
+                    }
+                }
+                Class implClass = obj.getClass();
+                if (inAxisMessage != null) {
+                    ILauncher launcher = (ILauncher)inMessage.getRootContext().getProperty(WebServiceLauncher.LAUNCHER_PROPERTY_KEY);
+                    if(null != launcher){
+                        Object[] pars = RPCUtil.processRequest(methodElement,method,inMessage.getAxisService().getObjectSupplier());
+                        InvokeInfo data = new InvokeInfo(inMessage,implClass.getName(),method.getName(),pars);
+
+                        launcher.invoke(data);
+                    }else {
+                        RPCUtil.invokeServiceClass(inAxisMessage,
+                                method,
+                                obj,
+                                messageNameSpace,
+                                methodElement, inMessage);
+                    }
+
+                }
+                replicateState(inMessage);
+            } catch (InvocationTargetException e) {
+                Throwable cause = e.getCause();
+                if (cause != null) {
+                    String msg = cause.getMessage();
+                    if (msg == null) {
+                        msg = "Exception occurred while trying to invoke service method " +
+                                method.getName();
+                    }
+                    log.error(msg, cause);
+                } else {
+                    cause = e;
+                }
+                throw AxisFault.makeFault(cause);
+            } catch (Exception e) {
+                String msg = "Exception occurred while trying to invoke service method " +
+                        method.getName();
+                log.error(msg, e);
+                throw new AxisFault(msg, e);
+            }
+
+    }
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<queue clazz="com.octopus.tools.queue.KafkaQueue">
+    <instance>
+        <properties>
+            <property name="broker.id">0</property>
+            <property name="listeners">PLAINTEXT://:9092</property>
+            <property name="num.network.threads">3</property>
+            <property name="num.io.threads">8</property>
+            <property name="socket.send.buffer.bytes">102400</property>
+            <property name="socket.receive.buffer.bytes">102400</property>
+            <property name="socket.request.max.bytes">104857600</property>
+            <property name="num.partitions">1</property>
+            <property name="num.recovery.threads.per.data.dir">1</property>
+            <property name="offsets.topic.replication.factor">1</property>
+            <property name="transaction.state.log.replication.factor">1</property>
+            <property name="transaction.state.log.min.isr">1</property>
+            <property name="log.retention.hours">168</property>
+            <property name="log.segment.bytes">1073741824</property>
+            <property name="log.retention.check.interval.ms">300000</property>
+            <property name="zookeeper.connect">localhost:9001</property>
+            <property name="zookeeper.connection.timeout.ms">6000</property>
+            <property name="group.initial.rebalance.delay.ms">0</property>
+        </properties>
+    </instance>
+</queue>

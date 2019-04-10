@@ -1,0 +1,143 @@
+package com.octopus.isp.bridge.launchers.impl;
+
+import com.octopus.isp.bridge.IBridge;
+import com.octopus.isp.ds.RequestParameters;
+import com.octopus.isp.utils.SimpleFlyingServer;
+import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.cls.POJOUtil;
+import com.octopus.utils.exception.ExceptionUtil;
+import com.octopus.utils.xml.XMLMakeup;
+import com.octopus.utils.xml.XMLObject;
+import com.octopus.utils.xml.auto.ResultCheck;
+import com.octopus.utils.xml.auto.XMLDoObject;
+import com.octopus.utils.xml.auto.XMLParameter;
+import com.octopus.utils.xml.desc.Desc;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Created by kod on 2017/3/24.
+ */
+public class FlyingServerLauncher extends XMLDoObject {
+    boolean isdevelop=true;
+    SimpleFlyingServer flying;
+    public FlyingServerLauncher(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
+        super(xml, parent,containers);
+    }
+
+    @Override
+    public boolean checkInput(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
+        return true;
+    }
+
+    public static Object invoke(String srvName,String retClass,Object receive) throws Exception {
+        try {
+            Map in = POJOUtil.convertPojo2Map(receive);
+            IBridge bridge = (IBridge) getObjectById("bridge");
+            RequestParameters par = new RequestParameters();
+            par.setTargetNames(new String[]{srvName});
+            par.setRequestData(in);
+            long t = System.currentTimeMillis();
+            Object ret = bridge.evaluate(par);
+            System.out.println("I:"+(System.currentTimeMillis()-t));
+            if (null != ret) {
+                if (ret instanceof ResultCheck) {
+                    if (((ResultCheck) ret).isSuccess()) {
+                        ret = ((ResultCheck) ret).getRet();
+                        Type type = POJOUtil.getTypeByString(retClass);
+                        return POJOUtil.convertUSDL2POJO(ret, type);
+
+                    }else{
+                        if(((ResultCheck) ret).getRet() instanceof Exception){
+                            throw (Exception)((ResultCheck) ret).getRet();
+                        }
+                    }
+                }
+            }
+            return null;
+        }catch (Exception e){
+            log.error("FlyingService ["+srvName+"] invoke error ",e);
+            throw (Exception) ExceptionUtil.getRootCase(e);
+        }finally {
+            //System.out.println("T:"+(System.currentTimeMillis()-l));
+        }
+
+    }
+    @Override
+    public Object doSomeThing(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
+
+        if(null != config){
+            String port = (String)config.get("port");
+            String develop = (String)config.get("isdevelop");
+            if(StringUtils.isNotBlank(develop)){
+                isdevelop= StringUtils.isTrue(develop);
+            }
+            String compilepath = (String)config.get("compilepath");
+            List<String> list = (List)config.get("servicelist");
+            if(null != list && list.size()>0){
+                List<XMLDoObject> sers = getDeployServices(list);
+                if(null != sers){
+                    for(XMLDoObject ser:sers){
+                        String pack = ser.getXML().getProperties().getProperty("package");
+                        pack = pack.substring(0,pack.lastIndexOf("."));
+                        Class serClass=null;
+                        if(isdevelop) {
+                            serClass = Desc.getServiceWrapClassByDesc(ser.getXML().getId(), ser.getInvokeDescStructure(), compilepath, this.getClass().getName(), "invoke");
+                        }else{
+                            serClass = Class.forName(pack+"."+"proxy_"+ser.getXML().getId());
+                        }
+                        //deploy cxf web service
+                        if(null != serClass) {
+                            flying.addService(ser.getXML().getId(), serClass, serClass);
+                        }else{
+                            log.error("get desc service error.");
+                        }
+                    }
+
+                }
+            }
+            //get ServiceInfo;
+            if(null == flying){
+                flying=new SimpleFlyingServer((String)config.get("host"),(int)config.get("port"),(Map)config.get("parameters"),(Map)config.get("services"));
+            }
+        }
+
+        return null;
+    }
+    //filter loaded xmldoobject by path
+    List<XMLDoObject> getDeployServices(List<String> name){
+        Map<String,XMLObject> all = getXMLObjectContainer();
+        Iterator<String> its = all.keySet().iterator();
+        List<XMLDoObject> ret= new ArrayList();
+        while(its.hasNext()){
+            String m = its.next();
+            try {
+                if (all.get(m) instanceof XMLDoObject ){
+                    Map stru = ((XMLDoObject) all.get(m)).getInvokeDescStructure();
+                    if(null != stru &&  StringUtils.isNotBlank(stru.get("package"))) {
+                        String path = (String) stru.get("package");
+                        for (String n : name) {
+                            if (path.startsWith(n))
+                                ret.add((XMLDoObject) all.get(m));
+                        }
+                    }
+                }
+            }catch (Exception e){e.printStackTrace();}
+        }
+        return ret;
+    }
+
+    @Override
+    public ResultCheck checkReturn(String xmlid, XMLParameter env, Map input, Map output, Map config, Object ret) throws Exception {
+        return new ResultCheck(true,ret);
+    }
+
+    @Override
+    public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
+        return false;
+    }
+}

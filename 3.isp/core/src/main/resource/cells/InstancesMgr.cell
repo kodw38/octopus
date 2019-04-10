@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cell key="InstancesMgr"  xmlid="Cell">
+    <namespace clazz="com.octopus.utils.namespace.impl.Namespace">cell.instancesmgr</namespace>
+    <instances>
+       <instance key="" ip=""/>
+    </instances>
+    <!-- 自己的执行流程 -->
+    <flows xmlid="Flows">
+        <executor xmlid="ActionExecutor"/>
+        <flow xmlid="Flow" key="default" >
+            <node xmlid="Node" type="normal" seq="-1">
+                <before>
+                    <step seq="0" action="com.octopus.isp.cell.impl.ParameterConvert" desc="把参数分解、转换为一个或多个规则参数、并行执行"/>
+                </before>
+            </node>
+            <node xmlid="Node" type="normal" seq="-1">
+                <before>
+                    <step seq="1" action="com.octopus.isp.cell.impl.AuthCheck" desc="权限判断"/>
+                </before>
+            </node>
+            <node xmlid="Node" type="fork" seq="-1">
+                <before>
+                    <step seq="2" action="com.octopus.isp.cell.impl.ActionInvoke" desc="并行执行"/>
+                </before>
+            </node>
+            <node xmlid="Node" type="collection" seq="-1">
+                <before>
+                    <step seq="2" action="com.octopus.isp.cell.impl.ActionInvoke" desc="结果处理"/>
+                </before>
+            </node>
+        </flow>
+    </flows>
+</cell>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<instancesmgr clazz="">
+    <!-- 本实例资源判断 -->
+    <rj clazz=""/>
+    <!-- 可以扩展的主机实例信息 -->
+    <instances>
+        <instance ip="" port="" clazz="" limitcpu="" limitmem="" limitdisk=""/>
+    </instances>
+    <router>
+
+    </router>
+    <!-- 主机实例管理对具体调用方法的注册 -->
+    <invocationhandler clazz="com.octopus.tools.jvminsmgr.invokehandler.ExtendInstanceInvokeHandler" targetxmlids="cache" targetids="" desc="扩展实例方法调用">
+        <action seq="1" path="com.octopus.tools.jvminsmgr.invokehandler.RemoteCalLocalResourceInvokeAction" targetmethods="cache#add" desc="计算当前主机资源判断是否扩展调用，可以则扩展调用，本地不调用"/>
+        <action seq="2" path="com.octopus.tools.jvminsmgr.invokehandler.RemoteInvokeAction" targetmethods="cache#update,cache#delete,cache#get" desc="直接扩展调用，调用成功本地不调用，扩展中一个成功即为成功，失败调用本地"/>
+        <action seq="3" path="com.octopus.tools.jvminsmgr.invokehandler.MargeResultInvokeAction" targetmethods="cache#query" desc="直接扩展调用和本地调用，合并返回结果"/>
+    </invocationhandler>
+</instancesmgr>

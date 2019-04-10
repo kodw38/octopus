@@ -1,0 +1,150 @@
+<tablecontainer key="tablecontainer" clazz="com.octopus.tools.dataclient.v2.ds.TableContainer" config="{dataclient:'dataclient'}">
+    <ISP_DICTIONARY_FIELD  structure="[
+                {field:{fieldCode:'FIELD_NAME',fieldLen:'100',DBFieldType:'varchar'},notNull:'n',usedTypes:['Q']}
+                ,{field:{fieldCode:'FIELD_CODE',fieldLen:'50',DBFieldType:'varchar'},notNull:'y',usedTypes:['P']}
+                ,{field:{fieldCode:'STATE',fieldLen:'1',DBFieldType:'int'},notNull:'n',usedTypes:['Q']}
+                ,{field:{fieldCode:'FIELD_TYPE',fieldLen:'10',DBFieldType:'varchar'},notNull:'y',usedTypes:['Q']}
+                ,{field:{fieldCode:'REMARK',fieldLen:'256',DBFieldType:'varchar'},notNull:'n',usedTypes:['Q']}
+                ,{field:{fieldCode:'FIELD_LEN',fieldLen:'5',DBFieldType:'int'},notNull:'n',usedTypes:['Q']}
+                ,{field:{fieldCode:'FIELD_NUM',fieldLen:'5',DBFieldType:'varchar'},notNull:'n',usedTypes:['Q']}
+                ,{field:{fieldCode:'I18N',fieldLen:'20',DBFieldType:'varchar'},notNull:'n',usedTypes:['Q']}
+            ]" avoid_repeat="['FIELD_CODE']" desc="FIELD_TYPE:[{I:'integer type',S:'String type',T:'DateTime type',D:'Double type',L:'Long type'}]">
+        <!-- APP_FIELDS -->
+
+    </ISP_DICTIONARY_FIELD>
+    <ISP_DICTIONARY_TABLE structure="[
+               {field:{fieldCode:'TABLE_NAME',fieldLen:'500',DBFieldType:'varchar'},notNull:'n',usedTypes:['Q']}
+               ,{field:{fieldCode:'FIELD_CODE',fieldLen:'50',DBFieldType:'varchar'},notNull:'y',usedTypes:['Q']}
+               ,{field:{fieldCode:'STATE',fieldLen:'1',DBFieldType:'int'},notNull:'n',usedTypes:['Q']}
+               ,{field:{fieldCode:'USED_TYPES',fieldLen:'12',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+               ,{field:{fieldCode:'NOT_NULL',fieldLen:'1',DBFieldType:'int'},usedTypes:['Q'],notNull:'n'}
+               ,{field:{fieldCode:'TABLE_NUM',fieldLen:'5',DBFieldType:'int'},usedTypes:['Q'],notNull:'n'}
+               ,{field:{fieldCode:'REMARK',fieldLen:'1024',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+               ,{field:{fieldCode:'IS_CACHE',fieldLen:'1',DBFieldType:'int'},usedTypes:['Q'],notNull:'n'}
+            ]" avoid_repeat="['TABLE_NAME','FIELD_CODE']" desc="TABLE_NUM:'table No mapping for table name',IS_CACHE:'if cache in redis for center search in diff store',USED_TYPES:[P:'primary key',Q:'query field',I:'index field',D:'Data field']">
+        <!-- APP_TABLES -->
+
+    </ISP_DICTIONARY_TABLE>
+    <ISP_DICTIONARY_TABLE_ROUTER structure="[
+                {field:{fieldCode:'DATA_SOURCE',fieldLen:'50',DBFieldType:'varchar'},notNull:'n',usedTypes:['Q']}
+                ,{field:{fieldCode:'ROUTER_ID',fieldLen:'12',DBFieldType:'bigint'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'TABLE_NAME',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'SPLIT_EXPRESS',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'ROUTE_EXPRESS',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'SPLIT_RANGE',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'STATE',fieldLen:'1',DBFieldType:'int'},usedTypes:['Q'],notNull:'n'}
+            ]" avoid_repeat="['DATA_SOURCE','TABLE_NAME']" desc="DATA_SOURCE:'datasource key',table_name:'original table name',SPLIT_EXPRESS:'split table rule express',ROUTE_EXPRESS:'table position route rule express'">
+        <property ROUTER_ID="1" DATA_SOURCE="hbase" TABLE_NAME="ISP_SV_INTERRUPT" SPLIT_EXPRESS="" ROUTE_EXPRESS=""/>
+    </ISP_DICTIONARY_TABLE_ROUTER>
+    <ISP_DICTIONARY_TABLE_REL structure="[
+                {field:{fieldCode:'TABLE_REL_ID',fieldLen:'12',DBFieldType:'bigint'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'TABLE_NAME',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'FIELD_CODE',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'TABLE_NAME_REL',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'FIELD_CODE_REL',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'STATE',fieldLen:'1',DBFieldType:'int'},usedTypes:['Q'],notNull:'n'}
+            ]" avoid_repeat="['TABLE_NAME','FIELD_CODE','TABLE_NAME_REL','FIELD_CODE_REL']" desc="table object relationship mapping">
+        <!--<property TABLE_NAME="INS_OFFER_571" FIELD_CODE="USER_ID" TABLE_NAME_REL="INS_USER_571" FIELD_CODE_REL="USER_ID"/>-->
+    </ISP_DICTIONARY_TABLE_REL>
+    <ISP_DICTIONARY_CATALOG structure="[
+                {field:{fieldCode:'CATALOG_CODE',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'CATALOG_NAME',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'PARTNER_CATALOG_CODE',fieldLen:'12',DBFieldType:'int'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'CATALOG_NAME_PATH',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'CATALOG_CODE_PATH',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'LABELS',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'SORTS',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'CATALOG_TYPE',fieldLen:'100',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'REMARK',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'STATE',fieldLen:'1',DBFieldType:'int'},usedTypes:['Q'],notNull:'n'}
+            ]" desc="table object relationship mapping">
+        <!--<property TABLE_NAME="INS_OFFER_571" FIELD_CODE="USER_ID" TABLE_NAME_REL="INS_USER_571" FIELD_CODE_REL="USER_ID"/>-->
+    </ISP_DICTIONARY_CATALOG>
+    <ISP_DICTIONARY_CATALOG_SEARCH structure="[
+                {field:{fieldCode:'SEARCH_ID',fieldLen:'50',DBFieldType:'int'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'CATALOG_CODE',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'CATALOG_CODE_PATH',fieldLen:'200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'CATALOG_NAME_PATH',fieldLen:'200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'LABELS',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'REL_CODE',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'REL_NAME',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'CATALOG_TYPE',fieldLen:'1200',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'REMARK',fieldLen:'100',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+            ]" desc="table object relationship mapping">
+        <!--<property TABLE_NAME="INS_OFFER_571" FIELD_CODE="USER_ID" TABLE_NAME_REL="INS_USER_571" FIELD_CODE_REL="USER_ID"/>-->
+    </ISP_DICTIONARY_CATALOG_SEARCH>
+    <ISP_ALARM_TEMPLATE structure="[
+                {field:{fieldCode:'TEMPLATE_ID',fieldLen:'6',DBFieldType:'int'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'ACTION_NAME',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'ALARM_CHANNEL',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'TEMPLATE_NAME',fieldLen:'100',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'STATE',fieldLen:'1',DBFieldType:'int'},usedTypes:['Q'],notNull:'y'}
+            ]" desc="">
+    </ISP_ALARM_TEMPLATE>
+    <ISP_ALARM_IGNORE structure="[
+                {field:{fieldCode:'ACTION_NAME',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'IGNORE_MSG',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'STATE',fieldLen:'1',DBFieldType:'int'},usedTypes:['Q'],notNull:'y'}
+            ]" desc="">
+    </ISP_ALARM_IGNORE>
+    <ISP_ALARM_TEMPLATE_CONTENT structure="[
+                {field:{fieldCode:'TEMPLATE_NAME',fieldLen:'100',DBFieldType:'varchar'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'I18N',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'TEMPLATE_CONTENT',fieldLen:'2000',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'STATE',fieldLen:'1',DBFieldType:'int'},usedTypes:['Q'],notNull:'y'}
+            ]" desc="">
+    </ISP_ALARM_TEMPLATE_CONTENT>
+    <ISP_ALARM structure="[
+                {field:{fieldCode:'ALARM_ID',fieldLen:'6',DBFieldType:'int'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'TEMPLATE_ID',fieldLen:'6',DBFieldType:'int'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'ALARM_OBJECT_TYPE',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'ALARM_OBJECT_VALUE',fieldLen:'500',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+            ]" desc="">
+    </ISP_ALARM>
+    <ISP_SEQUENCES structure="[
+                {field:{fieldCode:'SEQUENCE_NAME',fieldLen:'150',DBFieldType:'varchar'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'INCREMENT_BY',fieldLen:'6',DBFieldType:'int'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'LAST_NUMBER',fieldLen:'12',DBFieldType:'bigint'},usedTypes:['Q'],notNull:'y'}
+            ]" avoid_repeat="['SEQUENCE_NAME']" desc="table object relationship mapping">
+        <property SEQUENCE_NAME="ISP_DICTIONARY_TABLE$SEQ" INCREMENT_BY="1" LAST_NUMBER="1"/>
+        <property SEQUENCE_NAME="ISP_DICTIONARY_TABLE_ROUTER$SEQ" INCREMENT_BY="1" LAST_NUMBER="1"/>
+        <property SEQUENCE_NAME="ISP_DICTIONARY_TABLE_REL$SEQ" INCREMENT_BY="1" LAST_NUMBER="1"/>
+        <property SEQUENCE_NAME="ISP_DICTIONARY_CATALOG_SEARCH$SEQ" INCREMENT_BY="1" LAST_NUMBER="1"/>
+        <property SEQUENCE_NAME="ISP_ALARM$SEQ" INCREMENT_BY="1" LAST_NUMBER="1"/>
+        <property SEQUENCE_NAME="ISP_ALARM_TEMPLATE$SEQ" INCREMENT_BY="1" LAST_NUMBER="1"/>
+        <property SEQUENCE_NAME="ISP_BINLOG_POINT$SEQ" INCREMENT_BY="1" LAST_NUMBER="1"/>
+        <property SEQUENCE_NAME="ISP_ROLE_DATA$SEQ" INCREMENT_BY="1" LAST_NUMBER="10000"/>
+        <property SEQUENCE_NAME="ISP_ROLE_DATA_DEFINE$SEQ" INCREMENT_BY="1" LAST_NUMBER="10000"/>
+        <property SEQUENCE_NAME="ISP_ROLE_SRV_DEFINE$SEQ" INCREMENT_BY="1" LAST_NUMBER="10000"/>
+        <property SEQUENCE_NAME="ISP_USER_ROLE$SEQ" INCREMENT_BY="1" LAST_NUMBER="10000"/>
+        <property SEQUENCE_NAME="ISP_I18N$SEQ" INCREMENT_BY="1" LAST_NUMBER="10000"/>
+    </ISP_SEQUENCES>
+    <LOG_REPORT_GENERATOR structure="[
+                {field:{fieldCode:'SV_NAME',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'B_DATE',fieldLen:'',DBFieldType:'datetime'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'F_DATE',fieldLen:'',DBFieldType:'datetime'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'FILE_NAME',fieldLen:'255',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'FTP_PATH',fieldLen:'255',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'FILE_SIZE',fieldLen:'20',DBFieldType:'bigint'},usedTypes:['Q'],notNull:'n'}
+            ]" avoid_repeat="['SEQUENCE_NAME']" desc="table object relationship mapping">
+    </LOG_REPORT_GENERATOR>
+    <ISP_SV_INTERRUPT ds="hbase" structure="[
+                {field:{fieldCode:'REQ_ID',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'REQ_DATA',fieldLen:'1024',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'SV_NAME',fieldLen:'100',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'SV_INFO',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'STATE',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'REDO_TYPE',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'OP_CODE',fieldLen:'50',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+            ]" avoid_repeat="['REQ_ID']" desc="table object relationship mapping">
+    </ISP_SV_INTERRUPT>
+    <ISP_AUTH_CLIENT_INFO  structure="[
+                {field:{fieldCode:'CLIENT_ID',fieldLen:'32',DBFieldType:'varchar'},usedTypes:['P'],notNull:'y'}
+                ,{field:{fieldCode:'CLIENT_SECRET',fieldLen:'32',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'CLIENT_NAME',fieldLen:'100',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'CLIENT_INFO',fieldLen:'100',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'n'}
+                ,{field:{fieldCode:'CREATE_DATE',fieldLen:'20',DBFieldType:'date'},usedTypes:['Q'],notNull:'y'}
+                ,{field:{fieldCode:'STATE',fieldLen:'10',DBFieldType:'varchar'},usedTypes:['Q'],notNull:'y'}
+            ]" avoid_repeat="['CLIENT_ID']" desc="auth function client info">
+    </ISP_AUTH_CLIENT_INFO>
+</tablecontainer>

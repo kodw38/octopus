@@ -1,0 +1,163 @@
+package com.octopus.isp.bridge.launchers.impl.pageframe.channel;
+
+import com.octopus.isp.bridge.launchers.impl.pageframe.util.HttpUtils;
+import com.octopus.isp.ds.RequestParameters;
+import com.octopus.portal.framework.external.IPopedom;
+import com.octopus.utils.alone.ArrayUtils;
+import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.xml.XMLMakeup;
+import com.octopus.utils.xml.XMLObject;
+import com.octopus.utils.xml.auto.ResultCheck;
+import com.octopus.utils.xml.auto.XMLDoObject;
+import com.octopus.utils.xml.auto.XMLParameter;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.Map;
+
+/**
+ * User: wfgao_000
+ * Date: 15-8-20
+ * Time: 下午4:05
+ */
+public class SsoChannel extends XMLDoObject {
+    SsoConfig ssoConfig=null;
+
+    public SsoChannel(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
+        super(xml, parent,containers);
+        XMLMakeup sso = (XMLMakeup)ArrayUtils.getFirst(xml.getChild("sso"));
+        if(null != sso){
+            ssoConfig = new SsoConfig();
+            ssoConfig.setCrmSSOServerName(sso.getChild("servername-portal")[0].getText().trim());
+            ssoConfig.setSsoServerNameOf4A(sso.getChild("servername-4asso")[0].getText().trim());
+            ssoConfig.setStrImplClassName(sso.getChild("impl-classname")[0].getText().trim());
+            ssoConfig.setSuccessHome(sso.getChild("success-home")[0].getText().trim());
+            ssoConfig.setIsLog(sso.getChild("islog")[0].getText().trim());
+            // tian jia 灰白路由
+            ssoConfig.setGrayRoute(sso.getChild("isGrayRoute")[0].getText().trim().equals("Y")?true:false);
+            ssoConfig.setSuccessGrayHome(sso.getChild("successGray-Home")[0].getText().trim());
+
+            String allPath = sso.getChild("allowpath")[0].getText().trim();
+            if (allPath == null)
+                allPath = "";
+            String tempArr[] = StringUtils.split(allPath, ";");
+            for (int i = 0; i < tempArr.length; i++)
+                ssoConfig.getArrPathList().add(tempArr[i]);
+
+            try {
+                Class cls = Class.forName(ssoConfig.getStrImplClassName());
+                ssoConfig.setIpopedom((IPopedom) cls.newInstance());
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            } catch (InstantiationException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public Object doSomeThing(String xmlid,XMLParameter env, Map input, Map output, Map config) throws Exception {
+        RequestParameters param = (RequestParameters)env;
+
+        HttpServletRequest request = (HttpServletRequest)param.getParameter("${request}");
+        HttpServletResponse response = (HttpServletResponse)param.getParameter("${response}");
+        try {
+                boolean isPass = ssoConfig.getIpopedom().setFirstPopedom(request, response, ssoConfig.getArrPathList(),
+                        ssoConfig.getCrmSSOServerName());
+                if (isPass) {
+                    HttpUtils httpUtils = (HttpUtils)getObjectById("HttpUtils");
+                    httpUtils.setLogin(env);
+                }else{
+                    throw new Exception("sso login error.");
+                }
+        } catch (Exception e) {
+            throw e;
+        }
+        return null;
+    }
+
+    @Override
+    public boolean checkInput(String xmlid,XMLParameter env, Map input, Map output, Map config) throws Exception {
+        return true;
+    }
+
+    @Override
+    public ResultCheck checkReturn(String xmlid,XMLParameter env, Map input, Map output, Map config, Object ret) throws Exception {
+        return new ResultCheck(true,null);
+    }
+
+    @Override
+    public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
+        return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    class SsoConfig{
+        private ArrayList arrPathList = new ArrayList();
+        private String strImplClassName;
+        public String isLog = "false";
+        private String crmSSOServerName = "";
+        private String ssoServerNameOf4A = "";
+        private String successHome = "";
+        private String successGrayHome=""; //灰路由主页
+        private boolean isGrayRoute;// 是否灰白路由
+        public final String actionName = "activeSession";
+        private IPopedom ipopedom;
+        public String getStrImplClassName() {
+            return strImplClassName;
+        }
+        public void setStrImplClassName(String strImplClassName) {
+            this.strImplClassName = strImplClassName;
+        }
+        public String getIsLog() {
+            return isLog;
+        }
+        public void setIsLog(String isLog) {
+            this.isLog = isLog;
+        }
+        public String getCrmSSOServerName() {
+            return crmSSOServerName;
+        }
+        public void setCrmSSOServerName(String crmSSOServerName) {
+            this.crmSSOServerName = crmSSOServerName;
+        }
+        public String getSsoServerNameOf4A() {
+            return ssoServerNameOf4A;
+        }
+        public void setSsoServerNameOf4A(String ssoServerNameOf4A) {
+            this.ssoServerNameOf4A = ssoServerNameOf4A;
+        }
+        public IPopedom getIpopedom() {
+            return ipopedom;
+        }
+        public void setIpopedom(IPopedom ipopedom) {
+            this.ipopedom = ipopedom;
+        }
+        public ArrayList getArrPathList() {
+            return arrPathList;
+        }
+        public String getActionName() {
+            return actionName;
+        }
+        public String getSuccessHome() {
+            return successHome;
+        }
+        public void setSuccessHome(String successHome) {
+            this.successHome = successHome;
+        }
+        public String getSuccessGrayHome() {
+            return successGrayHome;
+        }
+        public void setSuccessGrayHome(String successGrayHome) {
+            this.successGrayHome = successGrayHome;
+        }
+        public boolean isGrayRoute() {
+            return isGrayRoute;
+        }
+        public void setGrayRoute(boolean isGrayRoute) {
+            this.isGrayRoute = isGrayRoute;
+        }
+    }
+}

@@ -1,0 +1,184 @@
+package com.octopus.tools.queue;
+
+import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.xml.XMLMakeup;
+import com.octopus.utils.xml.XMLObject;
+import com.octopus.utils.xml.auto.ResultCheck;
+import com.octopus.utils.xml.auto.XMLDoObject;
+import com.octopus.utils.xml.auto.XMLParameter;
+import org.apache.activemq.ActiveMQConnection;
+import org.apache.activemq.ActiveMQConnectionFactory;
+
+import javax.jms.*;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * User: wfgao_000
+ * Date: 16-9-7
+ * Time: 上午8:40
+ */
+public class ActiveMQ extends XMLDoObject {
+    private String user = ActiveMQConnection.DEFAULT_USER;
+
+    private String password = ActiveMQConnection.DEFAULT_PASSWORD;
+
+    private String url = ActiveMQConnection.DEFAULT_BROKER_URL;
+
+    private String subject = "TOOL.DEFAULT";
+
+    private Destination destination = null;
+
+    private Connection connection = null;
+
+    private Map<String,Session> sessions = new HashMap();
+
+    private Map<String,MessageConsumer> consumers = new HashMap();
+    private Map<String,MessageProducer> producers = new HashMap();
+
+    public ActiveMQ(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
+        super(xml, parent,containers);
+        String config = (String)xml.getProperties().get("config");
+        if(StringUtils.isNotBlank(config)){
+            Map c = StringUtils.convert2MapJSONObject(config);
+            if(StringUtils.isNotBlank(c.get("user"))){
+                user = (String)c.get("user");
+            }
+            if(StringUtils.isNotBlank(c.get("password"))){
+                password = (String)c.get("password");
+            }
+            if(StringUtils.isNotBlank(c.get("url"))){
+                url = (String)c.get("url");
+            }
+        }
+        ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
+                user, password, url);
+        connection = connectionFactory.createConnection();
+        connection.start();
+    }
+    public void createSession(String subject)throws Exception{
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        destination = session.createQueue(subject);
+        MessageConsumer consumer = session.createConsumer(destination);
+        MessageProducer producer = session.createProducer(destination);
+        producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
+
+        if(!sessions.containsKey(subject))
+            sessions.put(subject,session);
+        if(!consumers.containsKey(subject))
+            consumers.put(subject,consumer);
+        if(!producers.containsKey(subject))
+            producers.put(subject,producer);
+    }
+    // 消费消息
+    public void consumeMessage() throws JMSException, Exception {
+
+        System.out.println("Consumer:->Begin listening...");
+        // 开始监听
+        //consumer.setMessageListener(this);
+        // Message message = consumer.receive();
+    }
+    public void close(String subject) throws JMSException {
+       // System.out.println("Consumer:->Closing connection");
+        if (consumers.containsKey(subject)){
+            consumers.get(subject).close();
+            consumers.remove(subject);
+        }
+        if(producers.containsKey(subject)){
+            producers.get(subject).close();
+            producers.remove(subject);
+        }
+        if (sessions.containsKey(subject)){
+            sessions.get(subject).close();
+            sessions.remove(subject);
+        }
+
+    }
+    public void send(String subject,String msg)throws Exception{
+        if(sessions.containsKey(subject)){
+            TextMessage message = sessions.get(subject).createTextMessage(msg);
+            producers.get(subject).send(message);
+        }
+
+    }
+    // 消息处理函数
+    public void onMessage(Message message) {
+        try {
+            if (message instanceof TextMessage) {
+                TextMessage txtMsg = (TextMessage) message;
+                String msg = txtMsg.getText();
+                System.out.println("Consumer:->Received: " + msg);
+            } else {
+                System.out.println("Consumer:->Received: " + message);
+            }
+        } catch (JMSException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+    String getSessionId(XMLParameter env){
+        if(null != env.getParameter("${session}")){
+            Object obj = env.getParameter("${session}");
+            if(obj instanceof Map){
+                String sessionId = (String)((Map)obj).get("KEY_SESSION_ID");
+                if(StringUtils.isNotBlank(sessionId)){
+                    return sessionId;
+                }
+            }
+        }
+        return null;
+    }
+    boolean contains(String id){
+        return sessions.containsKey(id);
+    }
+    @Override
+    public Object doSomeThing(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
+        if(null!=input){
+            if("create".equals(input.get("op"))){
+                String sessionId = getSessionId(env);
+                if(StringUtils.isNotBlank(sessionId)){
+                    createSession(sessionId);
+                    return true;
+                }
+            }else if("put".equals(input.get("op")) && StringUtils.isNotBlank(input.get("data"))){
+                String id = getSessionId(env);
+                System.out.println("sessionId:"+id);
+                if(StringUtils.isNotBlank(id)){
+                    if(!contains(id))
+                        createSession(id);
+                    send(getSessionId(env),(String)input.get("data"));
+                    return true;
+                }
+            }else if("close".equals(input.get("op"))){
+                close(getSessionId(env));
+                return true;
+            }
+        }
+        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void doInitial() throws Exception {
+
+    }
+
+    @Override
+    public boolean checkInput(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
+        return true;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public ResultCheck checkReturn(String xmlid, XMLParameter env, Map input, Map output, Map config, Object ret) throws Exception {
+        return new ResultCheck(true,ret);  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public boolean commit(String xmlid, XMLParameter env, Map input, Map output, Map config, Object ret) throws Exception {
+        return false;
+    }
+
+    @Override
+    public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
+        return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+}

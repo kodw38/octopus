@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dcs>
+    <dc id="my1-1" ds="">
+        <commd>UPDATE CS.CS_RPT_DAILY_AGING T1 SET T1.CUR_ORG_NAME = (SELECT T2.ORGANIZE_NAME FROM sec.sec_organize T2 WHERE T2.ORGANIZE_ID = T1.CUR_ORG_ID) WHERE t1.RPT_DAY = :RPT_YESTODAY</commd>
+        <rollback></rollback>
+    </dc>
+    <dc id="my1-2" ds="tt">
+        <commd>UPDATE CS.CS_RPT_DAILY_AGING T1 SET T1.CUR_ORG_NAME = (SELECT T2.ORGANIZE_NAME FROM sec.sec_organize T2 WHERE T2.ORGANIZE_ID = T1.CUR_ORG_ID) WHERE t1.RPT_DAY = :RPT_YESTODAY</commd>
+        <rollback></rollback>
+    </dc>
+</dcs>

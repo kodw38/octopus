@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<alarm clazz="">
+    <queues>
+        <queue key="immediate" clazz=""/>
+        <queue key="cron" clazz=""/>
+    </queues>
+    <opportunities>
+        <opportunity key="immediate" clazz=""></opportunity>
+        <opportunity key="cron" times="" clazz=""></opportunity>
+    </opportunities>
+    <styles>
+        <style clazz="" desc="站内消息"></style>
+        <style clazz="" desc="短信"></style>
+    </styles>
+    <!-- 根据 消息源、操作员，获取发送和抄送的对象，使用Resource获取-->
+    <receiver clazz="" opcode="" />
+</alarm>

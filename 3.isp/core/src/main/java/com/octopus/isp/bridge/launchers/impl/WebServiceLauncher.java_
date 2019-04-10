@@ -1,0 +1,211 @@
+package com.octopus.isp.bridge.launchers.impl;
+
+import com.octopus.isp.bridge.IBridge;
+import com.octopus.isp.bridge.ILauncher;
+import com.octopus.isp.bridge.impl.Bridge;
+import com.octopus.isp.bridge.launchers.IConvert;
+import com.octopus.isp.bridge.launchers.impl.wsext.InvokeInfo;
+import com.octopus.isp.ds.ClientInfo;
+import com.octopus.isp.ds.Context;
+import com.octopus.isp.ds.RequestParameters;
+import com.octopus.utils.alone.ObjectUtils;
+import com.octopus.utils.xml.XMLMakeup;
+import com.octopus.utils.xml.XMLObject;
+import com.octopus.utils.xml.auto.ResultCheck;
+import com.octopus.utils.xml.auto.XMLDoObject;
+import com.octopus.utils.xml.auto.XMLParameter;
+import org.apache.axis2.AxisFault;
+import org.apache.axis2.context.ConfigurationContext;
+import org.apache.axis2.context.ConfigurationContextFactory;
+import org.apache.axis2.deployment.DeploymentEngine;
+import org.apache.axis2.description.Parameter;
+import org.apache.axis2.engine.AxisConfiguration;
+import org.apache.axis2.engine.AxisConfigurator;
+import org.apache.axis2.engine.AxisServer;
+
+import java.io.InputStream;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
+/**
+ * User: wfgao_000
+ * Date: 15-8-7
+ * Time: 上午9:01
+ */
+public class WebServiceLauncher extends XMLDoObject implements ILauncher{
+    IConvert inputconvert;
+    IConvert outputconvert;
+    public static String LAUNCHER_PROPERTY_KEY="WSServiceLauncher";
+
+    ConfigurationContext context = null;
+    public WebServiceLauncher(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
+        super(xml, parent,containers);
+    }
+
+    @Override
+    public void start() throws Exception {
+        WSServer server = new WSServer();
+        server.setConfigurationContext(context);
+        server.getConfigurationContext().setProperty(LAUNCHER_PROPERTY_KEY,this);
+        server.start();
+    }
+
+    @Override
+    public boolean addEnv(String key, Object value) {
+        Object o = getRoot() ;
+        if(null != o && o instanceof Bridge){
+            if(null !=((Bridge)o).getEnv()){
+                ((Bridge)o).getEnv().getEnv().addParameter(key,value);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public Object invoke(Object obj) throws Exception {
+        if(null!=obj && obj instanceof InvokeInfo){
+            RequestParameters pars = new RequestParameters();
+            InvokeInfo data = (InvokeInfo)obj;
+            pars.setQueryString(data.getClassName());
+            HashMap properties = new HashMap();
+            properties.put("action", data.getMethodName());
+            Properties p = data.getProperties();
+            pars.addClientInfo(ClientInfo.CLIENT_IP,p.getProperty("REMOTE_ADDR"));
+            pars.addAllHeader(data.getProperties());
+            pars.addAllHeader((Map)data.getProperties().get("TRANSPORT_HEADERS"));
+            /*pars.setContextPath();
+            pars.setRequestURL();
+            pars.setRequestDate();
+            */
+            pars.setTargetNames(new String[]{data.getMethodName()});
+            properties.putAll(data.getHeader());
+            pars.setQueryStringMap(properties);
+            Object objpar = data.getPars();
+            if(objpar.getClass().isArray()){
+                if(((Object[])objpar).length>0)
+                    objpar=((Object[])objpar)[0];
+                else
+                    objpar=null;
+            }
+            if(null != inputconvert && null != objpar){
+                objpar = inputconvert.convert(objpar);
+            }
+            pars.setRequestData(objpar);
+            pars.setRequestDate(new Date());
+            Context context = new Context();
+
+            pars.setContext(context);
+            //pars.setRequestId();
+            //pars.setRequestURL();
+
+            ((IBridge)getPropertyObject("bridge")).evaluate(pars);
+            Object ret = pars.getResult();
+            if(null != ret){
+                Object result = null;
+                if(ret instanceof ResultCheck){
+                    if(((ResultCheck)ret).isSuccess())
+                        result=((ResultCheck)ret).getRet();
+                    else
+                        return  ((ResultCheck)ret).getRet();
+                }else{
+                    result=ret;
+                }
+                if(null != outputconvert ){
+                     result =outputconvert.convert(result);
+                }
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Object doSomeThing(String xmlid,XMLParameter env, Map input, Map output, Map config) throws Exception {
+        context = ConfigurationContextFactory.createConfigurationContext(new XMLConfigurator(this,getXML()));
+        start();
+        return null;
+    }
+
+    @Override
+    public void doInitial() throws Exception {
+
+    }
+
+    @Override
+    public boolean checkInput(String xmlid,XMLParameter env, Map input, Map output, Map config) throws Exception {
+        return true;
+    }
+
+    @Override
+    public ResultCheck checkReturn(String xmlid,XMLParameter env, Map input, Map output, Map config, Object ret) throws Exception {
+        return new ResultCheck(true,null);
+    }
+
+    @Override
+    public boolean commit(String xmlid, XMLParameter env, Map input, Map output, Map config, Object ret) throws Exception {
+        return false;
+    }
+
+    @Override
+    public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
+        return false;
+    }
+    class WSServer extends AxisServer{
+        public WSServer(){
+            super(false);
+        }
+        public void start() throws AxisFault {
+            super.start();
+        }
+    }
+    class XMLConfigurator  extends DeploymentEngine implements AxisConfigurator{
+        private XMLMakeup axis2xml = null;
+        XMLObject top;
+        public XMLConfigurator(XMLObject top,XMLMakeup xml)throws AxisFault{
+            axis2xml=xml;
+            this.top = top;
+        }
+
+        public synchronized AxisConfiguration getAxisConfiguration()throws AxisFault{
+            try{
+                InputStream configStream = ObjectUtils.convert2InputStream(axis2xml.toString().getBytes());
+                this.axisConfig = populateAxisConfiguration(configStream);
+            }catch (Exception e){
+                e.printStackTrace();
+                throw new AxisFault("System can not find the given axis2.xml " + this.axis2xml);
+            }
+            Parameter gp = new Parameter();
+            gp.setName(LAUNCHER_PROPERTY_KEY);
+            gp.setValue(top);
+            this.axisConfig.addParameter(gp);
+            Parameter axis2repoPara = this.axisConfig.getParameter("repository");
+            if (axis2repoPara != null) {
+                String repoLocation = ((String)axis2repoPara.getValue());
+                if ((repoLocation != null) && (!"".equals(repoLocation))) {
+                    loadRepository(repoLocation);
+                } else {
+                    loadFromClassPath();
+                }
+            }
+
+            Parameter p = new Parameter();
+            p.setName("services");
+            p.setValue(axis2xml.getChild("services"));
+            this.axisConfig.addParameter(p);
+
+            this.axisConfig.setConfigurator(this);
+            return this.axisConfig;
+        }
+
+        public void engageGlobalModules()throws AxisFault{
+            //engageModules();
+        }
+
+        public void loadServices(){
+            super.loadServices();
+        }
+    }
+}

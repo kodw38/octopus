@@ -1,0 +1,257 @@
+package com.octopus.isp.bridge.launchers.impl.wsext;
+
+import com.octopus.isp.bridge.ILauncher;
+import com.octopus.isp.bridge.launchers.impl.WebServiceLauncher;
+import org.apache.axiom.om.OMAbstractFactory;
+import org.apache.axiom.om.OMElement;
+import org.apache.axiom.om.OMNamespace;
+import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.axiom.soap.SOAPEnvelope;
+import org.apache.axiom.soap.SOAPFactory;
+import org.apache.axis2.AxisFault;
+import org.apache.axis2.context.MessageContext;
+import org.apache.axis2.context.ServiceContext;
+import org.apache.axis2.databinding.utils.BeanUtil;
+import org.apache.axis2.description.AxisMessage;
+import org.apache.axis2.description.AxisOperation;
+import org.apache.axis2.description.AxisService;
+import org.apache.axis2.description.Parameter;
+import org.apache.axis2.description.java2wsdl.TypeTable;
+import org.apache.axis2.engine.DependencyManager;
+import org.apache.axis2.i18n.Messages;
+import org.apache.axis2.rpc.receivers.RPCMessageReceiver;
+import org.apache.axis2.rpc.receivers.RPCUtil;
+import org.apache.axis2.util.StreamWrapper;
+import org.apache.axis2.util.Utils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import javax.xml.namespace.QName;
+import javax.xml.stream.XMLStreamReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+/**
+ * User: wfgao_000
+ * Date: 15-8-10
+ * Time: 上午8:35
+ */
+public class RPCMessageOutReceiver extends RPCMessageReceiver{
+    transient static Log log = LogFactory.getLog(RPCMessageOutReceiver.class) ;
+
+    /**
+     * Invokes the bussiness logic invocation on the service implementation class
+     *
+     * @param inMessage    the incoming message context
+     * @param outMessage the response message context
+     * @throws AxisFault on invalid method (wrong signature) or behaviour (return null)
+     */
+    public void invokeBusinessLogic(MessageContext inMessage, MessageContext outMessage)
+            throws AxisFault {
+        Method method = null;
+        try
+        {
+            Object obj = getTheImplementationObject(inMessage);
+
+            Class implClass = obj.getClass();
+
+            AxisOperation op = inMessage.getOperationContext().getAxisOperation();
+            method = (Method)op.getParameterValue("myMethod");
+            if ((method != null) && (method.getDeclaringClass() != implClass)) {
+                method = null;
+            }
+            AxisService service = inMessage.getAxisService();
+            OMElement methodElement = inMessage.getEnvelope().getBody().getFirstElement();
+
+            AxisMessage inAxisMessage = op.getMessage("In");
+            String messageNameSpace = null;
+            if (method == null)
+            {
+                String methodName = op.getName().getLocalPart();
+                Method[] methods = implClass.getMethods();
+                for (Method method1 : methods) {
+                    if (!method1.isBridge()) {
+                        if (method1.getName().equals(methodName))
+                        {
+                            method = method1;
+                            op.addParameter("myMethod", method);
+                            break;
+                        }
+                    }
+                }
+                if (method == null) {
+                    throw new AxisFault("No such method '" + methodName + "' in class " + implClass.getName());
+                }
+            }
+            Object resObject = null;
+            if (inAxisMessage != null) {
+                ILauncher launcher = (ILauncher)inMessage.getRootContext().getProperty(WebServiceLauncher.LAUNCHER_PROPERTY_KEY);
+                if(null != launcher){
+                    Object[] pars = RPCUtil.processRequest(methodElement,method,inMessage.getAxisService().getObjectSupplier());
+                    InvokeInfo data = new InvokeInfo(inMessage,implClass.getName(),method.getName(),pars);
+
+                    resObject = launcher.invoke(data);
+                }else{
+                    resObject = RPCUtil.invokeServiceClass(inAxisMessage, method, obj, messageNameSpace, methodElement, inMessage);
+                }
+            }
+            SOAPFactory fac = getSOAPFactory(inMessage);
+
+
+            AxisMessage outaxisMessage = op.getMessage("Out");
+            if ((outaxisMessage != null) && (outaxisMessage.getElementQName() != null)) {
+                messageNameSpace = outaxisMessage.getElementQName().getNamespaceURI();
+            } else {
+                messageNameSpace = service.getTargetNamespace();
+            }
+            OMNamespace ns = fac.createOMNamespace(messageNameSpace, service.getSchemaTargetNamespacePrefix());
+
+            SOAPEnvelope envelope = fac.getDefaultEnvelope();
+            OMElement bodyContent = null;
+            if ("http://www.w3.org/ns/wsdl/robust-in-only".equals(op.getMessageExchangePattern()))
+            {
+                if (outMessage.getAxisMessage().getName() != null)
+                {
+                    OMElement bodyChild = fac.createOMElement(outMessage.getAxisMessage().getName(), ns);
+                    envelope.getBody().addChild(bodyChild);
+                }
+                outMessage.setEnvelope(envelope);
+                return;
+            }
+            Parameter generateBare = service.getParameter("doclitBare");
+            if ((generateBare != null) && ("true".equals(generateBare.getValue()))) {
+                RPCUtil.processResonseAsDocLitBare(resObject, service, envelope, fac, ns, bodyContent, outMessage);
+            } else {
+                RPCUtil.processResponseAsDocLitWrapped(resObject, service, method, envelope, fac, ns, bodyContent, outMessage);
+            }
+            outMessage.setEnvelope(envelope);
+        }
+        catch (InvocationTargetException e)
+        {
+            String msg = null;
+            Throwable cause = e.getCause();
+            if (cause != null) {
+                msg = cause.getMessage();
+            }
+            if (msg == null) {
+                msg = "Exception occurred while trying to invoke service method " + (method != null ? method.getName() : "null");
+            }
+            if ((cause instanceof AxisFault))
+            {
+                log.debug(msg, cause);
+                throw ((AxisFault)cause);
+            }
+            Class[] exceptionTypes = method.getExceptionTypes();
+            for (Class exceptionType : exceptionTypes) {
+                if (exceptionType.getName().equals(cause.getClass().getName()))
+                {
+                    String partQName = inMessage.getAxisService().getName() + getSimpleClassName(exceptionType);
+                    TypeTable typeTable = inMessage.getAxisService().getTypeTable();
+                    QName elementQName = typeTable.getQNamefortheType(partQName);
+                    SOAPFactory fac = getSOAPFactory(inMessage);
+                    OMElement exceptionElement = fac.createOMElement(elementQName);
+                    if (exceptionType.getName().equals(Exception.class.getName()))
+                    {
+                        OMElement innterExceptionElement = fac.createOMElement(elementQName);
+                        OMElement messageElement = fac.createOMElement("Message", inMessage.getAxisService().getTargetNamespace(), null);
+                        messageElement.setText(cause.getMessage());
+
+                        innterExceptionElement.addChild(messageElement);
+                        exceptionElement.addChild(innterExceptionElement);
+                    }
+                    else
+                    {
+                        QName innerElementQName = new QName(elementQName.getNamespaceURI(), getSimpleClassName(exceptionType));
+                        XMLStreamReader xr = BeanUtil.getPullParser(cause, innerElementQName, typeTable, true, false);
+
+                        StAXOMBuilder stAXOMBuilder = new StAXOMBuilder(OMAbstractFactory.getOMFactory(), new StreamWrapper(xr));
+                        OMElement documentElement = stAXOMBuilder.getDocumentElement();
+                        exceptionElement.addChild(documentElement);
+                    }
+                    AxisFault axisFault = new AxisFault(cause.getMessage());
+                    axisFault.setDetail(exceptionElement);
+                    throw axisFault;
+                }
+            }
+            log.error(msg, e);
+            throw new AxisFault(msg, e);
+        }
+        catch (RuntimeException e)
+        {
+            log.error(e.getMessage(), e);
+            throw AxisFault.makeFault(e);
+        }
+        catch (Exception e)
+        {
+            String msg = "Exception occurred while trying to invoke service method " + (method != null ? method.getName() : "null");
+
+            log.error(msg, e);
+            throw AxisFault.makeFault(e);
+        }
+    }
+
+    protected String getSimpleClassName(Class type)
+    {
+        String simpleClassName = type.getName();
+        int idx = simpleClassName.lastIndexOf('.');
+        if ((idx != -1) && (idx < simpleClassName.length() - 1)) {
+            simpleClassName = simpleClassName.substring(idx + 1);
+        }
+        return simpleClassName.replace('$', '_');
+    }
+
+    Method getMethod(MessageContext inMessage){
+        Method method = null;
+        try
+        {
+            Object obj = getTheImplementationObject(inMessage);
+
+            Class ImplClass = obj.getClass();
+
+            AxisOperation op = inMessage.getOperationContext().getAxisOperation();
+
+            OMElement methodElement = inMessage.getEnvelope().getBody().getFirstElement();
+
+
+            AxisMessage inAxisMessage = op.getMessage("In");
+            String messageNameSpace = null;
+            String methodName = op.getName().getLocalPart();
+            Method[] methods = ImplClass.getMethods();
+            for (int i = 0; i < methods.length; i++) {
+                if (!methods[i].isBridge()) {
+                    if (methods[i].getName().equals(methodName))
+                    {
+                        method = methods[i];
+                        break;
+                    }
+                }
+            }
+            return method;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+    protected Object getTheImplementationObject(MessageContext msgContext)
+            throws AxisFault
+    {
+        ServiceContext serviceContext = msgContext.getServiceContext();
+        Object serviceimpl = serviceContext.getProperty("serviceObject");
+        if (serviceimpl != null) {
+            return serviceimpl;
+        }
+        serviceimpl = makeNewServiceObject(msgContext);
+
+        DependencyManager.initServiceObject(serviceimpl, msgContext.getServiceContext());
+        serviceContext.setProperty("serviceObject", serviceimpl);
+        return serviceimpl;
+    }
+    protected Object makeNewServiceObject(MessageContext msgContext)
+            throws AxisFault
+    {
+        Object serviceObject = Utils.createServiceObject(msgContext.getAxisService());
+        if (serviceObject == null) {
+            throw new AxisFault(Messages.getMessage("paramIsNotSpecified", "SERVICE_OBJECT_SUPPLIER"));
+        }
+        return serviceObject;
+    }
+}

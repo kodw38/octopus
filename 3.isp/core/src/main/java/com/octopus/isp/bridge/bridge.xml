@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    1.bridge负责任务的分发，事务一致。
+    2.cell管理，cell的实例管理，管理的cell可以不在同一个实例中
+    3.启动协议管理，
+    4.异步消息通知能力
+    5.数据结构定义
+    6.会话管理
+
+    系统启动后
+        启动协议接收请求，
+        请求经过bridge的处理管道，
+        处理管道事务分发请求
+        根据请求参数作同步返回，还是异步消息推送返回
+    -->
+<bridge clazz="com.octopus.isp.bridge.impl.Bridge">
+    <instancename>isp.test</instancename>
+
+    <!-- 元素定义 -->
+    <defs>
+        <def xmlid="Flows"  clazz="com.octopus.utils.flow.impl.FlowMgr"/>
+        <def xmlid="Cell"  clazz="com.octopus.isp.cell.impl.Cell"/>
+        <def xmlid="Flow"  clazz="com.octopus.utils.flow.impl.Flow"/>
+        <def xmlid="Node"  clazz="com.octopus.utils.bftask.impl.BFTask"/>
+        <def xmlid="InvokeHandler"  clazz="com.octopus.utils.xml.handle.XMLObjectHandler"/>
+        <def xmlid="ParameterFieldGet"  clazz="com.octopus.isp.utils.ObjectFieldGet"/>
+        <!-- cell-->
+        <def xmlid="RuleExecutor"  clazz="com.octopus.isp.executors.RuleBFExecutor"/>
+        <def xmlid="ActionExecutor"  clazz="com.octopus.isp.executors.ActionExecutor"/>
+        <def xmlid="TransactionExecutor"  clazz="com.octopus.isp.executors.TransactionExecutor"/>
+        <def xmlid="CellExecutorFromPars"  clazz="com.octopus.isp.executors.CellExecutorFromPars"/>
+        <def xmlid="StepExecutor"  clazz="com.octopus.isp.executors.StepExecutor"/>
+        <def xmlid="DataExecutor"  clazz="com.octopus.isp.executors.DataExecutor"/>
+        <def xmlid="DataClient"  clazz="com.octopus.tools.dataclient.impl.DataClient"/>
+    </defs>
+
+    <!-- 启动协议 -->
+    <launchers>
+        <launcher key="web" enable="true" type="out" clazz="com.octopus.isp.bridge.launchers.impl.WebFilterLauncher" protocol="http" port="" desc="">
+            <inputconvert clazz="com.octopus.isp.bridge.launchers.convert.ConvertRequestData2JSONArray"/>
+            <outputconvert clazz="com.octopus.isp.bridge.launchers.convert.ConvertReturn2POJO"/>
+        </launcher>
+    </launchers>
+
+    <!-- cell获取 -->
+    <cellsget clazz="com.octopus.isp.bridge.impl.CellsGet"/>
+
+    <!-- xmlobject方法调用监控 -->
+    <invocationhandler xmlid="InvokeHandler">
+        <before>
+            <action seq="1" path="" desc=""/>
+        </before>
+        <after>
+            <action seq="1" path="com.octopus.tools.statistic.InvocationStatistic" desc="每一个调用做统计"/>
+        </after>
+    </invocationhandler>
+
+    <!-- 请求参数结构 -->
+    <!-- 系统环境变量 -->
+    <env clazz="com.octopus.isp.ds.DataEnv">
+        <property name="namespace.style"></property>
+    </env>
+    <!-- 上下文环境变量 -->
+    <contexts clazz="com.octopus.isp.ds.Contexts">
+        <context seq="2">
+            <property name="language" value="zh" mapping="session.user.language"/>
+            <property name="country" value="cn" mapping="session.user.country"/>
+            <property name="currency" value="jiangsu" mapping="session.user.region"/>
+            <property name="datestyle" value="yyyy-MM-dd" mapping="session.user.datestyle"/>
+            <property name="datetimestyle" value="yyyy-MM-dd 24HH:mm:ss" mapping="session.user.datetimestyle"/>
+            <property name="timezone" value="Asia/Shanghai" mapping="session.user.timezone"/>
+        </context>
+        <context seq="1">
+            <property name="language" value="zh" mapping="session.user.language"/>
+            <property name="country" value="cn" mapping="session.user.country"/>
+            <property name="currency" value="jiangsu" mapping="session.user.region"/>
+        </context>
+    </contexts>
+    <!-- 用户登录信息 -->
+    <sessionmgr clazz="com.octopus.isp.ds.DataSession" sessionidpath="">
+        <session>
+            <user op.name="" op.code="" op.type="" op.language="" op.country="" op.currency="" op.logindate="" op.zone="" />
+        </session>
+    </sessionmgr>
+
+    <!-- 数据操作 -->
+    <dataclient xmlid="DataClient" xml="com/octopus/tools/dataclient/dataclient.xml"/>
+
+    <!-- cells路径配置 -->
+    <cells>
+        <!-- bridge 自由cells -->
+        <cell instanceids="isp.test.1" path="com/octopus/isp/files/cells/InstancesMgr.cell" desc="判断该cell所在的实例，已经监听其他实例的状态，以及实例的扩展、收缩" />
+        <cell instanceids="isp.test.2" path="com/octopus/isp/files/cells/SecurityMgr.cell" desc="访问权限管理" />
+        <cell instanceids="isp.test" path="com/octopus/isp/files/cells/Invoke.cell" desc="负责本地、远程调用，结果汇集" />
+        <cell instanceids="isp.test.3" path="com/octopus/isp/files/cells/Error.cell" desc="负责本地、远程调用，结果汇集" />
+
+        <!-- 业务规则cells -->
+        <cell instanceids="isp.test" path="com/octopus/isp/files/cells/Rules.cell" desc="规则执行cell" />
+        <cell instanceids="isp.test" path="com/octopus/isp/files/cells/DataOperator.cell" desc="数据操作" />
+    </cells>
+
+    <!-- 请求管道 -->
+    <flow xmlid="Flow" >
+        <executor clazz="com.octopus.isp.executors.CellExecutor"/>
+        <node xmlid="Node" type="normal" seq="0">
+            <before>
+<!--
+                <step seq="0" action="InstancesMgr" desc=""/>
+                <step seq="1" action="SecurityMgr" desc="访问安全控制"/>
+-->
+                <step seq="2" action="TargetCellInvoke" desc="所有调用的操作都由该cell处理"/>
+                <step seq="3" action="DataOperator" desc="所有保存数据的操作都由该cell处理"/>
+<!--
+                <step seq="4" action="SecurityMgr" desc="数据安全处理"/>
+-->
+            </before>
+        </node>
+        <node xmlid="Node" type="error" seq="-1">
+            <before>
+                <step seq="0" action="BridgeError" desc="异常处理cell"/>
+            </before>
+        </node>
+    </flow>
+</bridge>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<i18n id="i18n" clazz="com.octopus.tools.i18n.impl.I18N">
+    <item id="i18n.item" seq="0" type="Date" clazz="com.octopus.tools.i18n.impl.I18NItem" locale="com.octopus.tools.i18n.LocaleParty" desc="">
+        <getter clazz="com.octopus.tools.i18n.TestGet"></getter>
+        <transport clazz="com.octopus.tools.i18n.TestTrans"></transport>
+        <formate clazz="com.octopus.tools.i18n.TestFormate"></formate>
+        <cache clazz="com.octopus.tools.i18n.TestCache"></cache>
+        <existstyle clazz="com.octopus.tools.i18n.TestExist"></existstyle>
+    </item>
+</i18n>

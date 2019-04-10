@@ -1,0 +1,926 @@
+<action msg="begin store config to db...." key="updateDB" xmlid="Logic">
+    <do key="isEntOp" action="RedisClient" input="{db:'CountTimes',op:'contains',key:'Veris_SecFrame_(env_code)_Entity_Template_V1.0.xlsx'}" desc="" />
+    <do key="isMenuOp" action="RedisClient" input="{db:'CountTimes',op:'contains',key:'Veris_SecFrame_(env_code)_Menu_Template_V1.0.xlsx'}" desc="" />
+    <do key="isOrgOp" action="RedisClient" input="{db:'CountTimes',op:'contains',key:'Veris_SecFrame_(env_code)_OrganizeStaff_Template_V1.0.xlsx'}" desc="" />
+    <do key="isRoleOp" action="RedisClient" input="{db:'CountTimes',op:'contains',key:'Veris_SecFrame_(env_code)_Role_Template_V1.0.xlsx'}" desc="" />
+    <if cond="#{(${isEntOp})=false&amp;(${isMenuOp})=false&amp;(${isOrgOp})=false&amp;(${isRoleOp})=false}">
+        <do key="opdbs" action="var" input="{value:['mysql']}"/>
+        <do key="modules" action="var" input="{value:['ALL']}"/>
+        <for collection="${opdbs}">
+            <for collection="${modules}">
+                <print msg="{opmsg:'update (${opdbs}.item)  (${modules}.item)......'}"/>
+                <do key="excelpath" action="var" input="{value:'(referencedata)/secframe/(env_code)/(${modules}.item)'}"/>
+                <do key="Excel_OrganizeStaff" action="var" input="{value:'(${excelpath})/Veris_SecFrame_(env_code)_OrganizeStaff_Template_V1.0.xlsx'}"/>
+                <do key="Excel_Menu" action="var" input="{value:'(${excelpath})/Veris_SecFrame_(env_code)_Menu_Template_V1.0.xlsx'}"/>
+                <do key="Excel_Entity" action="var" input="{value:'(${excelpath})/Veris_SecFrame_(env_code)_Entity_Template_V1.0.xlsx'}"/>
+                <do key="Excel_Role" action="var" input="{value:'(${excelpath})/Veris_SecFrame_(env_code)_Role_Template_V1.0.xlsx'}"/>
+                <do key="isOrgStaffExist" action="utils" input="{op:'isFileExist',file:'${Excel_OrganizeStaff}'}"/>
+                <do key="isMenuExist" action="utils" input="{op:'isFileExist',file:'${Excel_Menu}'}"/>
+                <do key="isEntityExist" action="utils" input="{op:'isFileExist',file:'${Excel_Entity}'}"/>
+                <do key="isRoleExist" action="utils" input="{op:'isFileExist',file:'${Excel_Role}'}"/>
+                <do msg="1. bs_district" key="districtDatas" isenable="true" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'District'}">
+                    <do key="setdef" action="setvalue" input="{obj:'${districtDatas}',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{ID:'0',ParentID:'-1',DistrictName_LV1:'Virtual',UpDownLevel:'1',AreaCode:'0',PostCode:'0'}}}"/>
+                    <do key="get_obj1" action="OneRow2MulRow" input="{obj:'${districtDatas}',compose:{parentName:'ParentName',name:'Name',id:'ID',parentid:'ParentID',rootvalue:'-1',newid:{1:1,2:3,3:3},fields:['DistrictName_LV1','DistrictName_LV2','DistrictName_LV3']}}"/>
+                    <do key="get_obj2" action="DataClient" input="{ds:'(${opdbs}.item)',table:'bs_district',op:'query',fields:['DISTRICT_ID','DISTRICT_NAME','AREA_CODE','POST_CODE','PARENT_DISTRICT_ID']}"/>
+                    <for collection="${get_obj2}">
+                        <do key="addd_cache_name_id" action="cache" input="{check:'isnotnull(${get_obj2}.item.DISTRICT_ID)',cache:'cache_name_id6',op:'add',key:'(${get_obj2}.item.DISTRICT_NAME)',value:'(${get_obj2}.item.DISTRICT_ID)'}"/>
+                    </for>
+                    <do key="address_name_id" action="cache" input="{cache:'cache_name_id6',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{Name:'DISTRICT_NAME'},valueMap:{AreaCode:'AREA_CODE',PostCode:'POST_CODE',ParentName:'PARENT_DISTRICT_ID'},chgValueMap1:{ParentName:'${address_name_id}'},obj1:'${get_obj1}',obj2:'${get_obj2}'}">
+                        <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                        <for collection="${findAdd}">
+                            <do key="tempcache" action="cache" input="{check:'isnotnull(${findAdd}.item.Name)',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{DISTRICT_ID:'${findAdd}.item.ID',DISTRICT_NAME:'${findAdd}.item.Name',DISTRICT_ENGLISH_NAME:'${findAdd}.item.Name',DISTRICT_TYPE_ID:'${findAdd}.item.UpDownLevel',AREA_CODE:'${findAdd}.item.AreaCode',POST_CODE:'${findAdd}.item.PostCode',PARENT_DISTRICT_ID:'${findAdd}.item.ParentID',SORT_ID:'1',CENTER_INFO_CODE:'1'}}}">
+                                <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                <do key="setnewNameId" action="setvalue" input="{obj:'${address_name_id}',path:'(${findAdd}.item.Name)',value:'${findAdd}.item.ID'}"/>
+                            </do>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'bs_district',op:'add',datas:'${tempdata}'}"/>
+                    </do>
+                    <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{Name:'DISTRICT_NAME'},valueMap:{AreaCode:'AREA_CODE',PostCode:'POST_CODE',ParentName:'PARENT_DISTRICT_ID'},chgValueMap1:{ParentName:'${address_name_id}'},obj1:'${get_obj1}',obj2:'${get_obj2}'}">
+                        <for collection="${findUpdate}">
+                            <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'bs_district',op:'update',conds:{DISTRICT_NAME:'(${findUpdate}.item.Name)'},datas:
+                            {AREA_CODE:'${findUpdate}.item.AreaCode',POST_CODE:'${findUpdate}.item.PostCode',PARENT_DISTRICT_ID:'${findUpdate}.item.ParentID'}
+                            }"/>
+                        </for>
+                    </do>
+                </do>
+                <do msg="2. sec_static_data" isenable="true" key="staticDatas" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'static_data'}">
+                    <do key="dbStaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_TYPE','CODE_ID','CODE_NAME','IS_USED']}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{Type:'CODE_TYPE',Key:'CODE_ID'},valueMap:{Value:'CODE_NAME'},obj1:'${staticDatas}',obj2:'${dbStaticData}'}">
+                        <for collection="${findAdd}">
+                            <do key="tempcache" action="cache" input="{check:'isnotnull(${findAdd}.item.Type)',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{CODE_TYPE:'${findAdd}.item.Type',CODE_ID:'${findAdd}.item.Key',CODE_NAME:'${findAdd}.item.Value',CODE_NAME_NLS:'${findAdd}.item.Value',SORT_ID:'1',EXTERN_CODE:'0',IS_USED:'1'}}}"/>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_static_data',op:'add',datas:'${tempdata}'}"/>
+                    </do>
+                    <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{Type:'CODE_TYPE',Key:'CODE_ID'},valueMap:{Value:'CODE_NAME'},obj1:'${staticDatas}',obj2:'${dbStaticData}'}">
+                        <for collection="${findUpdate}">
+                            <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'update',conds:{CODE_TYPE:'(${findUpdate}.item.Type)',CODE_ID:'(${findUpdate}.item.Key)'},datas:
+                            {CODE_TYPE:'${findUpdate}.item.Type',CODE_ID:'${findUpdate}.item.Key',CODE_NAME:'${findUpdate}.item.Value',CODE_NAME_NLS:'${findUpdate}.item.Value',SORT_ID:'1',EXTERN_CODE:'0',IS_USED:'1'}
+                            }"/>
+                        </for>
+                    </do>
+                </do>
+
+                <do key="channelType" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_ID','CODE_NAME'],conds:{CODE_TYPE:'20150305',IS_USED:'1'}}"/>
+                <for collection="${channelType}">
+                    <do key="putCache" action="cache" input="{cache:'channel_name_id',op:'add',key:'(${channelType}.item.CODE_NAME)',value:'(${channelType}.item.CODE_ID)'}"/>
+                </for>
+                <do key="channel_name_id" action="cache" input="{cache:'channel_name_id',op:'getall'}"/>
+
+                <do key="ManagerType" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_ID','CODE_NAME'],conds:{CODE_TYPE:'9999999',IS_USED:'1'}}"/>
+                <for collection="${ManagerType}">
+                    <do key="putCache" action="cache" input="{cache:'managerType_name_id',op:'add',key:'(${ManagerType}.item.CODE_NAME)',value:'(${ManagerType}.item.CODE_ID)'}"/>
+                </for>
+                <do key="managertype_name_id" action="cache" input="{cache:'managerType_name_id',op:'getall'}"/>
+
+
+                <do msg="3. sec_station_type_kind" isenable="true" key="get_obj1" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'station_type_kind'}">
+                    <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                    <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=station_type_kind.ID},CurNum)'}"/>
+                    <do key="get_obj2" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_station_type_kind',op:'query',fields:['KIND_ID','KIND_NAME']}"/>
+                    <for collection="${get_obj2}">
+                        <do key="addcache_kind_name_id" action="cache" input="{cache:'station_kind_name_id',op:'add',key:'(${get_obj2}.item.KIND_NAME)',value:'(${get_obj2}.item.KIND_ID)'}"/>
+                    </for>
+                    <do key="nameIdMap" action="cache" input="{cache:'station_kind_name_id',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap"  input="{op:'add',keyMap:{Name:'KIND_NAME'},obj1:'${get_obj1}',obj2:'${get_obj2}'}">
+                        <for collection="${findAdd}">
+                            <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                            <do key="tempcache" action="cache" input="{op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{KIND_ID:'${newId}',KIND_NAME:'${findAdd}.item.Name',PARENT_KIND_ID:'-1',SORT_ID:'1',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}
+                             }}"/>
+                            <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                            <do key="setnewNameId" action="setvalue" input="{obj:'${nameIdMap}',path:'(${findAdd}.item.Name)',value:'${newId}'}"/>
+                            <do key="addcache_kind_name_id" action="cache" input="{cache:'station_kind_name_id',op:'add',key:'(${findAdd}.item.RoleName)',value:'(${newId})'}"/>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_station_type_kind',op:'add',datas:'${tempdata}'}"/>
+                        <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'station_type_kind.ID'},value:'(${curSequence})'}"/>
+                    </do>
+                </do>
+                <do key="cache_kind_name_id" isenable="true" action="cache" input="{cache:'station_kind_name_id',op:'getall'}"/>
+                <do msg="4. sec_station_type" isenable="true" key="sequence" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'sequence'}">
+                    <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=station_type.ID},CurNum)'}"/>
+                    <do key="get_obj1" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'station_type'}"/>
+                    <do key="get_obj2" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_station_type',op:'query',fields:['STATION_TYPE_ID','KIND_ID','CODE']}"/>
+                    <for collection="${get_obj2}">
+                        <do key="name_id" action="cache" input="{cache:'cache_name_id9',op:'add',key:'(${get_obj2}.item.CODE)',value:'(${get_obj2}.item.STATION_TYPE_ID)'}"/>
+                    </for>
+                    <do key="stationtype_name_id" action="cache" input="{cache:'cache_name_id9',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{Name:'CODE'},valueMap:{Kind:'KIND_ID'},chgValueMap1:{Kind:'${cache_kind_name_id}'},obj1:'${get_obj1}',obj2:'${get_obj2}'}">
+                        <for collection="${findAdd}">
+                            <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                            <do key="tempcache" action="cache" input="{check:'isnotnull(${findAdd}.item.Name)',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{STATION_TYPE_ID:'(${newId})',KIND_ID:'(${cache_kind_name_id}.(${findAdd}.item.Kind))',CODE:'(${findAdd}.item.Name)',NAME:'(${findAdd}.item.Name)'
+                             ,SORT_ID:'1',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}
+                             }}">
+                                <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                <do key="setnewNameId" action="setvalue" input="{obj:'${stationtype_name_id}',path:'(${findAdd}.item.Name)',value:'${newId}'}"/>
+                            </do>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_station_type',op:'add',datas:'${tempdata}'}"/>
+                        <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'station_type.ID'},value:'(${curSequence})'}"/>
+                    </do>
+                    <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{Name:'CODE'},valueMap:{Kind:'KIND_ID'},chgValueMap1:{Kind:'${cache_kind_name_id}'},obj1:'${get_obj1}',obj2:'${get_obj2}'}">
+                        <for collection="${findUpdate}">
+                            <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_station_type',op:'update',conds:{STATION_TYPE_ID:'getvalue(${get_obj2},#{(${findUpdate}.item.Name)=(${each}.CODE)},STATION_TYPE_ID)'}
+                            ,datas:{KIND_ID:'(${cache_kind_name_id}.(${findUpdate}.item.Kind))',CODE:'(${findUpdate}.item.Name)'}
+                            }"/>
+                        </for>
+                    </do>
+                </do>
+
+                <do msg="5. sec_role" isenable="true" key="get_obj1" action="readExcel" input="{check:'(${isRoleExist})',file:'${Excel_Role}',sheetName:'Role'}">
+                    <do key="sequence" action="readExcel" input="{file:'${Excel_Role}',sheetName:'sequence'}"/>
+                    <do key="roletypec" action="readExcel" input="{file:'${Excel_Role}',sheetName:'static_data'}"/>
+                    <for collection="${roletypec}">
+                        <do key="addd_cache_kind_name_id" action="cache" input="{check:'isnotnull(${roletypec}.item.Key)',cache:'cache_name_id',op:'add',key:'(${roletypec}.item.Value)',value:'(${roletypec}.item.Key)'}"/>
+                    </for>
+                    <do key="name_id" isenable="true" action="cache" input="{cache:'cache_name_id',op:'getall'}"/>
+                    <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=role.ID},CurNum)'}"/>
+                    <do key="get_obj2" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_role',op:'query',fields:['ROLE_ID','ROLE_NAME','ROLE_TYPE']}"/>
+                    <for collection="${get_obj2}">
+                        <do key="putcache"  action="cache" input="{cache:'cache_name_id18',op:'add',key:'(${get_obj2}.item.ROLE_NAME)',value:'(${get_obj2}.item.ROLE_ID)'}"/>
+                    </for>
+                    <do key="role_name_id" action="cache" input="{cache:'cache_name_id18',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap"  input="{op:'add',keyMap:{RoleName:'ROLE_NAME'},valueMap:{RoleType:'ROLE_TYPE'},chgValueMap1:{RoleType:'${name_id}'},obj1:'${get_obj1}',obj2:'${get_obj2}'}">
+                        <for collection="${findAdd}">
+                            <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                            <do key="tempcache" action="cache" input="{op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{ROLE_ID:'${newId}',ROLE_NAME:'${findAdd}.item.RoleName',ROLE_TYPE:'(${name_id}.(${findAdd}.item.RoleType))',DOMAIN_ID:'1',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1'}
+                             }}"/>
+                            <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                            <do key="zipname" action="utils" input="{op:'getNameFilterSpace',name:'(${findAdd}.item.RoleName)'}"/>
+                            <do  key="setnewNameId" action="setvalue" input="{obj:'${role_name_id}',path:'${zipname}',value:'${newId}'}"/>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_role',op:'add',datas:'${tempdata}'}"/>
+                        <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_Role}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'role.ID'},value:'(${curSequence})'}"/>
+                    </do>
+                    <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{RoleName:'ROLE_NAME'},valueMap:{RoleType:'ROLE_TYPE'},chgValueMap1:{RoleType:'${name_id}'},obj1:'${get_obj1}',obj2:'${get_obj2}'}">
+                        <for collection="${findUpdate}">
+                            <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_role',op:'update',conds:{ROLE_NAME:'(${findUpdate}.item.RoleName)'}
+                            ,datas:{ROLE_TYPE:'(${name_id}.(${findUpdate}.item.RoleType))'}
+                            }"/>
+                        </for>
+                    </do>
+                </do>
+                <do key="role_name_id" action="cache" input="{cache:'cache_name_id18',op:'getall'}"/>
+                <print msg="{roles:'${role_name_id}'}"/>
+
+                <do msg="6. sec_org_role_type" isenable="true" key="staticDatas" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'org_role_type'}">
+                    <do key="dbStaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_org_role_type',op:'query',fields:['ORG_ROLE_TYPE_ID','ORG_ROLE_TYPE_NAME','CODE']}"/>
+                    <for collection="${dbStaticData}">
+                        <do key="addd_cache_kind_name_id" action="cache" input="{check:'isnotnull(${dbStaticData}.item.ORG_ROLE_TYPE_NAME)',cache:'cache_name_id7',op:'add',key:'(${dbStaticData}.item.ORG_ROLE_TYPE_NAME)',value:'(${dbStaticData}.item.ORG_ROLE_TYPE_ID)'}"/>
+                    </for>
+                    <do key="orgroletype_name_id" action="cache" input="{cache:'cache_name_id7',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{ID:'ORG_ROLE_TYPE_ID'},valueMap:{Name:'ORG_ROLE_TYPE_NAME',Code:'CODE'},obj1:'${staticDatas}',obj2:'${dbStaticData}'}">
+                        <for collection="${findAdd}">
+                            <do key="tempcache" action="cache" input="{check:'isnotnull(${findAdd}.item.ID)',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{ORG_ROLE_TYPE_ID:'${findAdd}.item.ID',ORG_ROLE_TYPE_NAME:'${findAdd}.item.Name',CODE:'${findAdd}.item.Code',PARENT_TYPE_ID:'${findAdd}.item.Parent',STATE:'1',TENANT_ID:'(TenantId)'}}}">
+                                <do key="setnewNameId" action="setvalue" input="{obj:'${orgroletype_name_id}',path:'(${findAdd}.item.Name)',value:'${findAdd}.item.ID'}"/>
+                            </do>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_org_role_type',op:'add',datas:'${tempdata}'}"/>
+                    </do>
+                    <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{ID:'ORG_ROLE_TYPE_ID'},valueMap:{Name:'ORG_ROLE_TYPE_NAME',Code:'CODE'},obj1:'${staticDatas}',obj2:'${dbStaticData}'}">
+                        <for collection="${findUpdate}">
+                            <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_org_role_type',op:'update',conds:{ORG_ROLE_TYPE_ID:'(${findUpdate}.item.ID)'},datas:
+                            {ORG_ROLE_TYPE_NAME:'${findUpdate}.item.Name',CODE:'${findUpdate}.item.Code',PARENT_TYPE_ID:'${findUpdate}.item.Parent'}
+                            }"/>
+                        </for>
+                    </do>
+                </do>
+                <!-- organize -->
+                <do msg="9. sec_organize" desc="sec_organize" isenable="true" key="orgExcel" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'Organization'}">
+                    <do key="orgData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_organize',op:'query',fields:['ORGANIZE_ID','ORG_ROLE_TYPE_ID','ORGANIZE_NAME','CODE','PARENT_ORGANIZE_ID','DISTRICT_ID','ORG_ADDRESS','COUNTY_ID'],conds:{STATE:'1'}}">
+                        <for collection="${orgData}">
+                            <do key="putCache" action="cache" input="{cache:'cache_name_id8',op:'add',key:'(${orgData}.item.ORGANIZE_NAME)',value:'(${orgData}.item.ORGANIZE_ID)'}"/>
+                        </for>
+                        <do key="orgroletype_name_id" action="cache" input="{cache:'cache_name_id7',op:'getall'}"/>
+                        <print msg="{org_role_type:'${orgroletype_name_id}'}"/>
+                        <do key="org_name_id" action="cache" input="{cache:'cache_name_id8',op:'getall'}"/>
+                        <do key="get_obj1" action="OneRow2MulRow" input="{obj:'${orgExcel}',compose:{parentName:'ParentName',name:'Name',id:'ID',parentid:'ParentID',rootvalue:'-1',newid:{1:1,2:3,3:3,4:3},fields:['Organization_LV1','Organization_LV2','Organization_LV3','Organization_LV4']}}">
+                            <do key="address_name_id" action="cache" input="{cache:'cache_name_id6',op:'getall'}"/>
+                            <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{Name:'ORGANIZE_NAME'},valueMap:{Org_type:'ORG_ROLE_TYPE_ID',OrganizationCode:'CODE',ParentName:'PARENT_ORGANIZE_ID',District:'DISTRICT_ID',Address:'ORG_ADDRESS',Region:'COUNTY_ID'},chgValueMap1:{Org_type:'${orgroletype_name_id}',ParentName:'${org_name_id}',District:'${address_name_id}',Region:'${address_name_id}'},obj1:'${get_obj1}',obj2:'${orgData}'}">
+                                <for collection="${findAdd}">
+                                    <do  key="tempcache" action="cache" input="{check:'#{isnotnull(${findAdd}.item.Name)=true &amp; isnotnull(getvalue((${orgroletype_name_id}.(${findAdd}.item.Org_type))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{ORGANIZE_ID:'${findAdd}.item.ID',ORG_ROLE_TYPE_ID:'(${orgroletype_name_id}.(${findAdd}.item.Org_type))',ORGANIZE_NAME:'${findAdd}.item.Name',CODE:'getvalue((${findAdd}.item.OrganizationCode))',PARENT_ORGANIZE_ID:'(${findAdd}.item.ParentID)',DISTRICT_ID:'(${address_name_id}.(${findAdd}.item.District))',EXT6:'${findAdd}.item.SAPCode',EXT3:'(${channel_name_id}.(${findAdd}.item.Channel))',ORG_ADDRESS:'getvalue((${findAdd}.item.Address))'
+                             ,COUNTY_ID:'(${address_name_id}.(${findAdd}.item.Region))',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                        <do key="addnew" action="setvalue" input="{obj:'${org_name_id}',path:'(${findAdd}.item.Name)',value:'(${findAdd}.item.ID)'}"/>
+                                    </do>
+                                </for>
+                                <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                                <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_organize',op:'add',datas:'${tempdata}'}"/>
+
+                                <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                            </do>
+
+                            <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{Name:'ORGANIZE_NAME'},valueMap:{Org_type:'ORG_ROLE_TYPE_ID',OrganizationCode:'CODE',ParentName:'PARENT_ORGANIZE_ID',District:'DISTRICT_ID',Address:'ORG_ADDRESS',Region:'COUNTY_ID'},chgValueMap1:{Org_type:'${orgroletype_name_id}',ParentName:'${org_name_id}',District:'${address_name_id}',Region:'${address_name_id}'},obj1:'${get_obj1}',obj2:'${orgData}'}">
+                                <for collection="${findUpdate}">
+                                    <print msg="{data:'${findUpdate}.item',dis:'(${address_name_id}.(${findAdd}.item.District))',reg:'(${address_name_id}.(${findAdd}.item.Region))'}"/>
+                                    <do key="updatedb" action="DataClient" input="{check:'isnotnull(${findUpdate}.item.Name)',ds:'(${opdbs}.item)',table:'sec_organize',op:'update',conds:{ORGANIZE_NAME:'(${findUpdate}.item.Name)'},datas:
+                            {ORG_ROLE_TYPE_ID:'(${orgroletype_name_id}.(${findUpdate}.item.Org_type))',CODE:'getvalue((${findUpdate}.item.OrganizationCode))',PARENT_ORGANIZE_ID:'case(isnull((${org_name_id}.(${findUpdate}.item.ParentName))),[[false,\'(${org_name_id}.(${findUpdate}.item.ParentName))\'],[true,-1]])',DISTRICT_ID:'(${address_name_id}.(${findUpdate}.item.District))',EXT6:'${findUpdate}.item.SAPCode',EXT3:'(${channel_name_id}.(${findUpdate}.item.Channel))',ORG_ADDRESS:'(${findUpdate}.item.Address)',COUNTY_ID:'(${address_name_id}.(${findUpdate}.item.Region))'}
+                            }"/>
+                                </for>
+                            </do>
+                        </do>
+                    </do>
+                </do>
+                <!-- staff -->
+                <do desc="" isenable="true" key="staffExcel" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'Staff'}">
+                    <do key="org_name_id" action="cache" input="{cache:'cache_name_id8',op:'getall'}"/>
+                    <do key="stationtype_name_id" action="cache" input="{cache:'cache_name_id9',op:'getall'}"/>
+                    <do key="StaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_ID','CODE_NAME'],conds:{CODE_TYPE:'10000',IS_USED:'1'}}"/>
+                    <for collection="${StaticData}">
+                        <do key="putCache" action="cache" input="{cache:'cache_name_id11',op:'add',key:'(${StaticData}.item.CODE_NAME)',value:'(${StaticData}.item.CODE_ID)'}"/>
+                    </for>
+                    <do key="stafftype_name_id" action="cache" input="{cache:'cache_name_id11',op:'getall'}"/>
+                    <do key="StaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_ID','CODE_NAME'],conds:{CODE_TYPE:'10101',IS_USED:'1'}}"/>
+                    <for collection="${StaticData}">
+                        <do key="putCache" action="cache" input="{cache:'cache_name_id12',op:'add',key:'(${StaticData}.item.CODE_NAME)',value:'(${StaticData}.item.CODE_ID)'}"/>
+                    </for>
+                    <do key="marry_name_id" action="cache" input="{cache:'cache_name_id12',op:'getall'}"/>
+                    <do key="StaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_ID','CODE_NAME'],conds:{CODE_TYPE:'40108',IS_USED:'1'}}"/>
+                    <for collection="${StaticData}">
+                        <do key="putCache" action="cache" input="{cache:'cache_name_id13',op:'add',key:'(${StaticData}.item.CODE_NAME)',value:'(${StaticData}.item.CODE_ID)'}"/>
+                    </for>
+                    <do key="cardtype_name_id"  action="cache" input="{cache:'cache_name_id13',op:'getall'}"/>
+                    <do key="StaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_ID','CODE_NAME'],conds:{CODE_TYPE:'10051',IS_USED:'1'}}"/>
+                    <for collection="${StaticData}">
+                        <do key="putCache" action="cache" input="{cache:'cache_name_id14',op:'add',key:'(${StaticData}.item.CODE_NAME)',value:'(${StaticData}.item.CODE_ID)'}"/>
+                    </for>
+                    <do key="education_name_id" action="cache" input="{cache:'cache_name_id14',op:'getall'}"/>
+                    <do key="StaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_ID','CODE_NAME'],conds:{CODE_TYPE:'40107',IS_USED:'1'}}"/>
+                    <for collection="${StaticData}">
+                        <do key="putCache" action="cache" input="{cache:'cache_name_id15',op:'add',key:'(${StaticData}.item.CODE_NAME)',value:'(${StaticData}.item.CODE_ID)'}"/>
+                    </for>
+                    <do key="gender_name_id" action="cache" input="{cache:'cache_name_id15',op:'getall'}"/>
+
+                    <!-- sec_station -->
+                    <do msg="10. sec_station" key="stationData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_station',op:'query',fields:['STATION_ID','ORGANIZE_ID','STATION_TYPE_ID','CODE','NAME'],conds:{STATE:'1'}}">
+                        <for collection="${stationData}">
+                            <do key="putCache" action="cache" input="{cache:'cache_name_id10',op:'add',key:'(${stationData}.item.NAME)',value:'(${stationData}.item.STATION_ID)'}"/>
+                        </for>
+                        <do key="station_name_id" action="cache" input="{cache:'cache_name_id10',op:'getall'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{OrganizationName:'ORGANIZE_ID',Sations:'STATION_TYPE_ID'},chgKeyMap1:{OrganizationName:'${org_name_id}',Sations:'${stationtype_name_id}'},obj1:'${staffExcel}',obj2:'${stationData}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=station.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{check:'#{isnotnull(${findAdd}.item.Sations)=true &amp; isnotnull(getvalue((${org_name_id}.(${findAdd}.item.OrganizationName))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{STATION_ID:'${newId}',ORGANIZE_ID:'(${org_name_id}.(${findAdd}.item.OrganizationName))',PARENT_STATION_ID:'-1',STATION_TYPE_ID:'(${stationtype_name_id}.(${findAdd}.item.Sations))',CODE:'(${findAdd}.item.Sations)',NAME:'(${findAdd}.item.Sations)',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                    <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                    <do key="addnew" action="setvalue" input="{obj:'${station_name_id}',path:'(${findAdd}.item.Sations)',value:'(${newId})'}"/>
+                                </do>
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_station',op:'add',datas:'${tempdata}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'station.ID'},value:'(${curSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                    </do>
+                    <do msg="11. sec_staff" key="staffData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_staff',op:'query',fields:['STAFF_ID','STAFF_NAME','ORGANIZE_ID','HEAD_URL','STAFF_TYPE','MARRY_STATUS','EMAIL','BILL_ID','FAX_ID','CARD_TYPE_ID','CARD_NO','GENDER','BIRTHDAY','EDUCATION_LEVEL'],conds:{STATE:'1'}}">
+                        <for collection="${staffData}">
+                            <do key="putCache" action="cache" input="{cache:'cache_name_id16',op:'add',key:'(${staffData}.item.STAFF_NAME)',value:'(${staffData}.item.STAFF_ID)'}"/>
+                        </for>
+                        <do key="staff_name_id" action="cache" input="{cache:'cache_name_id16',op:'getall'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{StaffName:'STAFF_NAME'},valueMap:{StaffType:'STAFF_TYPE',Marry:'MARRY_STATUS',Email:'EMAIL',PhoneNumber:'BILL_ID',FAX:'FAX_ID',CardType:'CARD_TYPE_ID',CardID:'CARD_NO',Gender:'GENDER',Birthday:'BIRTHDAY',Education_level:'EDUCATION_LEVEL'},chgValueMap1:{Education_level:'${education_name_id}',Gender:'${gender_name_id}',CardType:'${cardtype_name_id}',Marry:'${marry_name_id}',StaffType:'${stafftype_name_id}'},obj1:'${staffExcel}',obj2:'${staffData}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=staff.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{check:'#{isnotnull(${findAdd}.item.StaffName)=true &amp; isnotnull(getvalue((${org_name_id}.(${findAdd}.item.OrganizationName))))=true }',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{STAFF_ID:'${newId}',STAFF_NAME:'(${findAdd}.item.StaffName)',ORGANIZE_ID:'(${org_name_id}.(${findAdd}.item.OrganizationName))',PARENT_STAFF_ID:'-1',CARD_TYPE_ID:'getvalue((${cardtype_name_id}.(${findAdd}.item.CardType)))',CARD_NO:'getvalue((${findAdd}.item.CardID))',BIRTHDAY:'getvalue((${findAdd}.item.Birthday))',HEAD_URL:'getvalue(${findAdd}.item.HeadURL)',MARRY_STATUS:'getvalue((${marry_name_id}.(${findAdd}.item.Marry)))',GENDER:'getvalue((${gender_name_id}.(${findAdd}.item.Gender)))',EDUCATION_LEVEL:'getvalue((${education_name_id}.(${findAdd}.item.Education_level)))',BILL_ID:'getvalue(${findAdd}.item.PhoneNumber)',EMAIL:'getvalue(${findAdd}.item.Email)',FAX_ID:'getvalue(${findAdd}.item.Fax)',STAFF_TYPE:'getvalue((${stafftype_name_id}.(${findAdd}.item.StaffType)))',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                    <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                    <do key="addnew" action="setvalue" input="{obj:'${staff_name_id}',path:'(${findAdd}.item.StaffName)',value:'(${newId})'}"/>
+                                </do>
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_staff',op:'add',datas:'${tempdata}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'staff.ID'},value:'(${curSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{StaffName:'STAFF_NAME'},valueMap:{StaffType:'STAFF_TYPE',Marry:'MARRY_STATUS',Email:'EMAIL',PhoneNumber:'BILL_ID',FAX:'FAX_ID',CardType:'CARD_TYPE_ID',CardID:'CARD_NO',Gender:'GENDER',Birthday:'BIRTHDAY',Education_level:'EDUCATION_LEVEL'},chgValueMap1:{Education_level:'${education_name_id}',Gender:'${gender_name_id}',CardType:'${cardtype_name_id}',Marry:'${marry_name_id}',StaffType:'${stafftype_name_id}'},obj1:'${staffExcel}',obj2:'${staffData}'}">
+                            <for collection="${findUpdate}">
+                                <do key="updatedb" action="DataClient" input="{check:'isnotnull(getvalue((${org_name_id}.(${findUpdate}.item.OrganizationName))))',ds:'(${opdbs}.item)',table:'sec_staff',op:'update',conds:{STAFF_NAME:'(${findUpdate}.item.StaffName)'},datas:
+                                {ORGANIZE_ID:'(${org_name_id}.(${findUpdate}.item.OrganizationName))',PARENT_STAFF_ID:'-1',CARD_TYPE_ID:'getvalue((${cardtype_name_id}.(${findUpdate}.item.CardType)))',CARD_NO:'getvalue((${findUpdate}.item.CardID))',BIRTHDAY:'getvalue((${findUpdate}.item.Birthday))',HEAD_URL:'getvalue(${findUpdate}.item.HeadURL)',MARRY_STATUS:'getvalue((${marry_name_id}.(${findUpdate}.item.Marry)))',GENDER:'getvalue((${gender_name_id}.(${findUpdate}.item.Gender)))',EDUCATION_LEVEL:'getvalue((${education_name_id}.(${findUpdate}.item.Education_level)))',BILL_ID:'getvalue(${findUpdate}.item.PhoneNumber)',EMAIL:'getvalue(${findUpdate}.item.Email)',FAX_ID:'getvalue(${findUpdate}.item.Fax)',STAFF_TYPE:'getvalue((${stafftype_name_id}.(${findUpdate}.item.StaffType)))'}
+                                }"/>
+                            </for>
+                        </do>
+                    </do>
+                    <do key="staff_name_id" action="cache" input="{cache:'cache_name_id16',op:'getall'}"/>
+                    <do msg="12. sec_operator" key="opData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_operator',op:'query',fields:['OPERATOR_ID','STAFF_ID','CODE'],conds:{STATE:'1'}}">
+                        <for collection="${opData}">
+                            <do key="putCache" action="cache" input="{cache:'cache_name_id17',op:'add',key:'(${opData}.item.CODE)',value:'(${opData}.item.OPERATOR_ID)'}"/>
+                        </for>
+                        <do key="op_name_id" action="cache" input="{cache:'cache_name_id17',op:'getall'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{OPCode:'CODE'},valueMap:{Channel:'EX2',OAOPCode:'EX1'},chgValueMap1:{Channel:'${channel_name_id}'},obj1:'${staffExcel}',obj2:'${opData}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=op.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                                <do key="enpwd" action="security" input="{type:'MD5',op:'encrypt',data:'123456'}"/>
+                                <do key="tempcache"  action="cache" input="{check:'#{isnotnull(${findAdd}.item.OPCode)=true &amp; isnotnull(getvalue((${staff_name_id}.(${findAdd}.item.StaffName))))=true }',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{OPERATOR_ID:'${newId}',STAFF_ID:'(${staff_name_id}.(${findAdd}.item.StaffName))',CODE:'(${findAdd}.item.OPCode)',IS_ADMIN:'0',PASSWORD:'${enpwd}',EX1:'(${channel_name_id}.(${findAdd}.item.Channel))',EX2:'${findAdd}.item.OAOPCode',TRY_TIMES:'3',PASSWORD_VALID_DATE:'2020-12-31',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                    <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                    <do key="addnew" action="setvalue" input="{obj:'${op_name_id}',path:'(${findAdd}.item.OPCode)',value:'(${newId})'}"/>
+                                </do>
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_operator',op:'add',datas:'${tempdata}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'op.ID'},value:'(${curSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{OPCode:'CODE'},valueMap:{Channel:'EX2',OAOPCode:'EX1'},chgValueMap1:{Channel:'${channel_name_id}'},obj1:'${staffExcel}',obj2:'${opData}'}">
+                            <for collection="${findUpdate}">
+                                <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_operator',op:'update',conds:{CODE:'${findUpdate}.item.OPCode'},datas:
+                                {EX1:'(${channel_name_id}.(${findUpdate}.item.Channel))',EX2:'${findUpdate}.item.OAOPCode'}
+                                }"/>
+                            </for>
+                        </do>
+                    </do>
+                    <do key="op_name_id" action="cache" input="{cache:'cache_name_id17',op:'getall'}"/>
+                    <do msg="13. sec_oper_domain_rela" key="op_domain" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_oper_domain_rela',op:'query',fields:['MANAGER_ID','MANAGER_TYPE'],conds:{MANAGER_STATUS:'1'}}">
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{OPCode:'MANAGER_ID'},valueMap:{ManagerType:'MANAGER_TYPE'},chgKeyMap1:{OPCode:'${op_name_id}'},chgValueMap1:{ManagerType:'${managertype_name_id}'},obj1:'${staffExcel}',obj2:'${op_domain}'}">
+                            <for collection="${findAdd}">
+                                <do key="tempcache"  action="cache" input="{check:'#{isnotnull(${findAdd}.item.OPCode)=true &amp; isnotnull(getvalue((${op_name_id}.(${findAdd}.item.OPCode))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{MANAGER_ID:'(${op_name_id}.(${findAdd}.item.OPCode))',MANAGER_TYPE:'(${managertype_name_id}.(${findAdd}.item.ManagerType))',MANAGER_STATUS:'1',HOBBIES:'I',TENANT_ID:'(TenantId)'}}}"/>
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_oper_domain_rela',op:'add',datas:'${tempdata}'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{OPCode:'MANAGER_ID'},valueMap:{ManagerType:'MANAGER_TYPE'},chgKeyMap1:{OPCode:'${op_name_id}'},chgValueMap1:{ManagerType:'${managertype_name_id}'},obj1:'${staffExcel}',obj2:'${op_domain}'}">
+                            <for collection="${findUpdate}">
+                                <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_oper_domain_rela',op:'update',conds:{MANAGER_ID:'(${op_name_id}.(${findUpdate}.item.OPCode))'},datas:
+                                {MANAGER_TYPE:'(${managertype_name_id}.(${findUpdate}.item.ManagerType))'}
+                                }"/>
+                            </for>
+                        </do>
+                    </do>
+                    <do msg="14. sec_op_ad_rel" key="op_ad" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_op_ad_rel',op:'query',fields:['OPERATOR_ID','AD_OPER_CODE','AD_DOMAIN_CODE'],conds:{STATE:'1'}}">
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{OPCode:'OPERATOR_ID'},valueMap:{ADCode:'AD_OPER_CODE',ADDomain:'AD_DOMAIN_CODE'},chgKeyMap1:{OPCode:'${op_name_id}'},obj1:'${staffExcel}',obj2:'${op_ad}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=op_ad.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{check:'#{isnotnull(${findAdd}.item.OPCode)=true &amp; isnotnull(getvalue((${op_name_id}.(${findAdd}.item.OPCode))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{RELA_ID:'${newId}',OPERATOR_ID:'(${op_name_id}.(${findAdd}.item.OPCode))',AD_OPER_CODE:'${findAdd}.item.ADCode',AD_DOMAIN_CODE:'${findAdd}.item.ADDomain',STATE:'1',TENANT_ID:'(TenantId)'}}}">
+                                    <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                </do>
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_op_ad_rel',op:'add',datas:'${tempdata}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'op_ad.ID'},value:'(${curSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{OPCode:'OPERATOR_ID'},valueMap:{ADCode:'AD_OPER_CODE',ADDomain:'AD_DOMAIN_CODE'},chgKeyMap1:{OPCode:'${op_name_id}'},obj1:'${staffExcel}',obj2:'${op_ad}'}">
+                            <for collection="${findUpdate}">
+                                <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_op_ad_rel',op:'update',conds:{OPERATOR_ID:'(${op_name_id}.(${findUpdate}.item.OPCode))'},datas:
+                                {AD_OPER_CODE:'${findUpdate}.item.ADCode',AD_DOMAIN_CODE:'${findUpdate}.item.ADDomain'}
+                                }"/>
+                            </for>
+                        </do>
+                    </do>
+                    <do msg="15. sec_op_station" key="opStationData" action="DataClient" input="{ds:'(${opdbs}.item)',op:'query',sqls:['SELECT o.code,s.OP_STATION_ID,s.OPERATOR_ID,s.STATION_ID,s.IS_BASE_STATION FROM sec_op_station s,sec_operator o WHERE s.operator_id=o.operator_id AND o.state=1 AND s.state=1']}">
+                        <for collection="${opStationData}">
+                            <do key="putCache" action="cache" input="{cache:'cache_name_id4',op:'add',key:'(${opStationData}.item.CODE)',value:'(${opStationData}.item.OP_STATION_ID)'}"/>
+                        </for>
+                        <do key="op_name_id" action="cache" input="{cache:'cache_name_id17',op:'getall'}"/>
+                        <do key="station_name_id" action="cache" input="{cache:'cache_name_id10',op:'getall'}"/>
+                        <do key="opcode_station_id" action="cache" input="{cache:'cache_name_id4',op:'getall'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{Sations:'STATION_ID',OPCode:'OPERATOR_ID'},chgKeyMap1:{Sations:'${station_name_id}',OPCode:'${op_name_id}'},obj1:'${staffExcel}',obj2:'${opStationData}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=op_station.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{check:'#{isnotnull(${findAdd}.item.OPCode)=true &amp; isnotnull(getvalue((${op_name_id}.(${findAdd}.item.OPCode))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{OP_STATION_ID:'${newId}',OPERATOR_ID:'(${op_name_id}.(${findAdd}.item.OPCode))',STATION_ID:'(${station_name_id}.(${findAdd}.item.Sations))',IS_BASE_STATION:'case((${findAdd}.item.IsBaseStation),[[\'Yes\',\'1\'],[\'No\',\'0\']])',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_STATION_VALID_DATE:'(${systemdate})',OP_STATION_EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                    <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                    <do key="addnew" action="setvalue" input="{obj:'${opcode_station_id}',path:'(${findAdd}.item.OPCode)',value:'(${newId})'}"/>
+                                </do>
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_op_station',op:'add',datas:'${tempdata}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'op_station.ID'},value:'(${curSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                    </do>
+                    <do  key="role_name_id" action="cache" input="{cache:'cache_name_id18',op:'getall'}"/>
+                    <do key="op_name_id" action="cache" input="{cache:'cache_name_id17',op:'getall'}"/>
+                    <!-- auth -->
+                    <for collection="${staffExcel}">
+                        <for collection="${staffExcel}.item">
+                            <if cond="#{isnotnull(getvalue((${role_name_id}.(${staffExcel}.item.key))))=true &amp; isnotnull((${staffExcel}.item.OrganizationName))=true &amp; isnull((${staffExcel}.item.OPCode))=true }">
+                                <!-- author org -->
+                                <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'addList',key:'author_org',value:{declare:{clazz:'java.util.HashMap'},
+                                    data:{role_id:'(${role_name_id}.(${staffExcel}.item.key))',org_id:'(${org_name_id}.(${staffExcel}.item.OrganizationName))'}}}"/>
+
+                            </if>
+                            <if cond="#{isnotnull(getvalue((${role_name_id}.(${staffExcel}.item.key))))=true &amp; isnotnull(getvalue((${op_name_id}.(${staffExcel}.item.OPCode))))=true }">
+                                <!-- author op -->
+                                <do  key="tempdata" action="cache" input="{cache:'temp_cache',op:'addList',key:'author_op',value:{declare:{clazz:'java.util.HashMap'},
+                                    data:{role_id:'(${role_name_id}.(${staffExcel}.item.key))',op_id:'(${op_name_id}.(${staffExcel}.item.OPCode))'}}}"/>
+                            </if>
+                        </for>
+                    </for>
+                    <do key="cfgorgrole"  msg="{orgauth:'${return}'}" action="cache" input="{op:'get',cache:'temp_cache',key:'author_org'}"/>
+                    <do key="cfgoprole" msg="{opauth:'${return}'}" action="cache" input="{op:'get',cache:'temp_cache',key:'author_op'}"/>
+                    <!-- author_entity org -->
+                    <do msg="16. sec_author_entity" key="orgentity" action="DataClient" input="{ds:'(${opdbs}.item)',sqls:['SELECT e.obj_id,p.organize_name,e.author_entity_id FROM sec_author_entity e,sec_organize p WHERE p.organize_id=e.obj_id and e.obj_type=\'Org\' AND e.state=1']}">
+                        <for collection="${orgentity}">
+                            <do key="putCache" action="cache" input="{cache:'cache_name_id19',op:'add',key:'(${orgentity}.item.OBJ_ID)',value:'(${orgentity}.item.AUTHOR_ENTITY_ID)'}"/>
+                        </for>
+                        <do key="org_entity_id_id" action="cache" input="{op:'getall',cache:'cache_name_id19'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{org_id:'OBJ_ID'},obj1:'${cfgorgrole}',obj2:'${orgentity}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=org.author_entity.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{op:'addList',cache:'temp_cache',key:'author_entities',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{AUTHOR_ENTITY_ID:'${newId}',OBJ_TYPE:'Org',OBJ_ID:'(${findAdd}.item.org_id)',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}"/>
+                                <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                <do key="addnew" action="setvalue" input="{obj:'${org_entity_id_id}',path:'(${findAdd}.item.org_id)',value:'(${newId})'}"/>
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'author_entities'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_author_entity',op:'add',datas:'${tempdata}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'org.author_entity.ID'},value:'(${curSequence})'}"/>
+                        </do>
+                    </do>
+                    <!-- author org-->
+                    <do key="orgroles" action="DataClient" input="{ds:'(${opdbs}.item)',op:'query',sqls:['SELECT a.role_id,e.obj_id FROM sec_author_entity e,sec_author a WHERE e.author_entity_id=a.author_entity_id AND e.obj_type=\'Org\' AND e.state=1 AND a.state=1']}">
+                        <do key="org_entity_id_id" action="cache" input="{op:'getall',cache:'cache_name_id19'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{role_id:'ROLE_ID',org_id:'OBJ_ID'},obj1:'${cfgorgrole}',obj2:'${orgroles}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="authorSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=org.author.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="authorId" action="var" input="{value:'#{(${authorSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{op:'addList',cache:'temp_cache',key:'authors',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{AUTHOR_ID:'${authorId}',AUTHOR_ENTITY_ID:'(${org_entity_id_id}.(${findAdd}.item.org_id))',ROLE_ID:'(${findAdd}.item.role_id)',AUTHOR_TYPE:'A',PARENT_ROLE_AUTHOR_ID:'-1',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',AUTHOR_VALID_DATE:'(${systemdate})',AUTHOR_EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}"/>
+                                <do key="addPar" action="par" input="{op:'add',key:'authorSequence',value:'${authorId}'}"/>
+                            </for>
+                            <do key="authors" action="cache" input="{cache:'temp_cache',op:'get',key:'authors'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${authors})',ds:'(${opdbs}.item)',table:'sec_author',op:'add',datas:'${authors}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${authorSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'org.author.ID'},value:'(${authorSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="del" action="cache" input="{cache:'cache_name_id',op:'del'}"/>
+                    </do>
+                    <!-- author_entity op -->
+                    <do msg="17. sec_author_entity" key="opentity" action="DataClient" input="{ds:'(${opdbs}.item)',sqls:['SELECT e.obj_id,p.code,e.author_entity_id FROM sec_author_entity e,sec_operator p WHERE p.operator_id=e.obj_id and e.obj_type=\'Operator\' AND e.state=1']}">
+                        <for collection="${opentity}">
+                            <do key="putCache" action="cache" input="{cache:'cache_name_id20',op:'add',key:'(${opentity}.item.OBJ_ID)',value:'(${opentity}.item.AUTHOR_ENTITY_ID)'}"/>
+                        </for>
+                        <do key="op_entity_id_id" action="cache" input="{op:'getall',cache:'cache_name_id20'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{op_id:'OBJ_ID'},obj1:'${cfgoprole}',obj2:'${opentity}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=op.author_entity.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{op:'addList',cache:'temp_cache',key:'author_entities',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{AUTHOR_ENTITY_ID:'${newId}',OBJ_TYPE:'Operator',OBJ_ID:'(${findAdd}.item.op_id)',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}"/>
+                                <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                <do key="addnew" action="setvalue" input="{obj:'${op_entity_id_id}',path:'(${findAdd}.item.op_id)',value:'(${newId})'}"/>
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'author_entities'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_author_entity',op:'add',datas:'${tempdata}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'op.author_entity.ID'},value:'(${curSequence})'}"/>
+                        </do>
+                    </do>
+                    <!-- author op-->
+                    <do msg="18. sec_author" key="oproles" action="DataClient" input="{ds:'(${opdbs}.item)',op:'query',sqls:['SELECT a.role_id,e.obj_id FROM sec_author_entity e,sec_author a WHERE e.author_entity_id=a.author_entity_id AND e.obj_type=\'Operator\' AND e.state=1 AND a.state=1']}">
+                        <do key="op_entity_id_id" action="cache" input="{op:'getall',cache:'cache_name_id20'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{role_id:'ROLE_ID',op_id:'OBJ_ID'},obj1:'${cfgoprole}',obj2:'${oproles}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="authorSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=op.author.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="authorId" action="var" input="{value:'#{(${authorSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{op:'addList',cache:'temp_cache',key:'authors',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{AUTHOR_ID:'${authorId}',AUTHOR_ENTITY_ID:'(${op_entity_id_id}.(${findAdd}.item.op_id))',ROLE_ID:'(${findAdd}.item.role_id)',AUTHOR_TYPE:'A',PARENT_ROLE_AUTHOR_ID:'-1',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',AUTHOR_VALID_DATE:'(${systemdate})',AUTHOR_EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}"/>
+                                <do key="addPar" action="par" input="{op:'add',key:'authorSequence',value:'${authorId}'}"/>
+                            </for>
+                            <do key="authors" action="cache" input="{cache:'temp_cache',op:'get',key:'authors'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${authors})',ds:'(${opdbs}.item)',table:'sec_author',op:'add',datas:'${authors}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${authorSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'op.author.ID'},value:'(${authorSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="del" action="cache" input="{cache:'cache_name_id',op:'del'}"/>
+                    </do>
+                </do>
+                <do msg="7. sec_group" isenable="true" key="staticDatas" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'Group'}">
+                    <do key="dbStaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_group',op:'query',fields:['GROUP_ID','GROUP_NAME','BUILD_ID','GROUP_TYPE']}"/>
+                    <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                    <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=Group.ID},CurNum)'}"/>
+                    <do key="StaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_ID','CODE_NAME'],conds:{CODE_TYPE:'2012111',IS_USED:'1'}}"/>
+                    <for collection="${StaticData}">
+                        <do key="putCache" action="cache" input="{cache:'cache_name_id',op:'add',key:'(${StaticData}.item.CODE_NAME)',value:'(${StaticData}.item.CODE_ID)'}"/>
+                    </for>
+                    <do key="nameid" action="cache" input="{cache:'cache_name_id',op:'getall'}"/>
+                    <for collection="${dbStaticData}">
+                        <do key="putCache" action="cache" input="{cache:'cache_name_id2',op:'add',key:'(${dbStaticData}.item.GROUP_NAME)',value:'(${dbStaticData}.item.GROUP_ID)'}"/>
+                    </for>
+                    <do key="group_name_id" action="cache" input="{cache:'cache_name_id2',op:'getall'}"/>
+                    <do key="operators" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_operator',op:'query',fields:['OPERATOR_ID','CODE'],conds:{STATE:'1'}}"/>
+                    <for collection="${operators}">
+                        <do key="putCache" action="cache" input="{cache:'cache_name_id3',op:'add',key:'(${operators}.item.CODE)',value:'(${operators}.item.OPERATOR_ID)'}"/>
+                    </for>
+                    <do key="op_name_id" action="cache" input="{cache:'cache_name_id3',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{GroupName:'GROUP_NAME'},valueMap:{BuildID:'BUILD_ID',GroupType:'GROUP_TYPE'},obj1:'${staticDatas}',obj2:'${dbStaticData}'}">
+                        <for collection="${findAdd}">
+                            <!--
+                                                    <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                            -->
+                            <do key="tempcache" action="cache" input="{check:'isnotnull(${findAdd}.item.GroupName)',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{GROUP_ID:'${findAdd}.item.GroupID',GROUP_NAME:'${findAdd}.item.GroupName',BUILD_ID:'${findAdd}.item.BuildID',GROUP_TYPE:'(${nameid}.(${findAdd}.item.GroupType))',PARENT_ID:'${findAdd}.item.ParentId',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                <do key="addnew" action="setvalue" input="{obj:'${group_name_id}',path:'(${findAdd}.item.GroupName)',value:'(${findAdd}.item.GroupID)'}"/>
+                            </do>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_group',op:'add',datas:'${tempdata}'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        <!--
+                                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'Group.ID'},value:'(${curSequence})'}"/>
+                        -->
+                    </do>
+
+                    <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{GroupName:'GROUP_NAME'},valueMap:{BuildID:'BUILD_ID',GroupType:'GROUP_TYPE'},obj1:'${staticDatas}',obj2:'${dbStaticData}'}">
+                        <for collection="${findUpdate}">
+                            <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_group',op:'update',conds:{GROUP_NAME:'(${findUpdate}.item.GroupName)'},datas:
+                            {BUILD_ID:'${findUpdate}.item.BuildID',GROUP_TYPE:'(${nameid}.(${findUpdate}.item.GroupType))'}
+                            }"/>
+                        </for>
+                    </do>
+                    <print msg="{group:'${group_name_id}'}"/>
+                    <do msg="8. sec_group_member" key="group_mumber" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_group_member',op:'query',fields:['GROUP_ID','MEM_ID'],conds:{STATE:'1'}}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{GroupName:'GROUP_ID',OPCode:'MEM_ID'},chgKeyMap1:{GroupName:'${group_name_id}',OPCode:'${op_name_id}'},obj1:'${staticDatas}',obj2:'${group_mumber}'}">
+                        <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                        <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=GroupMem.ID},CurNum)'}"/>
+                        <for collection="${findAdd}">
+                            <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                            <do key="tempcache" action="cache" input="{check:'isnotnull(${findAdd}.item.OPCode)',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{ID:'${newId}',GROUP_ID:'(${group_name_id}.(${findAdd}.item.GroupName))',MEM_ID:'(${op_name_id}.(${findAdd}.item.OPCode))',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                            </do>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_group_member',op:'add',datas:'${tempdata}'}"/>
+                        <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'GroupMem.ID'},value:'(${curSequence})'}"/>
+                    </do>
+                    <do key="clear" action="cache" input="{cache:'cache_name_id',op:'del'}"/>
+                    <do key="clear" action="cache" input="{cache:'cache_name_id2',op:'del'}"/>
+                    <do key="clear" action="cache" input="{cache:'cache_name_id3',op:'del'}"/>
+                </do>
+                <do desc="19. sec_player " isenable="true" key="playerExcel" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'Player'}">
+                    <!-- sec_player -->
+                    <do key="playerData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_player',op:'query',fields:['PLAYER_ID','NAME','ROLE_TYPE'],conds:{STATE:'1'}}">
+                        <do key="StaticData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_static_data',op:'query',fields:['CODE_ID','CODE_NAME'],conds:{CODE_TYPE:'99100',IS_USED:'1'}}"/>
+                        <for collection="${StaticData}">
+                            <do key="putCache" action="cache" input="{cache:'cache_name_id',op:'add',key:'(${StaticData}.item.CODE_NAME)',value:'(${StaticData}.item.CODE_ID)'}"/>
+                        </for>
+                        <for collection="${playerData}">
+                            <do key="playCache" action="cache" input="{cache:'cache_name_id2',op:'add',key:'(${playerData}.item.NAME)',value:'(${playerData}.item.PLAYER_ID)'}"/>
+                        </for>
+                        <do key="player_name_id" action="cache" input="{cache:'cache_name_id2',op:'getall'}"/>
+                        <do key="roletype_name_id" action="cache" input="{cache:'cache_name_id',op:'getall'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{PlayerName:'NAME'},valueMap:{RoleType:'ROLE_TYPE'},chgValueMap1:{RoleType:'${roletype_name_id}'},obj1:'${playerExcel}',obj2:'${playerData}'}">
+                            <print msg="{roleType:'${roletype_name_id}'}"/>
+                            <for collection="${findAdd}">
+                                <do key="tempcache" action="cache" input="{check:'#{isnotnull(${findAdd}.item.PlayerName)=true &amp; isnotnull(getvalue((${roletype_name_id}.(${findAdd}.item.RoleType))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{PLAYER_ID:'(${findAdd}.item.PlayerID)',PARENT_PLAYER_ID:'-1',NAME:'(${findAdd}.item.PlayerName)',ROLE_TYPE:'(${roletype_name_id}.(${findAdd}.item.RoleType))',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                    <do key="addnew" action="setvalue" input="{obj:'${player_name_id}',path:'(${findAdd}.item.PlayerName)',value:'(${findAdd}.item.PlayerID)'}"/>
+                                </do>
+
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_player',op:'add',datas:'${tempdata}'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{PlayerName:'NAME'},valueMap:{RoleType:'ROLE_TYPE'},chgValueMap1:{RoleType:'${roletype_name_id}'},obj1:'${playerExcel}',obj2:'${playerData}'}">
+                            <for collection="${findUpdate}">
+                                <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_player',op:'update',conds:{NAME:'(${findUpdate}.item.PlayerName)'},datas:
+                                {ROLE_TYPE:'(${roletype_name_id}.(${findUpdate}.item.RoleType))'}
+                                }"/>
+                            </for>
+                        </do>
+                        <do key="clear" action="cache" input="{cache:'cache_name_id',op:'del'}"/>
+                    </do>
+                    <!-- player sec_author_entity -->
+                    <do msg="20. sec_author_entity for player" key="playerentity" action="DataClient" input="{ds:'(${opdbs}.item)',sqls:['SELECT e.obj_id,p.name,e.author_entity_id FROM sec_author_entity e,sec_player p WHERE p.player_id=e.obj_id and e.obj_type=\'Player\' AND e.state=1']}">
+                        <for collection="${playerentity}">
+                            <do key="playCache" action="cache" input="{cache:'cache_name_id5',op:'add',key:'(${playerentity}.item.OBJ_ID)',value:'(${playerentity}.item.AUTHOR_ENTITY_ID)'}"/>
+                        </for>
+                        <do key="player_name_id" action="cache" input="{cache:'cache_name_id2',op:'getall'}"/>
+                        <do key="player_entity_id_id" action="cache" input="{op:'getall',cache:'cache_name_id5'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{PlayerName:'NAME'},obj1:'${playerExcel}',obj2:'${playerentity}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=player.author_entity.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{check:'isnotnull(getvalue((${player_name_id}.(${findAdd}.item.PlayerName))))',op:'addList',cache:'temp_cache',key:'author_entities',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{AUTHOR_ENTITY_ID:'${newId}',OBJ_TYPE:'Player',OBJ_ID:'(${player_name_id}.(${findAdd}.item.PlayerName))',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                    <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                    <do key="addnew" action="setvalue" input="{obj:'${player_entity_id_id}',path:'(${player_name_id}.(${findAdd}.item.PlayerName))',value:'(${newId})'}"/>
+                                </do>
+                            </for>
+                            <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'author_entities'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_author_entity',op:'add',datas:'${tempdata}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'player.author_entity.ID'},value:'(${curSequence})'}"/>
+                        </do>
+                    </do>
+                    <!-- player sec_author-->
+                    <do key="role_name_id" action="cache" input="{cache:'cache_name_id18',op:'getall'}">
+                        <do key="player_name_id" action="cache" input="{cache:'cache_name_id2',op:'getall'}"/>
+                        <do key="playerroles" action="DataClient" input="{ds:'(${opdbs}.item)',op:'query',sqls:['SELECT a.role_id,e.obj_id FROM sec_author_entity e,sec_author a WHERE e.author_entity_id=a.author_entity_id AND e.obj_type=\'Player\' AND e.state=1 AND a.state=1']}"/>
+                        <do key="player_entity_id_id" action="cache" input="{op:'getall',cache:'cache_name_id5'}"/>
+                        <for collection="${playerExcel}">
+                            <for collection="${playerExcel}.item">
+                                <if cond="#{isnotnull(getvalue((${role_name_id}.(${playerExcel}.item.key))))=true &amp; isnotnull(getvalue((${player_name_id}.(${playerExcel}.item.PlayerName))))=true}">
+                                    <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'addList',key:'temp',value:{declare:{clazz:'java.util.HashMap'},
+                                    data:{role_id:'(${role_name_id}.(${playerExcel}.item.key))',player_id:'(${player_name_id}.(${playerExcel}.item.PlayerName))'}}}"/>
+                                </if>
+                            </for>
+                        </for>
+
+                        <do key="newPlayerRole" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <print msg="{newPlayerRole:'${newPlayerRole}'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{role_id:'ROLE_ID',player_id:'OBJ_ID'},obj1:'${newPlayerRole}',obj2:'${playerroles}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="authorSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=player.author.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="authorId" action="var" input="{value:'#{(${authorSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{check:'isnotnull(getvalue((${player_entity_id_id}.(${findAdd}.item.player_id))))',op:'addList',cache:'temp_cache',key:'authors',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{AUTHOR_ID:'${authorId}',AUTHOR_ENTITY_ID:'(${player_entity_id_id}.(${findAdd}.item.player_id))',ROLE_ID:'(${findAdd}.item.role_id)',AUTHOR_TYPE:'A',PARENT_ROLE_AUTHOR_ID:'-1',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',AUTHOR_VALID_DATE:'(${systemdate})',AUTHOR_EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}">
+                                <do key="addPar" action="par" input="{op:'add',key:'authorSequence',value:'${authorId}'}"/>
+                                </do>
+                            </for>
+                            <do key="authors" action="cache" input="{cache:'temp_cache',op:'get',key:'authors'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${authors})',ds:'(${opdbs}.item)',table:'sec_author',op:'add',datas:'${authors}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${authorSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'player.author.ID'},value:'(${authorSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="del" action="cache" input="{cache:'cache_name_id',op:'del'}"/>
+                    </do>
+                    <!-- sec_player_op_station_rela -->
+                    <do msg="21. sec_player_op_station_rela" isenable="true" key="player_name_id" action="cache" input="{cache:'cache_name_id2',op:'getall'}">
+                        <do desc="" isenable="true" key="playMemberExcel" action="readExcel" input="{check:'(${isOrgStaffExist})',file:'${Excel_OrganizeStaff}',sheetName:'PlayMember'}"/>
+                        <do msg="get opcode_station_id" key="opcode_station_id" action="cache" input="{cache:'cache_name_id4',op:'getall'}"/>
+                        <for collection="${playMemberExcel}">
+                            <if cond="#{isnotnull(getvalue((${playMemberExcel}.item.OPCode)))}">
+                                <do key="tempdata" action="cache" input="{check:'isnotnull(getvalue((${opcode_station_id}.(${playMemberExcel}.item.OPCode))))',cache:'temp_cache',op:'addList',key:'temp',value:{declare:{clazz:'java.util.HashMap'},
+                                data:{op_station_id:'(${opcode_station_id}.(${playMemberExcel}.item.OPCode))',player_id:'(${player_name_id}.(${playMemberExcel}.item.PlayerName))'}}}"/>
+                            </if>
+                        </for>
+                        <do key="opcode_stid" action="cache" input="{op:'get',cache:'temp_cache',key:'temp'}"/>
+                        <do msg="get player_op_statjion_rela" key="playerop" action="DataClient" input="{ds:'(${opdbs}.item)',op:'query',table:'sec_player_op_station_rela',fields:['PLAYER_ID','OP_STATION_ID'],conds:{STATE:'1'}}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{player_id:'PLAYER_ID',op_station_id:'OP_STATION_ID'},obj1:'${opcode_stid}',obj2:'${playerop}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_OrganizeStaff}',sheetName:'sequence'}"/>
+                            <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=player.opstation.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{op:'addList',cache:'temp_cache',key:'play_stations',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{RELA_ID:'${newId}',PLAYER_ID:'(${findAdd}.item.player_id)',OP_STATION_ID:'(${findAdd}.item.op_station_id)',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',PLAYER_VALID_DATE:'(${systemdate})',PLAYER_EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1',TENANT_ID:'(TenantId)'}}}"/>
+                                <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                            </for>
+                            <do key="playstations" action="cache" input="{cache:'temp_cache',op:'get',key:'play_stations'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${playstations})',ds:'(${opdbs}.item)',table:'sec_player_op_station_rela',op:'add',datas:'${playstations}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_OrganizeStaff}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'player.opstation.ID'},value:'(${curSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                    </do>
+                </do>
+                <!-- menu -->
+                <do msg="sec_domain" isenable="true" key="excelDatas" action="readExcel" input="{check:'(${isMenuExist})',file:'${Excel_Menu}',sheetName:'sec_domain'}">
+                    <do key="domainData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_domain',op:'query',fields:['DOMAIN_ID','DOMAIN_NAME']}"/>
+                    <for collection="${domainData}">
+                        <do key="addd_cache_kind_name_id" action="cache" input="{check:'isnotnull(${domainData}.item.DOMAIN_NAME)',cache:'cache_name_id22',op:'add',key:'(${domainData}.item.DOMAIN_NAME)',value:'(${domainData}.item.DOMAIN_ID)'}"/>
+                    </for>
+                    <do key="domain_name_id" action="cache" input="{cache:'cache_name_id22',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{DOMAIN_Name:'DOMAIN_NAME'},obj1:'${excelDatas}',obj2:'${domainData}'}">
+                        <for collection="${findAdd}">
+                            <do key="tempcache" action="cache" input="{check:'isnotnull(${findAdd}.item.DOMAIN_Name)',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{DOMAIN_ID:'${findAdd}.item.DOMAIN_ID',ORG_REBUILD:'-1',DOMAIN_NAME:'${findAdd}.item.DOMAIN_Name'}}}"/>
+                            <do key="setnewNameId" action="setvalue" input="{obj:'${domain_name_id}',path:'(${findAdd}.item.DOMAIN_Name)',value:'${findAdd}.item.DOMAIN_ID'}"/>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_domain',op:'add',datas:'${tempdata}'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                    </do>
+                </do>
+                <do key="domain_name_id" action="cache" input="{cache:'cache_name_id22',op:'getall'}"/>
+                <print msg="{sec_domain:'${domain_name_id}'}"/>
+                <do msg="sec_ent_class" isenable="true" key="excelDatas" action="readExcel" input="{check:'(${isMenuExist})',file:'${Excel_Menu}',sheetName:'sec_ent_class'}">
+                    <do key="entclassData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_ent_class',op:'query',fields:['ENT_CLASS_ID','NAME']}"/>
+                    <for collection="${entclassData}">
+                        <do key="put_name_id" action="cache" input="{check:'isnotnull(${entclassData}.item.NAME)',cache:'cache_name_id23',op:'add',key:'(${entclassData}.item.NAME)',value:'(${entclassData}.item.ENT_CLASS_ID)'}"/>
+                    </for>
+                    <do key="entclass_name_id" action="cache" input="{cache:'cache_name_id23',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{Name:'NAME'},obj1:'${excelDatas}',obj2:'${entclassData}'}">
+                        <for collection="${findAdd}">
+                            <do key="tempcache" action="cache" input="{check:'isnotnull(${findAdd}.item.Name)',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{ENT_CLASS_ID:'${findAdd}.item.ID',NAME:'${findAdd}.item.Name',PARENT_ID:'${findAdd}.item.ParentID',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1'}}}"/>
+                            <do key="setnewNameId" action="setvalue" input="{obj:'${entclass_name_id}',path:'(${findAdd}.item.Name)',value:'${findAdd}.item.ID'}"/>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_ent_class',op:'add',datas:'${tempdata}'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                    </do>
+                </do>
+                <do key="entclass_name_id" action="cache" input="{cache:'cache_name_id23',op:'getall'}"/>
+                <print msg="{sec_ent_class:'${entclass_name_id}'}"/>
+                <do msg="sec_function_url_mapping" isenable="true" key="excelDatas" action="readExcel" input="{check:'(${isMenuExist})',file:'${Excel_Menu}',sheetName:'sec_function_url_mapping'}">
+                    <do key="dbData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_function_url_mapping',op:'query',fields:['TENANT_ID','ENT_CLASS_ID','URL_PREFIX','PROTOCOL'],conds:{STATE:'1'}}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{URL_PREFIX:'URL_PREFIX'},obj1:'${excelDatas}',obj2:'${dbData}'}">
+                        <for collection="${findAdd}">
+                            <do key="tempcache" action="cache" input="{check:'isnotnull(${findAdd}.item.URL_PREFIX)',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{TENANT_ID:'(TenantId)',ENT_CLASS_ID:'(${entclass_name_id}.(${findAdd}.item.ENT_CLASS_ID))',URL_PREFIX:'${findAdd}.item.URL_PREFIX',STATE:'1',PROTOCOL:'${findAdd}.item.PROTOCOL'}}}"/>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_function_url_mapping',op:'add',datas:'${tempdata}'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                    </do>
+                    <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{URL_PREFIX:'URL_PREFIX'},valueMap:{ENT_CLASS_ID:'ENT_CLASS_ID',PROTOCOL:'PROTOCOL'},chgValueMap1:{ENT_CLASS_ID:'${entclass_name_id}'},obj1:'${excelDatas}',obj2:'${dbData}'}">
+                        <for collection="${findUpdate}">
+                            <do key="updatedb" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_function_url_mapping',op:'update',conds:{URL_PREFIX:'(${findUpdate}.item.Url_prefix)'},datas:
+                                {ENT_CLASS_ID:'(${entclass_name_id}.(${findUpdate}.item.ENT_CLASS_ID))',PROTOCOL:'${findUpdate}.item.PROTOCOL'}
+                                }"/>
+                        </for>
+                    </do>
+                </do>
+                <do msg="sec_function" isenable="true" key="excelDatas" action="readExcel" input="{check:'(${isMenuExist})',file:'${Excel_Menu}',sheetName:'Menu'}">
+                    <do key="fun_data" action="OneRow2MulRow" input="{obj:'${excelDatas}',compose:{parentName:'ParentName',name:'Name',id:'ID',parentid:'ParentID',rootvalue:'-1',newid:{1:3,2:3,3:4},fields:['Menu_LV1','Menu_LV2','Menu_LV3']}}"/>
+                    <do key="dbData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_function',op:'query',fields:['FUNC_ID','ENT_CLASS_ID','FUNC_CODE','NAME','DOMAIN_ID','VIEWNAME'],conds:{STATE:'1'}}"/>
+                    <for collection="${dbData}">
+                        <do key="put_name_id" action="cache" input="{check:'isnotnull(${dbData}.item.NAME)',cache:'cache_name_id24',op:'add',key:'(${dbData}.item.NAME)',value:'(${dbData}.item.FUNC_ID)'}"/>
+                    </for>
+                    <do key="fun_name_id" action="cache" input="{cache:'cache_name_id24',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{Name:'NAME'},obj1:'${fun_data}',obj2:'${dbData}'}">
+                        <for collection="${findAdd}">
+                            <do key="tempcache" action="cache" input="{check:'#{isnotnull(${findAdd}.item.Name)=true &amp; isnotnull(getvalue((${entclass_name_id}.(${findAdd}.item.Module))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{FUNC_ID:'(${findAdd}.item.ID)',ENT_CLASS_ID:'(${entclass_name_id}.(${findAdd}.item.Module))',DOMAIN_ID:'(${domain_name_id}.(${findAdd}.item.Domain))',FUNC_CODE:'getvalue((${findAdd}.item.Menu_Code))',NAME:'${findAdd}.item.Name',PARENT_ID:'(${findAdd}.item.ParentID)',FUNC_LEVEL:'${findAdd}.item.UpDownLevel',FUN_SEQ:'1',VIEWNAME:'${findAdd}.item.URL',FUNC_TYPE:'H',VERIFY_MODE:'00000000',MODULE_TYPE:'1',CREATOR_ID:'0',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1'}}}">
+                                <do key="addnew" action="setvalue" input="{obj:'${fun_name_id}',path:'(${findAdd}.item.Name)',value:'(${findAdd}.item.ID)'}"/>
+                            </do>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_function',op:'add',datas:'${tempdata}'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                    </do>
+                    <do key="findUpdate" action="differentMap" input="{op:'update',keyMap:{Name:'NAME'},valueMap:{Module:'ENT_CLASS_ID',Domain:'DOMAIN_ID',URL:'VIEWNAME',ParentName:'PARENT_ID'},chgValueMap1:{Module:'${entclass_name_id}',Domain:'${domain_name_id}',ParentName:'${fun_name_id}'},obj1:'${fun_data}',obj2:'${dbData}'}">
+                        <for collection="${findUpdate}">
+                            <do key="updatedb" action="DataClient" input="{check:'isnotnull(getvalue((${entclass_name_id}.(${findAdd}.item.Module))))',ds:'(${opdbs}.item)',table:'sec_function',op:'update',conds:{VIEWNAME:'(${findUpdate}.item.Name)'},datas:
+                                {ENT_CLASS_ID:'(${entclass_name_id}.(${findUpdate}.item.Module))',DOMAIN_ID:'(${domain_name_id}.(${findUpdate}.item.Domain))',FUNC_CODE:'(${findUpdate}.item.Menu_Code)',PARENT_ID:'case(isnull((${fun_name_id}.(${findUpdate}.item.ParentName))),[[false,\'(${fun_name_id}.(${findUpdate}.item.ParentName))\'],[true,-1]])',FUNC_LEVEL:'${findUpdate}.item.UpDownLevel',VIEWNAME:'${findUpdate}.item.URL'}
+                                }"/>
+                        </for>
+                    </do>
+                    <do key="fun_name_id" action="cache" input="{cache:'cache_name_id24',op:'getall'}"/>
+                    <print msg="{sec_function:'len(${fun_name_id})'}"/>
+                    <!-- sec_role_grant -->
+                    <do msg="sec_role_grant" key="menuroles" action="DataClient" input="{ds:'(${opdbs}.item)',op:'query',sqls:['SELECT e.role_id,e.ent_id FROM sec_role_grant e,sec_function a WHERE e.ent_id=a.func_id AND e.ent_type=\'F\' AND e.state=1 AND a.state=1']}">
+                        <do key="role_name_id" action="cache" input="{cache:'cache_name_id18',op:'getall'}"/>
+                        <for collection="${fun_data}">
+                            <for collection="${fun_data}.item">
+                                <if cond="#{isnotnull(${role_name_id}.(${fun_data}.item.key))&amp;isnotnull(${fun_name_id}.(${fun_data}.item.Name))}">
+                                    <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'addList',key:'temp',value:{declare:{clazz:'java.util.HashMap'},
+                                    data:{role_id:'(${role_name_id}.(${fun_data}.item.key))',func_id:'(${fun_name_id}.(${fun_data}.item.Name))'}}}"/>
+                                </if>
+                            </for>
+                        </for>
+                        <do key="newFuncRole" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{role_id:'ROLE_ID',func_id:'ENT_ID'},obj1:'${newFuncRole}',obj2:'${menuroles}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_Menu}',sheetName:'sequence'}"/>
+                            <do key="authorSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=func.role.grant.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="authorId" action="var" input="{value:'#{(${authorSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{op:'addList',cache:'temp_cache',key:'authors',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{ROLE_GRANT_ID:'${authorId}',ROLE_ID:'(${findAdd}.item.role_id)',PRIV_ID:'1',ENT_ID:'${findAdd}.item.func_id',ENT_TYPE:'F',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',ENT_VALID_DATE:'(${systemdate})',ENT_EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1'}}}"/>
+                                <do key="addPar" action="par" input="{op:'add',key:'authorSequence',value:'${authorId}'}"/>
+                            </for>
+                            <do key="authors" action="cache" input="{cache:'temp_cache',op:'get',key:'authors'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${authors})',ds:'(${opdbs}.item)',table:'sec_role_grant',op:'add',datas:'${authors}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${authorSequence})',file:'${Excel_Menu}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'func.role.grant.ID'},value:'(${authorSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="del" action="cache" input="{cache:'cache_name_id',op:'del'}"/>
+                    </do>
+                </do>
+
+                <do msg="sec_function_hide" isenable="true" key="excelDatas" action="readExcel" input="{check:'(${isMenuExist})',file:'${Excel_Menu}',sheetName:'Hidden_Menu'}">
+                    <do key="fun_name_id" action="cache" input="{cache:'cache_name_id24',op:'getall'}"/>
+                    <do key="dbData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_function_hide',op:'query',fields:['FUNC_ID','FUNC_NAME','HIDE_URL']}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{Menu_LV3:'FUNC_NAME',HIDE_URL:'HIDE_URL'},obj1:'${excelDatas}',obj2:'${dbData}'}">
+                        <for collection="${findAdd}">
+                            <do key="tempcache" action="cache" input="{check:'#{isnotnull((${findAdd}.item.HIDE_URL))=true &amp; isnotnull(getvalue((${fun_name_id}.(${findAdd}.item.Menu_LV3))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{FUNC_ID:'(${fun_name_id}.(${findAdd}.item.Menu_LV3))',FUNC_NAME:'(${findAdd}.item.Menu_LV3)',HIDE_URL:'${findAdd}.item.HIDE_URL'}}}"/>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_function_hide',op:'add',datas:'${tempdata}'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                    </do>
+
+                </do>
+                <!-- sec_priv -->
+                <do msg="sec_priv" isenable="true" key="excelDatas" action="readExcel" input="{check:'(${isEntityExist})',file:'${Excel_Entity}',sheetName:'sec_priv'}">
+                    <do key="dbData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_priv',op:'query',fields:['PRIV_ID','PRIV_NAME','ENT_CLASS_ID']}"/>
+                    <for collection="${dbData}">
+                        <do key="put_name_id" action="cache" input="{check:'isnotnull(${dbData}.item.PRIV_NAME)',cache:'cache_name_id25',op:'add',key:'(${dbData}.item.PRIV_NAME)',value:'(${dbData}.item.PRIV_ID)'}"/>
+                    </for>
+                    <do key="priv_name_id" action="cache" input="{cache:'cache_name_id25',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{ActionName:'PRIV_NAME'},obj1:'${excelDatas}',obj2:'${dbData}'}">
+                        <for collection="${findAdd}">
+                            <do key="tempcache" action="cache" input="{check:'#{isnotnull(${findAdd}.item.ActionName)=true &amp; isnotnull(getvalue((${entclass_name_id}.(${findAdd}.item.Module))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{PRIV_ID:'(${findAdd}.item.ActionID)',PRIV_NAME:'(${findAdd}.item.ActionName)',ENT_CLASS_ID:'(${entclass_name_id}.(${findAdd}.item.Module))',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1'}}}"/>
+                            <do key="addnew" action="setvalue" input="{obj:'${priv_name_id}',path:'(${findAdd}.item.ActionName)',value:'(${findAdd}.item.ActionID)'}"/>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_priv',op:'add',datas:'${tempdata}'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                    </do>
+                </do>
+                <do msg="sec_entity" isenable="true" key="excelDatas" action="readExcel" input="{check:'(${isEntityExist})',file:'${Excel_Entity}',sheetName:'Entity'}">
+                    <do key="priv_name_id" action="cache" input="{cache:'cache_name_id25',op:'getall'}"/>
+                    <do key="dbData" action="DataClient" input="{ds:'(${opdbs}.item)',table:'sec_entity',op:'query',fields:['ENT_ID','ENT_CLASS_ID','ENT_NAME'],conds:{STATE:'1'}}"/>
+                    <for collection="${dbData}">
+                        <do key="put_name_id" action="cache" input="{check:'isnotnull(${dbData}.item.ENT_NAME)',cache:'cache_name_id26',op:'add',key:'(${dbData}.item.ENT_NAME)',value:'(${dbData}.item.ENT_ID)'}"/>
+                    </for>
+                    <do key="ent_name_id" action="cache" input="{cache:'cache_name_id26',op:'getall'}"/>
+                    <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{EntityName:'ENT_NAME'},obj1:'${excelDatas}',obj2:'${dbData}'}">
+                        <do key="sequence" action="readExcel" input="{file:'${Excel_Entity}',sheetName:'sequence'}"/>
+                        <do key="curSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=ent.ID},CurNum)'}"/>
+                        <for collection="${findAdd}">
+                            <do key="newId" action="var" input="{value:'#{(${curSequence})+1}'}"/>
+                            <do key="tempcache" action="cache" input="{check:'#{isnotnull(${findAdd}.item.EntityName)=true &amp; isnotnull(getvalue((${entclass_name_id}.(${findAdd}.item.Module))))=true}',op:'addList',cache:'temp_cache',key:'temp',value:{declare:{clazz:'java.util.HashMap'}
+                             ,data:{ENT_ID:'(${newId})',ENT_CLASS_ID:'(${entclass_name_id}.(${findAdd}.item.Module))',ENT_NAME:'${findAdd}.item.EntityName',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1'}}}">
+                                <do key="addPar" action="par" input="{op:'add',key:'curSequence',value:'${newId}'}"/>
+                                <do key="addnew" action="setvalue" input="{obj:'${ent_name_id}',path:'(${findAdd}.item.EntityName)',value:'(${newId})'}"/>
+                            </do>
+                        </for>
+                        <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="insertdb" action="DataClient" input="{check:'isnotnull(${tempdata})',ds:'(${opdbs}.item)',table:'sec_entity',op:'add',datas:'${tempdata}'}"/>
+                        <do key="set_cell" action="readExcel" input="{check:'isnotnull(${curSequence})',file:'${Excel_Entity}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'ent.ID'},value:'(${curSequence})'}"/>
+                        <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                    </do>
+                    <!-- sec_ent_priv_rela -->
+                    <do msg="sec_ent_priv_rela" key="ent_priv_rel" action="DataClient" input="{ds:'(${opdbs}.item)',op:'query',sqls:['SELECT rela_id,priv_id,ent_id,ent_class_id FROM sec_ent_priv_rela WHERE state=1']}">
+                        <do key="priv_name_id" action="cache" input="{cache:'cache_name_id25',op:'getall'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{Action:'PRIV_ID',EntityID:'ENT_ID'},chgKeyMap1:{Action:'${priv_name_id}'},obj1:'${excelDatas}',obj2:'${ent_priv_rel}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_Entity}',sheetName:'sequence'}"/>
+                            <do key="cursequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=ent.priv.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="newId" action="var" input="{value:'#{(${cursequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{check:'isnotnull(getvalue((${priv_name_id}.(${findAdd}.item.Action))))',op:'addList',cache:'temp_cache',key:'entpriv',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{RELA_ID:'${newId}',PRIV_ID:'(${priv_name_id}.(${findAdd}.item.Action))',ENT_ID:'${findAdd}.item.EntityID',ENT_CLASS_ID:'(${entclass_name_id}.(${findAdd}.item.Module))',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1'}}}"/>
+                                <do key="addPar" action="par" input="{op:'add',key:'cursequence',value:'${newId}'}"/>
+                            </for>
+                            <do key="entprivdata" action="cache" input="{cache:'temp_cache',op:'get',key:'entpriv'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${entprivdata})',ds:'(${opdbs}.item)',table:'sec_ent_priv_rela',op:'add',datas:'${entprivdata}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${cursequence})',file:'${Excel_Entity}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'ent.priv.ID'},value:'(${cursequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                    </do>
+                    <!-- sec_role_grant -->
+                    <do msg="sec_role_grant for entity" key="menuroles" action="DataClient" input="{ds:'(${opdbs}.item)',op:'query',sqls:['SELECT e.role_id,e.ent_id,e.PRIV_ID FROM sec_role_grant e,sec_entity a WHERE e.ent_id=a.ent_id AND e.ent_type=\'D\' AND e.state=1 AND a.state=1']}">
+                        <do key="role_name_id" action="cache" input="{cache:'cache_name_id18',op:'getall'}"/>
+                        <for collection="${excelDatas}">
+                            <for collection="${excelDatas}.item">
+                                <if cond="#{isnotnull(${role_name_id}.(${excelDatas}.item.key))&amp;isnotnull(${ent_name_id}.(${excelDatas}.item.EntityName))&amp;isnotnull(${priv_name_id}.(${excelDatas}.item.Action))}">
+                                    <do key="tempdata" action="cache" input="{cache:'temp_cache',op:'addList',key:'temp',value:{declare:{clazz:'java.util.HashMap'},
+                                    data:{role_id:'(${role_name_id}.(${excelDatas}.item.key))',ent_id:'(${ent_name_id}.(${excelDatas}.item.EntityName))',priv_id:'(${priv_name_id}.(${excelDatas}.item.Action))'}}}"/>
+                                </if>
+                            </for>
+                        </for>
+                        <do key="entcRole" action="cache" input="{cache:'temp_cache',op:'get',key:'temp'}"/>
+                        <do key="findAdd" action="differentMap" input="{op:'add',keyMap:{role_id:'ROLE_ID',ent_id:'ENT_ID',priv_id:'PRIV_ID'},obj1:'${entcRole}',obj2:'${menuroles}'}">
+                            <do key="sequence" action="readExcel" input="{file:'${Excel_Entity}',sheetName:'sequence'}"/>
+                            <do key="authorSequence" action="var" input="{value:'getvalue(${sequence},#{(${each}.Field)=ent.role.grant.ID},CurNum)'}"/>
+                            <for collection="${findAdd}">
+                                <do key="authorId" action="var" input="{value:'#{(${authorSequence})+1}'}"/>
+                                <do key="tempcache" action="cache" input="{op:'addList',cache:'temp_cache',key:'authors',value:{declare:{clazz:'java.util.HashMap'}
+                                 ,data:{ROLE_GRANT_ID:'${authorId}',ROLE_ID:'(${findAdd}.item.role_id)',PRIV_ID:'(${findAdd}.item.priv_id)',ENT_ID:'${findAdd}.item.ent_id',ENT_TYPE:'D',STATE:'1',DONE_CODE:'000000',CREATE_DATE:'(${systemdate})',DONE_DATE:'(${systemdate})',VALID_DATE:'(${systemdate})',EXPIRE_DATE:'2022-01-01',ENT_VALID_DATE:'(${systemdate})',ENT_EXPIRE_DATE:'2022-01-01',OP_ID:'1',ORG_ID:'1'}}}"/>
+                                <do key="addPar" action="par" input="{op:'add',key:'authorSequence',value:'${authorId}'}"/>
+                            </for>
+                            <do key="authors" action="cache" input="{cache:'temp_cache',op:'get',key:'authors'}"/>
+                            <do key="insertdb" action="DataClient" input="{check:'isnotnull(${authors})',ds:'(${opdbs}.item)',table:'sec_role_grant',op:'add',datas:'${authors}'}"/>
+                            <do key="set_cell" action="readExcel" input="{check:'isnotnull(${authorSequence})',file:'${Excel_Entity}',sheetName:'sequence',op:'set',col:'CurNum',row:{Field:'ent.role.grant.ID'},value:'(${authorSequence})'}"/>
+                            <do key="cleardata" action="cache" input="{cache:'temp_cache',op:'del'}"/>
+                        </do>
+                        <do key="del" action="cache" input="{cache:'cache_name_id',op:'del'}"/>
+                    </do>
+                </do>
+            </for>
+        </for>
+        <do action="command" input="{type:'command',data:'bin/restart.sh'}"/>
+    </if>
+</action>

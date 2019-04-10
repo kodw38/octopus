@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="utf-8"?>
+<bridge clazz="com.octopus.isp.bridge.impl.Bridge">
+    <instanceid>dataquery1</instanceid>
+
+    <defs>
+        <def xmlid="Flows"  clazz="com.octopus.utils.flow.impl.FlowMgr"/>
+        <def xmlid="Flow"  clazz="com.octopus.utils.flow.impl.Flow"/>
+        <def xmlid="Node"  clazz="com.octopus.utils.bftask.impl.BFTask"/>
+        <def xmlid="InvokeHandler"  clazz="com.octopus.utils.xml.handle.XMLObjectHandler"/>
+        <def xmlid="ParameterFieldGet"  clazz="com.octopus.isp.utils.ObjectFieldGet"/>
+        <!-- cell-->
+        <def xmlid="Cell"  clazz="com.octopus.isp.cell.impl.Cell"/>
+        <def xmlid="Action"  clazz="com.octopus.isp.cell.actions.DefaultCellAction"/>
+        <def xmlid="ISPExecutor"  clazz="com.octopus.isp.executors.ISPExecutor"/>
+        <def xmlid="Executor"  clazz="com.octopus.isp.executors.ISPExecutor"/>
+        <def xmlid="RuleExecutor"  clazz="com.octopus.isp.executors.RuleBFExecutor"/>
+        <def xmlid="TransactionExecutor"  clazz="com.octopus.isp.executors.TransactionExecutor"/>
+        <def xmlid="StepExecutor"  clazz="com.octopus.isp.executors.StepExecutor"/>
+        <def xmlid="DataExecutor"  clazz="com.octopus.isp.executors.DataExecutor"/>
+        <def xmlid="FileLog" clazz="com.octopus.tools.filelog.LoggerMgr"/>
+        <def xmlid="Logic" clazz="com.octopus.utils.xml.auto.logic.XMLLogic">
+            <trade clazz="com.octopus.utils.xml.auto.logic.XMLLogicTrade" desc="depends ActiveX and Redis apps">
+                <statusQueue clazz="com.octopus.tools.queue.impl.MemBlockQueue"/>
+                <logger>trade_redis</logger>
+                <finish>com.octopus.utils.xml.auto.logic.TradeFinish</finish>
+            </trade>
+        </def>
+    </defs>
+
+    <env clazz="com.octopus.isp.ds.DataEnv">
+        <property key="namespace.style">xxx.xxx.xx</property>
+        <property key="referencedata">D:\referenceData</property>
+        <property key="referenceimg">/home/referenceData/templet/imgs</property>
+        <property key="deploy">/home/deploy</property>
+        <property key="TenantId">22</property>
+        <property key="env_code">DEV</property>
+        <property key="verisPath">http://10.1.242.29:32000/HubCrmServlet</property>
+        <property key="verisCustPath">http://10.1.242.22:32000/HubCrmServlet</property>
+        <property key="tenantId">10</property>
+        <property key="outApiPath">out/</property>
+
+        <property key="isDevelopment">true</property>
+        <property key="outside_wsdl_dir">c:/log/ws/</property>
+        <property key="ServicesDir">c:/log/sv/</property>
+        <property key="services">com.test.TestSV,com.test.TestInteSV</property>
+        <property key="serviceInvoker">com.test.TestInvoker</property>
+        <property key="ws_host">http://127.0.0.1:9091</property>
+
+    </env>
+
+    <!-- 上下文环境变量 -->
+    <contexts clazz="com.octopus.isp.ds.Contexts">
+        <!-- 为每次请求设置请求上下文变量,这些变量从输入参数中获取,如果输入则使用默认值 -->
+        <context>
+            <property key="session.user.language">zh</property>
+            <property key="session.user.country">cn</property>
+            <property key="session.user.region">jiangsu</property>
+            <property key="session.user.datestyle">yyyy-MM-dd</property>
+            <property key="session.user.datetimestyle">yyyy-MM-dd'T'HH:mm:ssZ</property>
+            <property key="session.user.timezone">Asia/Shanghai</property>
+        </context>
+    </contexts>
+
+
+    <inits>
+        <!-- Zoo Keeper服务 -->
+        <init init="{}" key="ZkServer" clazz="com.octopus.tools.pubsub.ZkServer" input="{op:'start'}" config="{host:'127.0.0.1',port:'9001',dataDir:'c:/log/zk',tickTime:'',maxClientCnxns:''}"/>
+        <init isenable="true" key="ZkClientListener" clazz="com.octopus.tools.pubsub.ZkClientListen" config="{hostPort:'127.0.0.1:9001'}">
+            <if cond="#{(${op})=delete}">
+                <do action="system" input="{op:'deleteService',name:'${name}'}"/>
+            </if>
+            <if cond="#{(${op})=update}">
+                <if cond="#{(${input_data}.op)=publishActiveService}">
+                    <do action="system" input="{op:'activeService',name:'${input_data}.name'}"/>
+                </if>
+                <if cond="#{(${input_data}.op)=publishSuspendService}">
+                    <do action="system" input="{op:'suspendService',name:'${input_data}.name'}"/>
+                </if>
+                <if cond="#{(${input_data}.op)=publishActiveOneService}">
+                    <do action="system" input="{op:'activeThisService',name:'${input_data}.name',ip:'${input_data}.ip',insid:'${input_data}.insid'}"/>
+                </if>
+                <if cond="#{(${input_data}.op)=publishSuspendOneService}">
+                    <do action="system" input="{op:'suspendThisService',name:'${input_data}.name',ip:'${input_data}.ip',insid:'${input_data}.insid'}"/>
+                </if>
+                <if cond="#{(${input_data}.op)=publishAddUpdateService}">
+                    <do action="system" input="{op:'addUpdateService'}"/>
+                </if>
+                <if cond="#{(${input_data}.op)=publishStartTrace}">
+                    <do action="TraceHandler" input="{op:'start'}"/>
+                </if>
+                <if cond="#{(${input_data}.op)=publishStopTrace}">
+                    <do action="TraceHandler" input="{op:'stop'}"/>
+                </if>
+
+            </if>
+            <!--<do key="2map"  action="utils" input="{op:'string2map',data:'${input_data}'}"/>
+            <do key="cache" action="cache" input="{cache:'isp_dictionary_field',op:'case((${2map}.OP),[[INSERT,add],[DELETE,del]])',key:'${2map}.FIELD_CODE',value:'${2map}'}"/>
+            <do key="mapstr" action="MapToString" input="{data:'${2map}',type:'json',fields:['FIELD_CODE','FIELD_NAME','REMARK','OP']}"/>
+            <do key="back2web" action="webstock" input="{data:'${mapstr}'}"/>
+            <do action="system" input="{op:'${2map}.op',data:'${2map}'}"/>-->
+        </init>
+
+        <!-- Redis 缓存配置 配置可以根据需求修改 -->
+        <action key="RedisClient" xml="classpath:funs/redis.fun"/>
+
+
+        <handler key="StatHandler" clazz="com.octopus.isp.handlers.StatHandler" level="1" iswaitebefore="no" iswaiteafter="no" iswaiteresult="no"  isnextinvoke="yes" logpathparent="/SRV_STAT" targetxmlids="Logic#doThing">
+            <loghandler ref="ZkClientListener"/>
+        </handler>
+
+        <handler key="TraceHandler" clazz="com.octopus.isp.handlers.TraceHandler" input="{db:'TRACE',op:'rpush',expire:180}" level="2" iswaitebefore="no" iswaiteafter="no" iswaiteresult="no" isnextinvoke="yes" targetxmlids="Logic#doThing">
+            <store ref="RedisClient"/>
+        </handler>
+
+        <!-- 初始化数据对象和服务对象 -->
+        <init key="Dictionary" init="{}"  clazz="com.octopus.isp.actions.ISPDictionary" input="{extendpojo:'${def_objs}'}">
+            <servicesload key="fromOutDesc" auto="before" xmlid="Logic">
+                <do key="srvs" action="utils" input="{op:'split',data:'(${env}.services)',splitChar:','}"/>
+                <if cond="#{(${env}.isDevelopment)}">
+                    <do key="removeTempFile" action="utils" input="{op:'clearFiles',path:'(${env}.ServicesDir)'}"/>
+                    <do desc="get wsdl files" key="wsdls" action="utils" input="{op:'getAllFilesPath',path:'(${env}.outside_wsdl_dir)',suffix:'xml'}">
+                        <for collection="${wsdls}">
+                            <do desc="generator desc file by wsdl file" key="generatorDescByWSDL" action="desc" input="{op:'generatorByWSDL',file:'file:(${wsdls}.item)',savepath:'(${env}.ServicesDir)',body:'<do key=\'end\' action=\'invokeWebService\'/>'}"/>
+                        </for>
+                    </do>
+                    <do desc="generator desc file by class" key="generatorDescByClassService" action="desc" input="{op:'generatorByClass',classpath:'${srvs}',savepath:'(${env}.ServicesDir)',body:'<do key=\'end\' action=\'invoke\' config=\'{parameterType:pojo}\'/>',invoker:'${env}.serviceInvoker'}"/>
+                    <do desc="get service info from desc and load to container" key="getDescFiles" action="utils" input="{op:'getAllFilesPath',path:'(${env}.ServicesDir)',suffix:'desc'}">
+                        <for collection="${getDescFiles}">
+                            <do key="srvtxt" action="utils" input="{op:'getFileStringContent',data:'${getDescFiles}.item'}">
+                                <do key="srvbody" action="desc" input="{op:'getInvokeStructure',txt:'${srvtxt}'}" desc="get service body from desc txt">
+                                    <do key="addsrv" action="Dictionary" input="{op:'addService',data:'${srvbody}'}" desc="add service by body txt"/>
+                                </do>
+                            </do>
+                        </for>
+                    </do>
+                <else/>
+                    <do key="getDescFiles" action="desc" input="{op:'getXMLServicesName',classes:'${srvs}'}">
+                        <for collection="${getDescFiles}">
+                            <do key="srvtxt" action="utils" input="{op:'getClassSourceText',data:'(${getDescFiles}.item).desc'}">
+                                <do key="srvbody" action="desc" input="{op:'getInvokeStructure',txt:'${srvtxt}'}" desc="get service body from desc txt">
+                                    <do key="addsrv" action="Dictionary" input="{op:'addService',data:'${srvbody}'}" desc="add service by body txt"/>
+                                </do>
+                            </do>
+                        </for>
+                    </do>
+                </if>
+            </servicesload>
+
+            <cfg key="pojos">
+                <property TYPE_NAME="com.ai.system.LoginBean" PROPERTY_NAME="UserName" PROPERTY_TYPE="java.lang.String" STATE="1" REMARK=""/>
+                <property TYPE_NAME="com.ai.system.LoginBean" PROPERTY_NAME="UserPwd" PROPERTY_TYPE="java.lang.String" STATE="1" REMARK=""/>
+            </cfg>
+            <cfg key="services">
+                <property NO_NUM="1" BUSI_NAME="SystemFrame" CATALOG="com.isp.dictionary" NAME="Login" BUSI_CLASS="System" OP_CLASS="LGN" PARAMETER_TYPE="com.ai.system.LoginBean" PARAMETER_LIMIT=""
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;Login&quot; clazz=&quot;com.octopus.octopus.actions.UserLogin&quot;&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="java.lang.Boolean" STATE="1"/>
+                <property NO_NUM="2" CATALOG="com.isp.dictionary" NAME="searchFields" BUSI_CLASS="System" OP_CLASS="BUS"
+                          PARAMETER_TYPE="" PARAMETER_LIMIT=""
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;searchFields&quot; result=&quot;${fkeys}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;fkeys&quot; action=&quot;cache&quot; input=&quot;{cache:'isp_dictionary_field',op:'search',fields:['FIELD_CODE','FIELD_NAME','REMARK']}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="2" CATALOG="com.isp.dictionary" NAME="getAllServices" BUSI_CLASS="System" OP_CLASS="BUS"
+                          PARAMETER_TYPE="" PARAMETER_LIMIT=""
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getAllServices&quot; result=&quot;${actions}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;actions&quot; action=&quot;system&quot; input=&quot;{op:'getActions'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="3" CATALOG="com.octopus.OSE" NAME="testV7" BUSI_CLASS="System" OP_CLASS="BUS"
+                          PARAMETER_TYPE="" PARAMETER_LIMIT=""
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;testV7&quot; result=&quot;${fkeys}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;custinfo&quot; action=&quot;httpClient&quot; input=&quot;{method:'POST',url:'(${env}.verisPath)',addRequestHeaders:{Content-Type:'application/x-www-form-urlencoded',Accept:'application/json'},inputstream:'servicecode=(${input_data}.v7)&amp;tenant=10&amp;WEB_HUB_PARAMS=(${input_data}.data)'}&quot; output=&quot;{format:'format({return:\'${return}.responseOutputStream\',charset:\'UTF-8\',clazz:\'java.util.HashMap\'})'}&quot; /&gt;
+
+                                 &lt;do key=&quot;sendms&quot; action=&quot;utils&quot; input=&quot;{op:'encodeURL',data:'${createCust}'}&quot; /&gt;
+                                 &lt;print msg=&quot;{msg:'${sendms}'}&quot;/&gt;
+                                 &lt;do key=&quot;fkeys&quot; action=&quot;httpClient&quot; input=&quot;{method:'POST',url:'(${env}.verisPath)',addRequestHeaders:{Content-Type:'application/x-www-form-urlencoded',Accept:'application/json'},inputstream:'servicecode=createCustomer&amp;tenant=10&amp;WEB_HUB_PARAMS=(${sendms})'}&quot; output=&quot;{format:'format({return:\'${return}.responseOutputStream\',charset:\'UTF-8\'})'}&quot; /&gt;
+
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="1" CATALOG="com.isp.dictionary" NAME="getServices" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getServices&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'getServices',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="java.lang.Boolean" STATE="1"/>
+                <property NO_NUM="2" CATALOG="com.isp.dictionary" NAME="getServiceParameters" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getServiceParameters&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'getServiceParameters',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="3" CATALOG="com.isp.dictionary" NAME="getServiceDescription" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getServiceDescription&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'getServiceDescription',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="4" CATALOG="com.isp.dictionary" NAME="getServiceUsage" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getServiceUsage&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'getServiceUsage',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="5" CATALOG="com.isp.dictionary" NAME="getTestParameter" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getTestParameter&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'getTestParameter',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="6" CATALOG="com.isp.dictionary" NAME="addService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;addService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'addService'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="7" CATALOG="com.isp.dictionary" NAME="deleteService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;deleteService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'deleteService',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="8" CATALOG="com.isp.dictionary" NAME="updateService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;updateService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'updateService'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="9" CATALOG="com.isp.dictionary" NAME="suspendService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;suspendService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'suspendService',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="10" CATALOG="com.isp.dictionary" NAME="activeService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;activeService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'activeService',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="11" CATALOG="com.isp.dictionary" NAME="publishAddUpdateService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;publishAddUpdateService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'publishAddUpdateService'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="12" CATALOG="com.isp.dictionary" NAME="publishDeleteService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;publishDeleteService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'publishDeleteService',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="publishActiveService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;publishActiveService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'publishActiveService',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="publishSuspendService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;publishSuspendService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'publishSuspendService',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="publishActiveOneService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;publishActiveOneService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'publishActiveOneService',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="publishSuspendOneService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;publishSuspendOneService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'publishSuspendOneService',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="getUpdateDesc" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getUpdateDesc&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'getUpdateDesc',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="getNewDesc" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getNewDesc&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'getNewDesc'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="publishService" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;publishService&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'publishService',name:'${input_data}.name'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="publishStartTrace" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;publishStartTrace&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'publishStartTrace'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="publishStopTrace" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;publishStopTrace&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'publishStopTrace'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="getTraceList" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getTraceList&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'getTraceList',data:'${input_data}.data'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+                <property NO_NUM="14" CATALOG="com.isp.dictionary" NAME="getTrace" BUSI_CLASS="System" OP_CLASS="BUS"
+                          BODY_TYPE="xml" BODY="&lt;action key=&quot;getTrace&quot; result=&quot;${end}&quot; xmlid=&quot;Logic&quot;&gt;
+                                 &lt;do key=&quot;end&quot; action=&quot;system&quot; input=&quot;{op:'getTrace',data:'${input_data}.data'}&quot;/&gt;
+                                &lt;/action&gt;"
+                          RETURN_TYPE="" STATE="1"/>
+            </cfg>
+            <!-- 加载数据库中定义的action， 系统启动和dictionary表变更触发 -->
+            <init key="LoadDefineActions" auto="after" clazz="com.octopus.isp.listeners.LoadActions" input="{op:'init',services:'${return}'}" remotepath="/SRV_INFO" optype="" statuspath="/SRV_STATUS_OP" >
+                <remotestore ref="ZkClientListener"/>
+            </init>
+        </init>
+    </inits>
+
+    <!-- OCTOPUS提供的能力集合,可以根据需求定制 -->
+    <actions>
+        <!--  OCTOPUS基础能力   -->
+        <!-- 服务描述报文通用工具 -->
+        <action key="desc" clazz="com.octopus.utils.xml.desc.Desc" savepath="(${env}.ServicesDir)"/>
+        <!-- OCTOPUS 异常处理 -->
+        <action key="BridgeError" clazz="com.octopus.isp.bridge.impl.BridgeError"/>
+        <!-- 变更一个对象中的值 -->
+        <action key="setvalue" clazz="com.octopus.isp.actions.SetValue"/>
+        <!-- webstock -->
+        <action key="webstock" clazz="com.octopus.isp.actions.WebSocket"/>
+        <!-- 定义一个变量 -->
+        <action key="var" clazz="com.octopus.isp.actions.SetVariable"/>
+        <!-- 对环境变量做操作 -->
+        <action key="par" clazz="com.octopus.isp.actions.OPParameter"/>
+        <!-- 对象转换 -->
+        <action key="type" clazz="com.octopus.isp.actions.TypeObject"/>
+        <!-- 加解密 -->
+        <action key="security" clazz="com.octopus.tools.security.SecurityObject"/>
+        <action key="system" clazz="com.octopus.isp.actions.SystemAction" servicepath="/SRV_INFO" statuspath="/SRV_STATUS" statusoppath="/SRV_STATUS_OP" statpath="/SRV_STAT" traceflagpath="/SYSTEM_TRACE">
+            <srvhandler ref="ZkClientListener"/>
+            <srvstat ref="StatHandler"/>
+            <tracelog ref="TraceHandler"/>
+        </action>
+
+        <!-- 通用能力 -->
+
+        <!-- 本地缓存 -->
+        <action key="cache" xml="classpath:funs/cache.xml"/>
+        <action key="isp.cache" ref="cache"/>
+        <action key="MapToString" clazz="com.octopus.isp.actions.MapToString" config="{splitchar:',',typequo:{varchar:['&quot;','&quot;']}}"/>
+        <!-- 数据操作客户端，包括DB,FTP,File -->
+        <!--<action key="DataClient" xml="classpath:funs/dataclient2.xml"/>-->
+        <!-- httpclient -->
+        <action key="httpClient" clazz="com.octopus.tools.client.http.impl.HttpClient3"/>
+
+        <action key="mail" clazz="com.octopus.tools.client.MailClientObject"/>
+        <!-- sshclient -->
+        <action key="command" isenable="false" clazz="com.octopus.tools.client.ssh.SSHClientObject" host="10.1.234.175" port="60211" username="aidocker" password="aidocker" />
+        <!-- action key="svn"  clazz="com.octopus.tools.client.svn.SVNClient" / -->
+        <action key="invoke" clazz="com.octopus.tools.utils.XmlObjProxy"/>
+        <!-- 文件处理 -->
+        <action key="utils" clazz="com.octopus.tools.utils.XmlObjProxy" config="{
+        getDirectoryNames:{clazz:'com.octopus.utils.file.FileUtils',method:'getCurDirNames',pars:['java.lang.String'],data:['${this_input}.data']}
+        ,getFileNames:{clazz:'com.octopus.utils.file.FileUtils',method:'getCurDirFileNames',pars:['java.lang.String'],data:['${this_input}.data']}
+        ,getAllFilesPath:{clazz:'com.octopus.utils.cls.ClassUtils',method:'getFilesFromLoader',pars:['java.lang.String','java.lang.String'],data:['${this_input}.path','${this_input}.endwith']}
+        ,removeFile:{clazz:'com.octopus.utils.file.FileUtils',method:'removeFile',pars:['java.lang.String'],data:['${this_input}.data']}
+        ,copyFile:{clazz:'com.octopus.utils.file.FileUtils',method:'copyFile',pars:['java.lang.String','java.lang.String'],data:['(${this_input}.srcfile)','(${this_input}.desfile)']}
+        ,saveTextFile:{clazz:'com.octopus.utils.file.FileUtils',method:'saveTextFile',pars:['java.lang.String','java.lang.String'],data:['(${env}.(${input_data}.business))/(${input_data}.path)','(${input_data}.text)']}
+        ,saveLocalFile:{clazz:'com.octopus.utils.file.FileUtils',method:'saveFiles',pars:['java.util.Map','java.lang.String','java.lang.Boolean'],data:['${input_data}.files','','false']}
+        ,isFileExist:{clazz:'com.octopus.utils.file.FileUtils',method:'isExist',pars:['java.lang.String'],data:['${this_input}.file']}
+        ,getNameFilterSpace:{clazz:'com.octopus.utils.alone.StringUtils',method:'getNameFilterSpace',pars:['java.lang.String'],data:['${this_input}.name']}
+        ,getFileLines:{clazz:'com.octopus.utils.file.FileUtils',method:'getFileLines',pars:['java.lang.String'],data:['(${this_input}.path)']}
+        ,map2string:{clazz:'com.octopus.utils.alone.ObjectUtils',method:'convertMap2String',pars:['java.util.Map'],data:['${this_input}.data']}
+        ,string2map:{clazz:'com.octopus.utils.alone.StringUtils',method:'convert2MapJSONObject',pars:['java.lang.String'],data:['${this_input}.data']}
+        ,filterMap:{clazz:'com.octopus.utils.alone.ObjectUtils',method:'filterMap',pars:['java.util.Map','java.util.Map'],data:['${this_input}.data','${this_input}.nullfilter']}
+        ,encodeURL:{clazz:'com.octopus.utils.alone.ObjectUtils',method:'encodeURL',pars:['java.lang.Object'],data:['${this_input}.data']}
+        ,getFileStringContent:{clazz:'com.octopus.utils.file.FileUtils',method:'getFileContentString',pars:['java.lang.String'],data:['${this_input}.data']}
+        ,clearFiles:{clazz:'com.octopus.utils.file.FileUtils',method:'delAllDirectory',pars:['java.lang.String','java.lang.String'],data:['${this_input}.path','']}
+        ,getClassSourceText:{clazz:'com.octopus.utils.file.FileUtils',method:'getClassSourceText',pars:['java.lang.String'],data:['${this_input}.data']}
+        ,split:{clazz:'com.octopus.utils.alone.StringUtils',method:'split',pars:['java.lang.String','java.lang.String'],data:['(${this_input}.data)','(${this_input}.splitChar)']}
+        ,convertJson2XMLString:{clazz:'com.octopus.utils.alone.StringUtils',method:'convertJsonMap2XMLString',pars:['java.util.Map'],data:['(${this_input}.data)']}
+        ,getAllFilesPath:{clazz:'com.octopus.utils.file.FileUtils',method:'getAllFileNames',pars:['java.lang.String','java.lang.String'],data:['${this_input}.path','${this_input}.suffix']}
+        ,bottomUpPath:{clazz:'com.octopus.utils.alone.StringUtils',method:'bottomUpPath',pars:['java.lang.String'],data:['${this_input}.path']}
+        ,convertWSDLXMLString2Map:{clazz:'com.octopus.utils.alone.StringUtils',method:'convertWSDLXMLString2Map',pars:['java.lang.String','java.lang.Object'],data:['${this_input}.data','${this_input}.type']}
+        }"/>
+        <!-- 字符串处理 -->
+        <action key="strs" clazz="com.octopus.tools.utils.XmlObjProxy" config="{
+          split:{clazz:'com.octopus.utils.alone.StringUtils',method:'splitByHtml',pars:['java.lang.String','java.lang.String'],data:['(${this_input}.data)','(${this_input}.splitChar)']}
+        }"/>
+        <action key="isp.rule" xml="classpath:cells/Rule.cell" desc="规则执行器" />
+
+
+        <!-- 专用能力 -->
+        <!-- excel多列差分 -->
+        <action key="OneRow2MulRow" clazz="com.octopus.isp.actions.OneRow2MulRow"/>
+        <!-- 读取Excel -->
+        <action key="readExcel" clazz="com.octopus.tools.utils.ExcelReader"/>
+        <!-- 找出Map中某些列，值不同的Map -->
+        <action key="differentMap" clazz="com.octopus.tools.utils.DifferentMapData"/>
+        <!-- 应用发布 -->
+        <action key="deploy" clazz="com.octopus.tools.deploy.AutoDeploy"/>
+        <!-- web service invoke with json -->
+        <action key="invokeWebService" result="${end}" xmlid="Logic">
+            <do key="srvinfo" action="desc" input="{op:'getDefaultValueDescStructure'}"/>
+            <do key="xmldata" action="utils" input="{op:'convertJson2XMLString',data:'${input_data}'}"/>
+            <do key="spacename" action="utils" input="{op:'bottomUpPath',path:'substr((${srvinfo}.package),0,#{indexof((${srvinfo}.package),.,-1)})'}"/>
+            <do key="lns" action="var" input="{value:'substr((${spacename}),0,#{indexof((${spacename}),.,0)})'}"/>
+            <do key="invoke_ws" msg="{req_msg:'${this_input}.inputstream',ws_ret:'${return}'}" action="httpClient" input="{method:'POST',url:'${srvinfo}.original.address',addRequestHeaders:{Accept-Encoding:'gzip,deflate',Content-Type:'text/xml;charset=UTF-8',SOAPAction:''}
+            ,inputstream:'<soapenv:Envelope xmlns:soapenv=&quot;http://schemas.xmlsoap.org/soap/envelope/&quot; xmlns:(${lns})=&quot;http://(${spacename})/&quot;>
+            <soapenv:Header/><soapenv:Body><(${lns}):(${srvinfo}.name)>(${xmldata})</(${lns}):(${srvinfo}.name)></soapenv:Body></soapenv:Envelope>'}" output="{format:'format({return:\'${return}.responseOutputStream\',charset:\'UTF-8\'})'}"/>
+            <do key="end" action="utils" input="{op:'convertWSDLXMLString2Map',data:'${invoke_ws}',type:'${srvinfo}.output'}"/>
+
+        </action>
+        <!-- web上传 -->
+        <action key="upload" clazz="com.octopus.tools.utils.FileUpload" config="{op:'upload',path:'(${env}.(${input_data}.business))'}">
+            <backup key="befdo" auto="before" xmlid="Logic">
+                <if cond="isnotnull(${input_data}.name)">
+                    <do key="bakfile" action="utils" input="{check:'isnotnull((${env}.(${input_data}.business))/(${input_data}.name))',op:'copyFile',srcfile:'(${env}.(${input_data}.business))/(${input_data}.name)'
+             ,desfile:'(${env}.(${input_data}.business))/../bak/(${input_data}.name)(${yyyyMMddhhmmss})'}"/>
+                </if>
+            </backup>
+        </action>
+
+        <action key="exeCommand" xmlid="Logic">
+            <do key="configfile" action="var" input="{value:'(deploy)/(${input_data}.input.configFile)'}"/>
+            <do key="commandfile" action="var" input="{value:'(deploy)/bin/(${input_data}.input.commandFile)'}"/>
+            <do key="scriptPath" action="var" input="{value:'(deploy)/script'}"/>
+            <do key="commands" action="utils" input="{op:'getFileLines',path:'${commandfile}'}"/>
+            <for collection="${commands}">
+                <do key="command_range" action="strs" input="{op:'split',data:'${commands}.item',splitChar:'&nbsp;'}"/>
+                <do action="deploy" input="{config:'(${configfile})',script:'(${scriptPath})',command:'(${command_range}[0])',range:'(${command_range}[1])'}"/>
+            </for>
+        </action>
+        <action key="cancelUsedExl" xmlid="Logic">
+            <do key="removeRedisKey" action="RedisClient" input="{db:'CountTimes',op:'remove',key:'substr((${input_data}.files),#{indexof((${input_data}.files),/,-1)+1})',value:'(${session}.KEY_SESSION_ID)'}"/>
+        </action>
+        <!-- 历史文件目录清理 -->
+        <his isenable="false" key="clearFile" worktime="{crons:['0 0/5 * ? * *']}"  xmlid="Logic">
+            <do key="remainSize" action="var" input="{value:'10'}" remark="unit K"/>
+            <do key="path" action="var" input="{value:'/home/referenceData/bak'}"/>
+            <!-- 磁盘不满多少时开始清理最早的日志文件 -->
+            <do key="dirUsedSize" msg="{command:'(${this_input}.data)',usedsize:'(${this_result})'}" action="command" input="{type:'command',data:'du -sk (${path})|awk \'{print $1}\''}"/>
+            <do key="hisFileCount" action="command" input="{type:'command',data:'ls (${path}) |wc -l'}"/>
+            <while cond="#{(${dirUsedSize})>(${remainSize})}">
+                <!-- 找出最早的文件 -->
+                <do key="minDateFile" msg="{command:'(${this_input}.data)'}" action="command" input="{type:'command',data:'find (${path}) -name \'*.xlsx*\' |xargs ls -rlt|awk \'{print $9}\'|head -n 1'}"/>
+                <do key="removeFile" action="command" input="{type:'command',data:'rm -f (${minDateFile})'}"/>
+                <do key="hisFileCount" action="command" input="{type:'command',data:'ls (${path})|wc -l'}"/>
+                <do key="dirUsedSize" msg="{command:'(${this_input}.data)'}" action="command" input="{type:'command',data:'du -sk (${path})|awk \'{print $1}\''}"/>
+            </while>
+        </his>
+
+    </actions>
+
+    <sessions>
+        <datas>
+            <property KEY_CODE="usermodel" SERVICE_NAME="Login" ACTION_NAME="Login"/>
+        </datas>
+    </sessions>
+
+    <!-- 启动协议 -->
+    <launchers>
+        <launcher key="web" xml="classpath:funs/pageframe.lnc"/>
+        <launcher key="cxf_webservice" init="{}" clazz="com.octopus.isp.bridge.launchers.impl.CXFWebServiceLauncher" config="{isdevelop:'(${env}.isDevelopment)',compilepath:'(${env}.ServicesDir)',host:'(${env}.ws_host)',servicelist:['com']}">
+            <statHandler ref="StatHandler"/>
+        </launcher>
+    </launchers>
+
+
+    <flow xmlid="Flow" key="RequestChain" >
+        <executor xmlid="Executor"/>
+        <node xmlid="Node" type="normal" seq="0">
+            <before>
+                <step isenable="false" seq="0" clazz="com.octopus.octopus.actions.CheckServiceAuth" desc="check action auth">
+                    <uncheckactions>
+                        <property>Login</property>
+                        <property>downloadFile</property>
+                    </uncheckactions>
+                </step>
+                <step seq="1" action="${targetNames}" desc="execute request action"/>
+            </before>
+        </node>
+        <node xmlid="Node" type="error" seq="-1">
+            <before>
+                <step seq="0" action="BridgeError"  desc="异常处理cell"/>
+            </before>
+        </node>
+    </flow>
+
+    <!-- 异步返回队列 -->
+    <answer></answer>
+
+</bridge>

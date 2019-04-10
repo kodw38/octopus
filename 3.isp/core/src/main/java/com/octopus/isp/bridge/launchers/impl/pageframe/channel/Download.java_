@@ -1,0 +1,66 @@
+package com.octopus.isp.bridge.launchers.impl.pageframe.channel;
+
+import com.octopus.isp.ds.RequestParameters;
+import com.octopus.utils.xml.XMLMakeup;
+import com.octopus.utils.xml.XMLObject;
+import com.octopus.utils.xml.auto.ResultCheck;
+import com.octopus.utils.xml.auto.XMLDoObject;
+import com.octopus.utils.xml.auto.XMLParameter;
+
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.net.URLDecoder;
+import java.util.Map;
+
+/**
+ * User: wfgao_000
+ * Date: 16-2-1
+ * Time: 下午3:46
+ */
+public class Download extends XMLDoObject {
+    public Download(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
+        super(xml, parent,containers);
+    }
+
+    @Override
+    public Object doSomeThing(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
+        if(((RequestParameters)env).getRequestProperties().get("Method").equals("GET")){
+            if("download".equals(((RequestParameters) env).getRequestResourceName())||"downloadFile".equals(((RequestParameters) env).getRequestResourceName())){
+                HttpServletResponse response = (HttpServletResponse)((RequestParameters) env).get("${response}");
+                String f = (String)((RequestParameters) env).getQueryStringMap().get("file");
+
+                String fileName = URLDecoder.decode(f, "ISO8859_1");
+                response.setContentType("application/x-msdownload");
+                response.setHeader("Content-disposition", "attachment; filename="+ fileName);
+                InputStream in = new FileInputStream(new File(input.get("path")+"/"+f));
+                byte [] b= new byte[1024];
+                int i = 0;
+                while((i=in.read(b))!= -1){
+                    response.getOutputStream().write(b, 0, i);
+                }
+                response.flushBuffer();
+
+                in.close();
+                ((RequestParameters) env).setStop();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public boolean checkInput(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
+        return true;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public ResultCheck checkReturn(String xmlid, XMLParameter env, Map input, Map output, Map config, Object ret) throws Exception {
+        return new ResultCheck(true,ret);  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
+        return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+}

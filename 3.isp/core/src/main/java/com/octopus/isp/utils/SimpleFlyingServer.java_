@@ -1,0 +1,20 @@
+package com.octopus.isp.utils;
+
+import com.octopus.appframe.ext.flyingserver.server.FlyingServer;
+
+import java.util.Map;
+
+/**
+ * Created by kod on 2017/3/28.
+ */
+public class SimpleFlyingServer {
+
+    public SimpleFlyingServer(String host,int port,Map pars,Map servs)throws Exception{
+        FlyingServer.start(host,port,pars,servs);
+    }
+
+
+    public void addService(String name,Class inter,Class impl){
+
+    }
+}

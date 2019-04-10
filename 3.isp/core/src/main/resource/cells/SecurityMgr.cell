@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cell key="SecurityMgr" clazz="com.octopus.isp.cell.impl.Cell">
+    <namespace clazz="com.octopus.utils.namespace.impl.Namespace">bridge.security</namespace>
+</cell>

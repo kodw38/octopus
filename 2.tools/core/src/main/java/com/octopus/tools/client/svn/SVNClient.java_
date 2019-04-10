@@ -1,0 +1,173 @@
+package com.octopus.tools.client.svn;
+
+import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.xml.XMLMakeup;
+import com.octopus.utils.xml.XMLObject;
+import com.octopus.utils.xml.auto.ResultCheck;
+import com.octopus.utils.xml.auto.XMLDoObject;
+import com.octopus.utils.xml.auto.XMLParameter;
+import org.tmatesoft.svn.core.SVNDirEntry;
+import org.tmatesoft.svn.core.SVNException;
+import org.tmatesoft.svn.core.SVNURL;
+import org.tmatesoft.svn.core.auth.ISVNAuthenticationManager;
+import org.tmatesoft.svn.core.internal.io.dav.DAVRepositoryFactory;
+import org.tmatesoft.svn.core.internal.io.svn.SVNRepositoryFactoryImpl;
+import org.tmatesoft.svn.core.io.SVNRepository;
+import org.tmatesoft.svn.core.wc.SVNWCUtil;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.*;
+
+/**
+ * User: wfgao_000
+ * Date: 2016/10/13
+ * Time: 14:50
+ */
+public class SVNClient extends XMLDoObject {
+    public SVNClient(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
+        super(xml, parent,containers);
+    }
+
+    @Override
+    public Object doSomeThing(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
+        if(null != input){
+            String op = (String)input.get("op");
+            String path = (String) input.get("path");
+
+            if("getFiles".equals(op)) {
+                if (StringUtils.isNotBlank(path)) {
+                    URL url = new URL(path);
+                    return getAllFile(url);
+                }
+            }else if("createBranch".equals(op)){
+
+            }else if("removeBranch".equals(op)){
+
+            }else if("update".equals(op)){
+
+            }else if("checkout".equals(op)){
+
+            }else if("cleanup".equals(op)){
+
+            }else if("diff".equals(op)){
+
+            }else if("merge".equals(op)){
+
+            }else if("afterVersion".equals(op)){
+
+            }else if("beforeVersion".equals(op)){
+
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public boolean checkInput(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
+        return true;
+    }
+
+    @Override
+    public ResultCheck checkReturn(String xmlid, XMLParameter env, Map input, Map output, Map config, Object ret) throws Exception {
+        return new ResultCheck(true,ret);
+    }
+
+    @Override
+    public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
+        return false;
+    }
+
+
+    Map getSVNPath(URL url)throws Exception{
+        String[] us = url.getUserInfo().split("\\:");
+        StringBuffer u = new StringBuffer("http://").append(url.getHost());
+        if(url.getPort()>0)
+            u.append(":").append(url.getPort());
+        DAVRepositoryFactory.setup();
+        String file = url.getPath();
+        String fileName="";
+        if(isFile(url.getPath())){
+            u.append(file.substring(0, file.lastIndexOf("/")));
+            fileName = file.substring(file.lastIndexOf("/")+1);
+        }else{
+            u.append(file);
+        }
+        SVNRepository repository = SVNRepositoryFactoryImpl.create(SVNURL.parseURIEncoded(StringUtils.decodeURL(u.toString())));
+        ISVNAuthenticationManager authManager = SVNWCUtil.createDefaultAuthenticationManager(us[0], us[1]);
+        repository.setAuthenticationManager(authManager);
+        HashMap map = new HashMap();
+        map.put("svn",repository);
+        map.put("fileName",fileName);
+        return map;
+    }
+    void update(URL url,String path)throws Exception{
+        Map m = getSVNPath(url);
+        SVNRepository repository = (SVNRepository)m.get("svn");
+        if(null != repository){
+            //repository.update();
+        }
+    }
+
+    public Map<String, InputStream> getAllFile(URL url) throws Exception {
+        Map map = new HashMap();
+        String[] us = url.getUserInfo().split("\\:");
+        StringBuffer u = new StringBuffer("http://").append(url.getHost());
+        if(url.getPort()>0)
+            u.append(":").append(url.getPort());
+        DAVRepositoryFactory.setup();
+        if(isFile(url.getPath())){
+            String file = url.getPath();
+            u.append(file.substring(0, file.lastIndexOf("/")));
+            SVNRepository repository = SVNRepositoryFactoryImpl.create(SVNURL.parseURIEncoded(StringUtils.decodeURL(u.toString())));
+            ISVNAuthenticationManager authManager = SVNWCUtil.createDefaultAuthenticationManager(us[0], us[1]);
+            repository.setAuthenticationManager(authManager);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            //FileOutputStream out = new FileOutputStream(new File("d:\\txt.xlsx"));
+            repository.getFile(file.substring(file.lastIndexOf("/")+1),-1,null,out);
+            ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+            out.close();
+            map.put(url.getFile(),in);
+        }else{
+            SVNRepository repository = SVNRepositoryFactoryImpl.create(SVNURL.parseURIEncoded(StringUtils.decodeURL(u.toString() + url.getPath())));
+            ISVNAuthenticationManager authManager = SVNWCUtil.createDefaultAuthenticationManager(us[0], us[1]);
+            repository.setAuthenticationManager(authManager);
+            List<String> li = new ArrayList<String>();
+            getFilepath(repository,"",li);
+            for(String s:li){
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                repository.getFile(s,-1,null,out);
+                ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+                out.close();
+                map.put(s.substring(s.lastIndexOf("/")+1),in);
+            }
+
+
+        }
+
+        return map;
+    }
+
+    boolean  isFile(String s){
+        s=s.replace("\\\\","/");
+        s = s.substring(s.lastIndexOf("/") + 1);
+        if(s.indexOf(".")>0){
+            return true;
+        }
+        return false;
+    }
+
+    void getFilepath(SVNRepository repository,String dir,List li) throws SVNException {
+        Collection<SVNDirEntry> entries = repository.getDir(dir, -1, null, (Collection) null);
+        for (SVNDirEntry entry : entries) {
+            if(isFile(entry.getRelativePath())){
+                li.add((dir.equals("")?"":(dir+"/"))+entry.getRelativePath());
+
+            }else{
+                getFilepath(repository,(dir.equals("")?"":(dir+"/"))+entry.getRelativePath(),li);
+            }
+        }
+    }
+}

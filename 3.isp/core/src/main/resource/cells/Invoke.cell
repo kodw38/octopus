@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 负责各种协议的方法调用 -->
+<cell key="TargetCellInvoke" clazz="com.octopus.isp.cell.impl.Cell">
+    <namespace clazz="com.octopus.utils.namespace.impl.Namespace">cell.invoke</namespace>
+    <!-- 接口方法代理
+    <invocationhandler xmlid="InvokeHandler">
+        <before>
+            <action seq="1" path="" desc=""/>
+        </before>
+        <after>
+            <action seq="1" path="com.octopus.tools.statistic.InvocationStatistic" desc="每一个调用做统计"/>
+        </after>
+    </invocationhandler>
+    -->
+
+    <monitor></monitor>
+    <statistic></statistic>
+    <!-- 安全 -->
+    <security></security>
+    <!-- 日志 -->
+    <log></log>
+    <!-- 数据操作 -->
+
+    <!-- 自己的监听 -->
+    <listeners>
+        <listener></listener>
+    </listeners>
+    <!-- 自己的方法 -->
+    <actions>
+        <action xmlid="Flow" key="JudgeInvoke">
+            <executor xmlid="StepExecutor"/>
+            <node xmlid="Node" type="normal" seq="0">
+                <before>
+                    <step seq="0" action="com.octopus.isp.actions.impl.InvokeCellJudgeAction" desc=""/>
+                </before>
+            </node>
+        </action>
+        <action xmlid="Flow" key="LocalNoTranOneCellInvoke">
+            <executor xmlid="CellExecutorFromPars"/>
+            <node xmlid="Node" type="normal" seq="0">
+                <before>
+                    <step seq="0" action="com.octopus.isp.actions.impl.LocalNoTranOneCellInvokeStep" desc=""/>
+                </before>
+            </node>
+        </action>
+        <action xmlid="Flow" key="error">
+            <executor xmlid="CellExecutorFromPars"/>
+            <node xmlid="Node" type="normal" seq="0">
+                <before>
+                    <step seq="0" action="" desc=""/>
+                </before>
+            </node>
+        </action>
+    </actions>
+    <!-- 自己的属性 -->
+    <properties>
+        <propertie key=""></propertie>
+    </properties>
+    <!-- 自己的执行流程 -->
+    <flows xmlid="Flows">
+        <executor xmlid="ActionExecutor"/>
+        <express clazz="com.octopus.utils.flow.impl.SimpleExpress"/>
+        <flow xmlid="Flow" key="default" >
+            <node xmlid="Node" type="judge" seq="0" resultexpr="6">
+                <before>
+                    <step seq="4" action="JudgeInvoke" desc=""/>
+                </before>
+            </node>
+            <node xmlid="Node" type="normal" seq="-1" desc="本地调用">
+                <before>
+                    <step seq="1" action="LocalNoTranOneCellInvoke" desc=""/>
+                </before>
+            </node>
+            <node xmlid="Node" type="error" seq="-1" desc="本地调用">
+                <before>
+                    <step seq="1" action="error" desc=""/>
+                </before>
+            </node>
+        </flow>
+    </flows>
+
+</cell>

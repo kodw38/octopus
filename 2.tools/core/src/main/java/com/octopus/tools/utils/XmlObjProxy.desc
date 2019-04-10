@@ -1,0 +1,22 @@
+{
+ name:'XmlObjProxy',
+ package:'com.octopus.isp.actions',
+ desc:{},
+ input:{
+     check:{@desc:'表达式判断，结果为true时，才进入该方法，为false不进入该方法'},
+     op:{@desc:'外围服务的名称'},
+     data:{@desc:'可以是一个对象，或一个List'},
+ },
+ config:{
+
+ },
+ output:{
+  check:{@desc:'表达式判断，为true时返回结果，为false时不返回结果'},
+  format:{@desc:'对结果做格式化'},
+  filter:{@desc:'对结果做过滤'}
+ },
+ error:{},
+ depend:{},
+ scene:{},
+ example:{}
+}
