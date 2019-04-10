@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<bftasks xmlid="bftasks" clazz="com.octopus.utils.bftask.impl.BFTaskMgr">
+    <executor clazz=""/>
+
+    <task xmlid="bftask" key="Test" clazz="com.octopus.utils.bftask.impl.BFTask" desc="">
+        <executor clazz=""/>
+        <before>
+            <step seq="1" action="" desc=""/>
+        </before>
+        <error>
+            <step seq="1" action="" desc=""/>
+        </error>
+        <after>
+            <step seq="1" action="" desc=""/>
+        </after>
+    </task>
+</bftasks>

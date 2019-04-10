@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<flows xmlid="flows" clazz="com.octopus.utils.flow.impl.FlowMgr">
+    <defs>
+        <def xmlid="flow" clazz="com.octopus.utils.flow.impl.Flow"/>
+        <def xmlid="node"  clazz="com.octopus.utils.bftask.impl.BFTask"/>
+    </defs>
+    <express xmlid="express" clazz="com.octopus.utils.flow.impl.SimpleExpress"/>
+    <executor xmlid="flowexecutor" clazz="com.octopus.models.bftask.TestExecutor"/>
+    <flow xmlid="flow" key="test.flow">
+        <!--
+            一般、判断、分叉、会签、子流程
+             normal/judge/fork/subflow/error
+             type="normal" seq="0" nextjumpto="targetseq" nextignore="" state="valid/invalid" resultexpr="" subid=""
+        -->
+        <node xmlid="node" type="normal" seq="-2">
+            <before>
+                <step seq="-2" action="normal.b.-2" desc=""/>
+            </before>
+        </node>
+        <node xmlid="node" type="normal" seq="-1">
+            <before>
+                <step seq="-1" action="normal.b.-1" desc=""/>
+            </before>
+        </node>
+        <node xmlid="node" type="normal" seq="0">
+            <before>
+                <step seq="0.1" action="normal.b.0.1" desc=""/>
+                <step seq="0" action="normal.b.0" desc=""/>
+            </before>
+            <error>
+                <step seq="0" action="normal.e.0" desc=""/>
+            </error>
+            <after>
+                <step seq="0" action="normal.a.0" desc=""/>
+            </after>
+        </node>
+        <node xmlid="node" type="normal" seq="1">
+            <before>
+                <step seq="1" action="normal.b.1" desc=""/>
+            </before>
+        </node>
+        <node xmlid="node" type="normal" seq="2" nextjumpto="3">
+            <before>
+                <step seq="2" action="normal.b.2" desc=""/>
+            </before>
+        </node>
+        <node xmlid="node" type="normal" seq="3" state="valid" nextignore="4">
+            <before>
+                <step seq="3" action="normal.b.3" desc=""/>
+            </before>
+        </node>
+        <node xmlid="node" type="judge" seq="4" resultexpr="6">
+            <before>
+                <step seq="4" action="just.b.4" desc=""/>
+            </before>
+        </node>
+        <node xmlid="node" type="fork" seq="5" nextjumpto="-1,-2">
+            <before>
+                <step seq="5" action="fork.b.5" desc=""/>
+            </before>
+        </node>
+        <node xmlid="node" type="subflow" seq="6" subid="test.flow2">
+            <before>
+                <step seq="6" action="subflow.b.6" desc=""/>
+            </before>
+        </node>
+        <node xmlid="node" type="error" seq="7">
+            <before>
+                <step seq="7" action="error.b.7" desc=""/>
+            </before>
+        </node>
+    </flow>
+    <flow xmlid="flow" key="test.flow2" >
+        <node xmlid="node" type="normal" seq="1">
+            <before>
+                <step seq="1" action="flow2.normal.1"/>
+            </before>
+        </node>
+    </flow>
+</flows>

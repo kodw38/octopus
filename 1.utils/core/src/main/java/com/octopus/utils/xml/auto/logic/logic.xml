@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<logic xmlid="xmllogic" clazz="com.octopus.utils.xml.auto.logic.XMLLogic">
+    <do seq="0" action="actions[httpclient]" jsonpar="{parse:'SingleParse',method:'GET',url:'http://hq.htsc.com.cn/allstock?ram0.5547212846577168',check:'cssweb_code:\\'success\\'',charset:'UTF-8',result:'net.sf.json.JSONObject'}" desc="">
+        <for collection="result.data">
+            <do seq="0" action="convert.convert2" parmap="{src:'result.data.item'}" jsonpar="{formate:com.ifp.stock.ds.StockInfo}"/>
+            <do seq="1" action="cells[isp.cache][stock_info]" parmap="{key:result.data.item[1],value:convert.convert2.result)"/>
+        </for>
+    </do>
+
+    <do seq="1" action="cells[isp.dataoperator]" jsonpar="{db:'mysql/STOCK_DATA',where:['C_DATE<date(now,-12,day)']}"/>
+    <if expression="">
+
+        <else/>
+
+    </if>
+    <for seq="2" collection="cells[isp.cache][stock_info]">
+        <do seq="0" action="actions[httpclient]" jsonpar="{parse:'SingleParse',method:'GET',url:'http://hq.htsc.com.cn/f10/[value.code]/[(value.stockType.equals('0')?'sz':'sh')]_3.txt?data=0.8176445136778057',check:'cssweb_code:\\'success\\'',charset:'UTF-8'}" desc="">
+            <do seq="0" action="convert.convert2" parmap="{src:'actions[httpclient].result'}" jsonpar="{formate:com.ifp.stock.ds.StockCompany}"/>
+            <do seq="1" action="cells[isp.cache][stock_company]" parmap="{key:cells[isp.cache][stock_info].item.code,value:convert.convert2.result}"/>
+        </do>
+    </for>
+    <result return=""/>
+</logic>

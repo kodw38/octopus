@@ -1,0 +1,43 @@
+Flow
+    -Node(BFTask property type:normal,error,judge,fork,subflow)
+        -<before>
+            -Task(XMLDoObject)
+        -<after>
+    -Node
+        -Task
+Node example:
+<node xmlid="Node" type="normal" seq="0" nextjumpto="NodeIdSeqs,used ',' split. can jumpto other node" nextignore="NodeIdSeqs,used ',' split. all type have this property">
+<node xmlid="Node" type="judge" seq="0" resultexpr="用express判断类，根据paratmer和该string表达式计算出下一个跳往的节点seq">
+<node xmlid="Node" type="fork" seq="0" nextjumpto="NodeIdSeqs,used ',' split. 指明需要fork的Node编号">
+<node xmlid="Node" type="subflow" seq="0" subid="另一个流程编号">
+
+
+负责运行时代码执行的流程，任务包含：
+1.定义执行流程的xml配置，包含定义各种NODE(一般、判断、分叉、会签、子流程)
+2.概念有flow、node、task
+
+流程执行时，需要流程配置文件和执行上下文。
+流程动态变更。node增加、删除、跟新，task增加、删除、跟新
+
+流程的执行顺序都按sequence来决定先后执行
+
+节点：
+ICollectionNode.java     --会签节点，用于分叉节点后的汇总
+IEndNode.java            --流程结束节点
+IErrorNode.java          --流程异常节点，同一个流程事例异常节点只有一个事例,可以抛出异常结束流程，也可以处理异常后选择继续或到一个判断节点
+IForkNode.java           --分叉节点，该节点的下面节点有多个同时处理的节点
+IJudge.java              --判断节点，选择下一个执行的节点
+INode.java               --普遍节点，也是原始节点
+IStartNode               --起始节点
+ISubRunFlow.java         --子流程
+开始节点和结束节点可以没有
+
+任务：
+IErrorTask.java          --异常任务
+ITask.java               --普通任务
+IBeforeTask.java         --预执行任务
+IAfterTask.java          --后执行任务
+一个节点只能有一个异常任务，该异常任务如果抛出异常则到异常节点
+
+IFlow.java            --流程类
+IFlowManager.java     --所有流程实例的管理类

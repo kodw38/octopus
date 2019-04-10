@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cnf>
+    <hac sshuser="osetask" sshpwd="Telenor2015" processname="console_13"/>
+    <zookeeper connectString=""/>
+    <has>
+        <ha type="balance">
+            <instance seq="1" ip="10.226.5.13" processname="admin_13">
+                <health-check type="http" url="" content=""/>
+                <reboot></reboot>
+                <recept-rule></recept-rule>
+            </instance>
+        </ha>
+        <ha id="" type="single">
+            <instance ip="10.226.5.13" processname="admin_13" sshuser="oseadmin" sshpwd="Telenor2015" restartscript="/veris/oseadmin/start_4001.sh">
+                <health-check type="http" url="" content=""/>
+            </instance>
+        </ha>
+    </has>
+</cnf>

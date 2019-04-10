@@ -1,0 +1,24 @@
+package com.octopus.xx
+import com.xx
+public class xx extends orgin{
+    M m
+    public xx(mm){
+       m=mm;
+    }
+
+    public ret do(xx,xx,x)xx{
+      Throwable e;
+      Object ret;
+      boolean issuccess=true;
+      try{
+        m.beforeAction(orgin,ret,new Object[]{xx,xx,x});
+        ret = super.do(xx,xx,x);
+      }catch(Exception ex){
+        e=ex;
+        issuccess=false;
+        throw ex;
+      }finally{
+         m.afterAction(orgin,ret,new Object[]{xx,xx,x},issuccess,e,ret);
+      }
+    }
+}

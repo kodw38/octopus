@@ -1,0 +1,5 @@
+概要说明:
+   bftask before after task.在一个task前后可以配置增加额外的task的模型。
+
+扩展范围:
+   可以动态增加或删除任意task，但不能修改某个task本身。

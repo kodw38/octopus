@@ -1,0 +1,619 @@
+package com.octopus.utils.si;
+
+import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.cls.POJOUtil;
+import com.octopus.utils.zip.ZipUtil;
+import com.sun.tools.attach.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.hyperic.sigar.*;
+import org.hyperic.sigar.ptql.MalformedQueryException;
+import org.hyperic.sigar.ptql.ProcessQuery;
+import org.hyperic.sigar.ptql.ProcessQueryFactory;
+
+
+import java.io.*;
+import java.lang.instrument.Instrumentation;
+import java.util.*;
+import java.util.jar.JarOutputStream;
+
+/**
+ * User: wangfeng2
+ * Date: 14-8-11
+ * Time: 下午8:58
+ */
+public class SIUtil {
+    private static Sigar sigar = null;
+    private static Log log = LogFactory.getLog(SIUtil.class);
+    private static ProcessQueryFactory processQueryFactory = null;
+    private static Instrumentation instrumentation=null;
+
+    static Sigar getSigar() {
+        if (sigar == null) {
+            sigar = new Sigar();
+            sigar.enableLogging(false);
+        }
+        return sigar;
+    }
+    static ProcessQueryFactory getProcessQueryFactory(){
+        if (processQueryFactory == null) {
+            processQueryFactory = new ProcessQueryFactory();
+        }
+        return processQueryFactory;
+    }
+    static VirtualMachine getVM() throws IOException, AttachNotSupportedException, SigarException {
+        VirtualMachine vm = null;
+        String pid= ""+getPid();
+        return VirtualMachine.attach(pid);
+    }
+    static Instrumentation getInstrumentation(){
+        if(instrumentation==null){
+            try{
+                VirtualMachine vm = getVM();
+                if(null != vm){
+                    String userdir = System.getProperty("user.dir");
+                    if(StringUtils.isBlank(userdir)) throw new RuntimeException("the user.dir is not exist!");
+                    String agentpath=userdir+"/ispagentmain.jar";
+                    File f = new File(agentpath);
+                    if(!f.exists()){
+                        String meta = "META-INF/MANIFEST.MF";
+                        ZipUtil.addFile(new JarOutputStream(new FileOutputStream(f)),meta, new ByteArrayInputStream(
+                                ("Manifest-Version: 1.0\n" +
+                                        "Created-By: 1.6.0_23 (Sun Microsystems Inc.)\n" +
+                                        "Agent-Class: com.octopus.utils.si.AgentMain").getBytes()));
+                    }
+                    vm.loadAgent(agentpath);
+                    instrumentation = AgentMain.getInstrumentation();
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+
+        return instrumentation;
+    }
+
+    /**
+     * 获取内存使用信息
+     * @return
+     * @throws SigarException
+     */
+    public static Mem getMem() throws SigarException {
+        return getSigar().getMem();
+    }
+
+    /**
+     * 获取CPU使用信息
+     * @return
+     * @throws SigarException
+     */
+    public static Cpu getCpu() throws SigarException {
+        return getSigar().getCpu();
+    }
+
+    /**
+     * 获取CPU硬件型号信息
+     * @return
+     * @throws SigarException
+     */
+    public static CpuInfo[] getCpuInfo() throws SigarException {
+        return getSigar().getCpuInfoList();
+    }
+
+    /**
+     * 获取文件或文件夹的所有信息
+     * @param file
+     * @return
+     * @throws SigarException
+     */
+    public static FileInfo getFileInfo(String file)throws SigarException{
+        return getSigar().getFileInfo(file);
+    }
+
+    /**
+     * 获取系统分区磁盘信息
+     * @return
+     * @throws SigarException
+     */
+    public static FileSystem[] getFileSystem()throws SigarException{
+        return getSigar().getFileSystemList();
+    }
+
+    /**
+     * 获取一个路径的挂载信息
+     * @param dir
+     * @return
+     * @throws SigarException
+     */
+    public static FileSystem getFileSystemMountPoint(String dir)throws SigarException{
+        return getSigar().getFileSystemMap().getMountPoint(dir);
+    }
+
+    /**
+     * 获取某个磁盘或路径的容量使用信息
+     * @param dir
+     * @return
+     * @throws SigarException
+     */
+    public static FileSystemUsage getFileSystemUsage(String dir)throws SigarException{
+        return getSigar().getFileSystemUsage(dir);
+    }
+
+    /**
+     * 获取本主机的全域名，在网络中的标识。
+     * @return
+     * @throws SigarException
+     */
+    public static String getFQDN()throws SigarException{
+        return getSigar().getFQDN();
+    }
+
+
+    /**
+     * 获取所有进程号
+     * @return
+     * @throws SigarException
+     */
+    public static long[] getProcPids()throws SigarException{
+        return getSigar().getProcList();
+    }
+
+    /**
+     * 获取某进程的启动参数
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static String[] getProcArgs(long pid)throws SigarException{
+        return getSigar().getProcArgs(pid);
+    }
+
+    /**
+     * 获取进程的环境变量信息
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static Map getProcEnv(long pid)throws SigarException{
+        return getSigar().getProcEnv(pid);
+    }
+
+    /**
+     * 获取进程的执行信息：用什么执行的，工作目录
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static ProcExe getProcExe(long pid)throws SigarException{
+        return getSigar().getProcExe(pid);
+    }
+
+
+    /**
+     * 获取进程打开的文件数
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static ProcFd getProcFd(long pid)throws SigarException{
+        return getSigar().getProcFd(pid);
+    }
+
+    /**
+     * 进程使用的内存信息
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static ProcMem getProcMem(long pid)throws SigarException{
+        return getSigar().getProcMem(pid);
+    }
+
+    /**
+     * 进程加载的动态库列表
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static List<String> getProcModules(long pid)throws SigarException{
+        return getSigar().getProcModules(pid);
+    }
+
+
+    /**
+     * 获取进程统计信息
+     * {Stopped=0, Threads=984, Idle=0, Sleeping=0, Running=75, Zombie=0, Total=75}
+     * @param
+     * @return
+     * @throws SigarException
+     */
+    public static ProcStat getProcStat()throws SigarException{
+        return getSigar().getProcStat();
+    }
+
+    /**
+     * 获取进程状态信息
+     * {Name=System, Threads=116, State=R, Ppid=0, Priority=8}
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static ProcState getProcState(long pid)throws SigarException{
+        return getSigar().getProcState(pid);
+    }
+
+    /**
+     * 获取进程启动时间
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static ProcTime getProcTime(long pid)throws SigarException{
+        return getSigar().getProcTime(pid);
+    }
+
+    /**
+     * 获取进程CPU使用信息
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static ProcCpu getProcCpu(long pid)throws SigarException{
+        return getSigar().getProcCpu(pid);
+    }
+
+    public static long getProcPort(int protocol,long pid)throws SigarException{
+        return getSigar().getProcPort(protocol, pid);
+    }
+
+    /**
+     * 获取进程证书信息.
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static ProcCred getProcCred(long pid)throws SigarException{
+        return getSigar().getProcCred(pid);
+    }
+
+
+    /**
+     * 获取进程的证书名称
+     * @param pid
+     * @return
+     * @throws SigarException
+     */
+    public static ProcCredName getProcCredName(long pid)throws SigarException{
+        return getSigar().getProcCredName(pid);
+    }
+
+    /**
+     * 根据条件查询进程号
+     * @param queryString "State.Name.eq=java,Exe.Cwd.eq=$PWD","Exe.Name.ew=java;
+     * 比较符:eq/gt/lt/ge/ct/re/ne等等
+     * @return
+     * @throws SigarException
+     */
+    public static long[] queryProcPids(String queryString)throws SigarException{
+        ProcessQuery query;
+        try {
+            query = getProcessQueryFactory().getQuery(queryString);
+            return query.find(getSigar());
+        } catch (MalformedQueryException e) {
+            throw e;
+        }
+    }
+
+    public static long getPid()throws SigarException{
+        return getSigar().getPid();
+    }
+
+    /**
+     * 获取主机各种资源的当前值和最大允许值。
+     * @return
+     * @throws SigarException
+     */
+    public static ResourceLimit getResourceLimit()throws SigarException{
+        return getSigar().getResourceLimit();
+    }
+
+    /**
+     * 获取信号量数字
+     *
+     * @param sig ["HUP", "INT", "KILL", "QUIT","TERM", "USR1", "USR2"]
+     * @return
+     * @throws SigarException
+     */
+    public static int getSigNum(String sig)throws SigarException{
+        return Sigar.getSigNum(sig);
+    }
+
+    /**
+     * 获取虚拟分区信息
+     * @return
+     * @throws SigarException
+     */
+    public static Swap getSwap()throws SigarException{
+        return getSigar().getSwap();
+    }
+
+    /**
+     * 获取TCP统计信息
+     * @return
+     * @throws SigarException
+     */
+    public static Tcp getTcp()throws SigarException{
+        return getSigar().getTcp();
+    }
+
+    /**
+     * CPU调用当前线程的时间积累
+     * @return
+     * @throws SigarException
+     */
+    public static ThreadCpu getThreadCpu()throws SigarException{
+        return getSigar().getThreadCpu();
+    }
+
+    /**
+     * 为该线程获取Cpu时间计数器。可以计算做事的时长。单位毫秒
+     * @return
+     * @throws SigarException
+     */
+    public static CpuTimer getCpuTimer()throws SigarException{
+        return new CpuTimer(getSigar());
+    }
+
+    /**
+     * This class implements a caching mechanism to avoid system calls with heavy Sigar usage in a short period of time. It is intended for use in applications such as Top
+     * @param mistime
+     * 使用完需要close();
+     * @return
+     * @throws SigarException
+     */
+    public static SigarProxy getSigarProxy(int mistime)throws SigarException{
+        return SigarProxyCache.newInstance(getSigar(), mistime);
+    }
+
+    /**
+     * 获取开机时间
+     * @return
+     * @throws SigarException
+     */
+    public static Date getBootTime()throws SigarException{
+        Uptime uptime = getSigar().getUptime();
+        long now = System.currentTimeMillis();
+        return new Date(now - (long)uptime.getUptime()*1000);
+    }
+
+    /**
+     * 获取用户信息
+     * @return
+     * @throws SigarException
+     */
+    public static Who[] getWho()throws SigarException{
+        return getSigar().getWhoList();
+    }
+
+    /**
+     * 获取网络地址配置列表
+     * @return
+     * @throws SigarException
+     */
+    public static String[] getNetInterfacesList()throws SigarException{
+        return getSigar().getNetInterfaceList();
+    }
+
+    /**
+     * 获取某个网络地址配置
+     * @param name
+     * @return
+     * @throws SigarException
+     */
+    public static NetInterfaceConfig getNetInterfaceConfig(String name)throws SigarException{
+        return getSigar().getNetInterfaceConfig(name);
+    }
+
+    /**
+     * 获取eth6网络配置，该配置几乎为默认网络地址
+     * @return
+     * @throws SigarException
+     */
+    public static NetInterfaceConfig getETH6NetInterfaceConfig()throws SigarException{
+        return getSigar().getNetInterfaceConfig("eth6");
+    }
+
+    /**
+     * 获取lo0网络配置，为本地地址127.0.0.1
+     * @return
+     * @throws SigarException
+     */
+    public static NetInterfaceConfig getLO0NetInterfaceConfig()throws SigarException{
+        return getSigar().getNetInterfaceConfig("lo0");
+    }
+
+    /**
+     * 获取某个网络地址的状态信息
+     * @param name
+     * @return
+     * @throws SigarException
+     */
+    public static NetInterfaceStat getNetInterfaceStat(String name)throws SigarException{
+        return getSigar().getNetInterfaceStat(name);
+    }
+
+    /**
+     * 获取DefaultGateway/dns信息
+     * @return
+     * @throws SigarException
+     */
+    public static NetInfo getNetInfo()throws SigarException{
+        return getSigar().getNetInfo();
+    }
+
+    /**
+     * 获取监听连接信息
+     * @param flags flags = NetFlags.CONN_SERVER | NetFlags.CONN_TCP;
+     * @return
+     * @throws SigarException
+     */
+    public static NetConnection[] getNetConnection(int flags) throws SigarException{
+        return getSigar().getNetConnectionList(flags);
+    }
+
+    /**
+     * 获取路由配置信息
+     * @return
+     * @throws SigarException
+     */
+    public static NetRoute[] getNetRoute()throws SigarException{
+        return getSigar().getNetRouteList();
+    }
+
+    /**
+     * 获取NetStat信息
+     * @return
+     * @throws SigarException
+     */
+    public static NetStat getNetStat()throws SigarException{
+        return getSigar().getNetStat();
+    }
+
+    public static NetStat getNetStat(String address,int port)throws SigarException{
+        return getSigar().getNetStat(address.getBytes(),port);
+    }
+
+    public static void kill(long pid,int signum)throws SigarException{
+        getSigar().kill(pid,signum);
+    }
+
+    /**
+     * 执行一个命令
+     * @param exeString
+     * @return
+     * @throws Exception
+     */
+    public static Process exeString(String exeString)throws Exception{
+        return Runtime.getRuntime().exec(exeString);
+    }
+
+    /**
+     * 执行一个命令
+     * @param exeString
+     * @return
+     * @throws Exception
+     */
+    public static Process exeString(String exeString,String[] evn)throws Exception{
+        return Runtime.getRuntime().exec(exeString,evn);
+    }
+
+    /**
+     * 获取内存中对象的大小
+     * @param obj
+     * @return
+     * @throws Exception
+     */
+    public static long getSizeOfJavaObject(Object obj)throws Exception{
+        Instrumentation in = getInstrumentation();
+        if(null != in){
+            JavaSizeOf.setInstrumentation(in);
+            return JavaSizeOf.sizeof(obj);
+        }
+        return -1;
+    }
+
+    /**
+     * 主机信息
+     * @return
+     */
+    public static Map getSigInfo(){
+        try {
+            HashMap map = new HashMap();
+            long pid = SIUtil.getPid();
+            Cpu cpu = SIUtil.getCpu();
+            CpuInfo[] cis = SIUtil.getCpuInfo();
+            //NetInterfaceConfig nic = SIUtil.getETH6NetInterfaceConfig();
+            FileSystem[] fs = SIUtil.getFileSystem();
+            if(null != fs){
+                Map li = new HashMap();
+                for(FileSystem f:fs){
+                    li.put(f.getDevName(),POJOUtil.convertPojo2Map(SIUtil.getFileSystemUsage(f.getDirName()),null));
+                }
+                map.put("FileSystemUsage",li);
+            }
+            Mem mem= SIUtil.getMem();
+            NetInfo ni = SIUtil.getNetInfo();
+            NetStat ns = SIUtil.getNetStat();
+            long[] pids = SIUtil.getProcPids();
+            ResourceLimit rl = SIUtil.getResourceLimit();
+            Swap swap = SIUtil.getSwap();
+            Tcp tcp = SIUtil.getTcp();
+            //NetRoute[] nrs = SIUtil.getNetRoute();
+            //ProcStat ps = SIUtil.getProcStat();
+            ThreadCpu tc = SIUtil.getThreadCpu();
+            Who[] ws = SIUtil.getWho();
+
+
+
+
+            map.put("PID",pid);
+            map.put("CPU", POJOUtil.convertPojo2Map(cpu,null));
+            map.put("CpuInfo", POJOUtil.convertPojoArray2Map(cis,null));
+            //map.put("NetConfig", POJOUtil.convertPojo2Map(nic,null));
+            map.put("FileSystem", POJOUtil.convertPojoArray2Map(fs,null));
+            map.put("Mem", POJOUtil.convertPojo2Map(mem,null));
+            map.put("NetInfo", POJOUtil.convertPojo2Map(ni,null));
+            map.put("NetStat", POJOUtil.convertPojo2Map(ns,null));
+            map.put("PIDS", POJOUtil.convertPojoArray2Map(pids,null));
+            map.put("ResourceLimit", POJOUtil.convertPojo2Map(rl,null));
+            map.put("Swap", POJOUtil.convertPojo2Map(swap,null));
+            map.put("Tcp", POJOUtil.convertPojo2Map(tcp,null));
+            //map.put("NetRoute", POJOUtil.convertPojoArray2Map(nrs,null));
+            //map.put("ProcStat", POJOUtil.convertPojo2Map(ps,null));
+            map.put("ThreadCpu", POJOUtil.convertPojo2Map(tc,null));
+            map.put("Who", POJOUtil.convertPojoArray2Map(ws,null));
+            map.put("CurDate",new Date());
+            return map;
+
+        }catch (SigarException e){
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static Map getPidSig(long pid){
+        try {
+            HashMap map = new HashMap();
+            map.put("ProcArgs",POJOUtil.convertPojoArray2Map(SIUtil.getProcArgs(pid),null));
+            map.put("ProcCpu",POJOUtil.convertPojo2Map(SIUtil.getProcCpu(pid),null));
+            map.put("ProcCred",POJOUtil.convertPojo2Map(SIUtil.getProcCred(pid),null));
+            map.put("ProcCredName",POJOUtil.convertPojo2Map(SIUtil.getProcCredName(pid),null));
+            map.put("ProcEnv",POJOUtil.convertPojo2Map(SIUtil.getProcEnv(pid),null));
+            map.put("ProcMem",POJOUtil.convertPojo2Map(SIUtil.getProcMem(pid),null));
+            map.put("ProcExe",POJOUtil.convertPojo2Map(SIUtil.getProcExe(pid),null));
+            map.put("ProcFd",POJOUtil.convertPojo2Map(SIUtil.getProcFd(pid),null));
+            map.put("ProcState",POJOUtil.convertPojo2Map(SIUtil.getProcState(pid),null));
+            map.put("ProcTime",POJOUtil.convertPojo2Map(SIUtil.getProcTime(pid),null));
+            if(log.isDebugEnabled()){
+                log.debug("Pid:"+pid+" \n"+map);
+            }
+            return map;
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static void main(String[] args){
+        try{
+            System.out.println(getSigInfo());
+            System.out.println(getPidSig(5104));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+}
+
