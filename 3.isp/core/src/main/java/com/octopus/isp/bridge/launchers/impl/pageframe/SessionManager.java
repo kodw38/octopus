@@ -14,6 +14,7 @@ import com.octopus.utils.xml.auto.XMLParameter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPubSub;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -77,6 +78,7 @@ public class SessionManager extends XMLDoObject {
                             }
                         }
                     }
+
                 }catch (Exception e){
                     log.error(e);
                 }finally {
@@ -90,6 +92,34 @@ public class SessionManager extends XMLDoObject {
                 }
             }
         },"run",null,null);
+    }
+
+    class SessionJedisPubSub extends JedisPubSub{
+        String dbid="";
+        public SessionJedisPubSub(String dbid){
+            this.dbid=dbid;
+        }
+
+        public void onPSubscribe(String pattern, int subscribedChannels) {
+                 System.out.println("onPSubscribe "
+                         + pattern + " " + subscribedChannels);
+         }
+
+         @Override
+         public void onPMessage(String pattern, String channel, String message) {
+             if(log.isDebugEnabled()) {
+                 log.error("onPMessage pattern "
+                         + pattern + " " + channel + " " + message);
+             }
+             if(channel.equals("__keyevent@"+dbid+"__:expired")||channel.equals("__keyevent@"+dbid+"__:del")){
+                if(log.isDebugEnabled()) {
+                    System.out.println("----:" + message);
+                }
+                 String key = message.substring(message.indexOf("_")+1);
+                 sessions.remove(key);
+             }
+         }
+
     }
     private SecureRandom createSecureRandom(){
         SecureRandom result = null;
@@ -458,7 +488,7 @@ public class SessionManager extends XMLDoObject {
                     Session s = new Session();
                     s.putAll(m);
                     if(log.isDebugEnabled())
-                        log.debug("get session:"+s);
+                        log.debug("get session:"+s+" by id:"+StartWith_Session+sessionId);
                     return active(s,null,(String)s.get("expire"),jsessionID,false);
                 }
             }
@@ -533,6 +563,24 @@ public class SessionManager extends XMLDoObject {
 
     @Override
     public void doInitial() throws Exception {
+        ExecutorUtils.work(new Runnable(){
+
+            @Override
+            public void run() {
+                try {
+                    RedisClient rc = (RedisClient) getObjectById("RedisClient");
+                    synchronized (sessions) {
+                        Jedis jedis = rc.getRedis("Session");
+                        String dbid = (String) rc.getXML().getByTagProperty("cluster", "key", "Session")[0].getChildren().get(0).getProperties().get("db");
+                        //log.error("JedisPubSub patterns:" + "__key*__:*");
+                        //need redis config redis.conf notify-keyspace-events Eg
+                        jedis.psubscribe(new SessionJedisPubSub(dbid), "__key*__:*");
+                    }
+                }catch (Exception e){
+                    log.error("",e);
+                }
+            }
+        });
 
     }
 
