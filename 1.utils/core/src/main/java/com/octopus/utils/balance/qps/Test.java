@@ -1,11 +1,16 @@
 package com.octopus.utils.balance.qps;
 
+import com.lowagie.text.Document;
+import com.lowagie.text.pdf.PdfCopy;
+import com.lowagie.text.pdf.PdfImportedPage;
+import com.lowagie.text.pdf.PdfReader;
 import com.octopus.utils.cls.javassist.bytecode.analysis.Executor;
 import com.octopus.utils.cls.javassist.bytecode.annotation.IntegerMemberValue;
 import com.octopus.utils.thread.ExecutorUtils;
 import com.octopus.utils.thread.ThreadPool;
 import junit.framework.TestCase;
 
+import java.io.FileOutputStream;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,10 +56,38 @@ public class Test extends TestCase{
             //Test t = new Test();
             //t.testB_1();
             System.out.println(new Date(321564309));
+            String[] files = { "file:///C:/Users/Crazy.jia/Desktop/00.pdf","file:///C:/Users/Crazy.jia/Desktop/1.pdf" };
+            String savepath = "C:\\logs\\temp.pdf";
+            mergePdfFiles(files, savepath);
         }catch (Exception e){
             e.printStackTrace();
         }
     }
+    public static boolean mergePdfFiles(String[] files, String newfile) {
+        boolean retValue = false;
+        Document document = null;
+        try {
+            document = new Document(new PdfReader(files[0]).getPageSize(1));
+            PdfCopy copy = new PdfCopy(document, new FileOutputStream(newfile));
+            document.open();
+            for (int i = 0; i < files.length; i++) {
+                PdfReader reader = new PdfReader(files[i]);
+                int n = reader.getNumberOfPages();
+                for (int j = 1; j <= n; j++) {
+                    document.newPage();
+                    PdfImportedPage page = copy.getImportedPage(reader, j);
+                    copy.addPage(page);
+                }
+            }
+            retValue = true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            document.close();
+        }
+        return retValue;
+    }
+
 
     public void testB_1(){
         long l = System.currentTimeMillis();

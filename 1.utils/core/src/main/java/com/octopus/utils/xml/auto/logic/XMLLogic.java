@@ -372,9 +372,9 @@ public class XMLLogic extends XMLDoObject{
 
     void doFor(XMLParameter env,XMLMakeup x)throws Exception{
         //long l = System.currentTimeMillis();
-        if(x.getProperties().containsKey("debug")){
+        /*if(x.getProperties().containsKey("debug")){
             System.out.println();
-        }
+        }*/
         String path = x.getProperties().getProperty("collection");
         Object o = ObjectUtils.getValueByPath(env.getReadOnlyParameter(),path);//获取for循环处理的数据对象，可以为Array,List,Map对象，也可以是int
         if(null ==o && StringUtils.isNumeric(path)){
@@ -537,12 +537,14 @@ public class XMLLogic extends XMLDoObject{
         /*if(log.isDebugEnabled()) {
             env.printTime("do if begin " + exp);
         }*/
-        Logger.debug(this.getClass(),env,(null==xml?"":xml.getId()),"do if begin "+exp,null,null);
+        if(Logger.isDebugEnabled())
+            Logger.debug(this.getClass(),env,(null==xml?"":xml.getId()),"do if begin "+exp,null,null);
         boolean o = checkStr(env, exp);
         /*if(log.isDebugEnabled()) {
             env.printTime("do if end " + o);
         }*/
-        Logger.debug(this.getClass(),env, (null==xml?"":xml.getId()),"do if end "+o,null,null);
+        if(Logger.isDebugEnabled())
+            Logger.debug(this.getClass(),env, (null==xml?"":xml.getId()),"do if end "+o,null,null);
         boolean istrue=true;
         for(XMLMakeup x:xml.getChildren()){
             if(x.getName().equals("else")) {
