@@ -383,6 +383,7 @@ public final class RC2 {
 		  }
 		  //System.out.println(r.encrypt("ailk123"));
 		  System.out.println(r.decrypt("e10adc3949ba59abbe56e057f20f883e"));
+		  System.out.println(r.decrypt("KtjA8FFiN1k="));
 		  System.out.println(r.encrypt("mysql115"));
 		  System.out.println(r.encrypt("mju7MJU&"));
 	  }catch(Exception e){

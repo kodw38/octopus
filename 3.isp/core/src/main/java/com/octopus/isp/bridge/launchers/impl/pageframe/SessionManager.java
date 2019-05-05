@@ -475,6 +475,7 @@ public class SessionManager extends XMLDoObject {
     }
     Session getSession(String sessionId,String jsessionID) throws Exception {
         RedisClient rc = (RedisClient)getObjectById("RedisClient");
+        log.debug("get session by sessionId:"+sessionId+" jsessionID:"+jsessionID);
         Jedis jedis= null;
         try{
             jedis=rc.getRedis("Session");
@@ -538,10 +539,13 @@ public class SessionManager extends XMLDoObject {
                 return s;
             }else if("getSession".equals(input.get("op"))){
                 String sessionId = (String)input.get("sessionId");
+                String purlSessionId = (String)input.get("purlSessionId");
                 String un = (String)input.get("UserName");
                 String token = (String)input.get("token");
                 String pwd = (String)input.get("UserPwd");
-                if(StringUtils.isNotBlank(sessionId)){
+                if(StringUtils.isNotBlank(purlSessionId)){
+                    return getSession(purlSessionId,null);
+                }if(StringUtils.isNotBlank(sessionId)){
                     return getSession(null,sessionId);
                 }else {
                     return getSessionByUser(un);

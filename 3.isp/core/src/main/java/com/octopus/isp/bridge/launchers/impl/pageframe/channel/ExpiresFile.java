@@ -7,6 +7,8 @@ import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.regexp.RE;
 import org.apache.regexp.RESyntaxException;
 
@@ -21,6 +23,7 @@ import java.util.*;
  * Time: 下午2:11
  */
 public class ExpiresFile extends XMLDoObject {
+    transient static Log log = LogFactory.getLog(ExpiresFile.class);
     private static final int EXPIRE_TYPE_ACCESS = 1;
     private static final int EXPIRE_TYPE_MODIFY = 2;
 
@@ -63,6 +66,7 @@ public class ExpiresFile extends XMLDoObject {
         String requestURI = par.getRequestURI();
 
         long timeMillis = -1;
+        //log.debug("file expire "+patternConfig);
         if (patternConfig != null && patternConfig.length != 0) {
             try {
                 String path="";
@@ -96,12 +100,14 @@ public class ExpiresFile extends XMLDoObject {
                         break;
                     }
                 }
+                log.debug("expires file :"+path+" "+new Date(timeMillis));
             }
             catch (Exception ex) {
             }
         }
 
-        HttpServletResponse response = (HttpServletResponse)par.get("${response}");;
+        HttpServletResponse response = (HttpServletResponse)par.get("${response}");
+
         if (timeMillis > 0) {
             response.addHeader("Cache-Control", "Private");
             response.addDateHeader("Expires", timeMillis);

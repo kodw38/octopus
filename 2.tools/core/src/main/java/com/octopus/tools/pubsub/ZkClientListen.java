@@ -303,6 +303,9 @@ public class ZkClientListen extends XMLLogic {
                         log.error("zkClient disconnectioned and wait 30 seconds will reconnect");
                     }
                 }
+                if(keeperState.getIntValue()==-112){//session expire
+                    log.error("zkClient session expired");
+                }
             }
 
             @Override

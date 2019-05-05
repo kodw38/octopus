@@ -80,6 +80,12 @@ public class SystemAction extends XMLDoObject {
     }
     public void doInitial(){
         try {
+            if (StringUtils.isNotBlank(traceFlagPath)) {
+                HashMap map = new HashMap();
+                map.put("op", "addPathDataListener");
+                map.put("path", traceFlagPath);
+                srvhandler.doSomeThing(null, null, map, null, null);
+            }
             initRegInfo(false);
             if (StringUtils.isNotBlank(getXML().getProperties().getProperty("initpublish"))) {
                 Object o = getEmptyParameter().getValueFromExpress(getXML().getProperties().getProperty("initpublish"), this);
@@ -112,8 +118,39 @@ public class SystemAction extends XMLDoObject {
                     }
                 }
             }
-        }catch (Exception x){
 
+            Timer t = new Timer();
+            t.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    try{
+                        initRegInfo(true);
+                    }catch (Exception e){
+
+                    }
+                    //load all services to local
+                    Map<String,List<Map>> srvs = new HashMap();
+                    Map<String,List<Map>>  li  = getSrvInfoRelIns(srvs);// when ins remove or srv add delete will notification this store
+                    if(null != li) {
+                        if (null != srvIdRelIns) {
+                            synchronized (srvIdRelIns) {
+                                srvIdRelIns = li;
+                            }
+                        } else {
+                            srvIdRelIns = li;
+                        }
+                    }
+                    if(null != srvInfoInCenter) {
+                        synchronized (srvInfoInCenter) {
+                            srvInfoInCenter = srvs;
+                        }
+                    }else{
+                        srvInfoInCenter=srvs;
+                    }
+                }
+            },0,60000);
+        }catch (Exception x){
+            log.error("",x);
         }
     }
 
@@ -122,12 +159,7 @@ public class SystemAction extends XMLDoObject {
             if(srvhandler==null)return ;
             log.debug("java.library.path\n"+System.getProperty("java.library.path"));
 
-            if (StringUtils.isNotBlank(traceFlagPath)) {
-                HashMap map = new HashMap();
-                map.put("op", "addPathDataListener");
-                map.put("path", traceFlagPath);
-                srvhandler.doSomeThing(null, null, map, null, null);
-            }
+
             //reg this instance info to zk
             if(StringUtils.isNotBlank(serverspath)){
                 Bridge root = (Bridge)getObjectById("bridge");
@@ -174,31 +206,7 @@ public class SystemAction extends XMLDoObject {
 
             }
 
-            Timer t = new Timer();
-            t.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    //load all services to local
-                    Map<String,List<Map>> srvs = new HashMap();
-                    Map<String,List<Map>>  li  = getSrvInfoRelIns(srvs);// when ins remove or srv add delete will notification this store
-                    if(null != li) {
-                        if (null != srvIdRelIns) {
-                            synchronized (srvIdRelIns) {
-                                srvIdRelIns = li;
-                            }
-                        } else {
-                            srvIdRelIns = li;
-                        }
-                    }
-                    if(null != srvInfoInCenter) {
-                        synchronized (srvInfoInCenter) {
-                            srvInfoInCenter = srvs;
-                        }
-                    }else{
-                        srvInfoInCenter=srvs;
-                    }
-                }
-            },0,60000);
+
         }catch (Exception e){
             log.error("systemAction init error",e);
         }

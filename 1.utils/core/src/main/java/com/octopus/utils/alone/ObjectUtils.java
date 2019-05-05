@@ -1632,10 +1632,12 @@ public class ObjectUtils {
         }
     }
     public static String convertMap2String(Map map){
+/*
         if(log.isDebugEnabled()) {
             new Exception().printStackTrace();
             log.debug("convertMap2String parameters:" + map);
         }
+*/
         if(null !=map) {
             synchronized (map) {
                 StringBuffer sb = new StringBuffer("{");

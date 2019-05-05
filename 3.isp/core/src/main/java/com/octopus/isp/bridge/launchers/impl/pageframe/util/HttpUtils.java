@@ -246,7 +246,9 @@ public class HttpUtils extends XMLObject {
         response.setCharacterEncoding("UTF-8");
         String cotent="";
         if(isCache && StringUtils.isBlank(append)){
+            log.debug("get cache page :"+url);
             if(!pageCacheMap.containsKey(url)){
+                log.debug("not in cache :"+url);
                 InputStream in = request.getServletContext().getResourceAsStream(url);
                 if(null != in){
                     byte[] bs = new byte[in.available()];
@@ -259,8 +261,10 @@ public class HttpUtils extends XMLObject {
 
             }
             cotent = pageCacheMap.get(url);
+            log.debug("response cache page :"+url);
         }else{
             InputStream in = request.getSession().getServletContext().getResourceAsStream(url);
+
             if(in == null)
                 throw new Exception("not find the source by "+url);
             byte[] bs = new byte[in.available()];
@@ -450,7 +454,9 @@ public class HttpUtils extends XMLObject {
         byte[] cotent;
         //System.out.println(url);
         if(isCache){
+            log.debug("get cache page :"+url);
             if(!itemCacheMap.containsKey(url)){
+                log.debug("not in cache :"+url);
                 InputStream in = request.getSession().getServletContext().getResourceAsStream(url);
                 if(null != in){
                     byte[] bs = new byte[in.available()];
@@ -462,6 +468,11 @@ public class HttpUtils extends XMLObject {
                 }
             }
             cotent = itemCacheMap.get(url);
+            response.getOutputStream().write(cotent);
+            log.debug("response cache page :"+url);
+            response.flushBuffer();
+
+
         }else{
             InputStream in = request.getSession().getServletContext().getResourceAsStream(url);
             if(null != in) {
@@ -506,6 +517,7 @@ public class HttpUtils extends XMLObject {
      */
 
     public void redirect(RequestParameters env,String uri,String append)throws Exception{
+        log.debug("redirect page include cache "+uri);
         HttpServletRequest request = (HttpServletRequest)env.get("${request}");
         HttpServletResponse response = (HttpServletResponse)env.get("${response}");
 
@@ -566,7 +578,7 @@ public class HttpUtils extends XMLObject {
             if(uri.indexOf(".")>0) {
                 redirectNoPageSource(env, request, response, uri);
             }else{
-                request.getRequestDispatcher(uri).forward(request,response);
+                request.getRequestDispatcher(uri).forward(request, response);
             }
         }
 

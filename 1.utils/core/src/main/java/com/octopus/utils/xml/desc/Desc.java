@@ -276,6 +276,20 @@ public class Desc extends XMLDoObject{
         Map m = getDescStructure(key);
         return getInvokeDescStructure(m);
     }
+    public static Map getParameterDesc(Map m){
+        if(null != ps) {
+            HashMap l = new LinkedHashMap();
+            Iterator<String> ks = ps.keySet().iterator();
+            while(ks.hasNext()){
+                String k = ks.next();
+                if(m.containsKey(k)){
+                    l.put(k,m.get(k));
+                }
+            }
+            return l;
+        }
+        return null;
+    }
     static void removeParameterDesc(Map src,Map target){
         if(null == src) return;
         Iterator<String> p = src.keySet().iterator();

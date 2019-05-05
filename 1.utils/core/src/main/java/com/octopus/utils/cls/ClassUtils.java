@@ -439,6 +439,9 @@ public class ClassUtils {
                 if((o instanceof String)) {
                     return Float.valueOf((String) o);
                 }
+                if( o instanceof Integer){
+                    return new Float((Integer)o);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;

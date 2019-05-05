@@ -23,7 +23,7 @@ public class LoginCheck extends XMLDoObject {
     public Object doSomeThing(String xmlid,XMLParameter env, Map input, Map output, Map config) throws Exception {
         if(((RequestParameters)env).getRequestProperties().get("Method").equals("GET")){
             if(null ==((RequestParameters)env).getSession()){
-                throw new Exception("you not login or session timeout or not register, so no authority access the page["+((RequestParameters)env).getRequestURI()+"] please login again");
+                throw new Exception("you not login or session timeout or not register, so no authority access the page["+((RequestParameters)env).getRequestURI()+"?"+((RequestParameters)env).getQueryString()+"] please login again");
             }
         }
         return true;
