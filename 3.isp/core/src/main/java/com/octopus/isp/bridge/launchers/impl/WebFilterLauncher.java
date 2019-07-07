@@ -68,8 +68,7 @@ public class WebFilterLauncher extends XMLObject implements ILauncher{
         HttpServletRequest request = (HttpServletRequest)((Object[])obj)[0];
         HttpServletResponse response = (HttpServletResponse)((Object[])obj)[1];
 
-        if(null!=inputconvert)
-            obj = inputconvert.convert(obj);
+
         RequestParameters pars = new RequestParameters();
         pars.setEnv(env);
         pars.setRequestData(obj);
@@ -80,6 +79,8 @@ public class WebFilterLauncher extends XMLObject implements ILauncher{
         pars.addRequestProperties("ServerPort",request.getServerPort());
         pars.setQueryString(request.getQueryString());
         pars.setRequestURL(request.getRequestURI());
+        if(null!=inputconvert)
+            obj = inputconvert.convert(pars,obj);
         Session session = new Session();
         Enumeration ss = request.getSession().getAttributeNames();
         while(ss.hasMoreElements()){
@@ -108,7 +109,7 @@ public class WebFilterLauncher extends XMLObject implements ILauncher{
 
         Object ret = ((IBridge)getPropertyObject("bridge")).evaluate(pars);
         if(null != ret){
-            return outputconvert.convert(ret);
+            return outputconvert.convert(pars,ret);
         }
         return ret;
     }

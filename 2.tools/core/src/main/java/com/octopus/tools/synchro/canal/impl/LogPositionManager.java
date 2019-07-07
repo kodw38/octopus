@@ -8,10 +8,12 @@ import com.alibaba.otter.canal.protocol.position.LogIdentity;
 import com.alibaba.otter.canal.protocol.position.LogPosition;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.exception.Logger;
+import com.octopus.utils.net.NetUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
+import io.netty.util.NetUtil;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -127,7 +129,7 @@ public class LogPositionManager extends AbstractCanalLifeCycle implements CanalL
         //每10分钟放入数据库   LogPosition[identity=LogIdentity[sourceAddress=/127.0.0.1:3306,slaveId=-1],postion=EntryPosition[included=false,journalName=mysql-bin.000508,position=2747,timestamp=1465130452000]]
         HashMap map = new HashMap();
         map.put("SLAVE_NAME",s);
-        map.put("SLAVE_ID",logPosition.getIdentity().getSlaveId());
+        map.put("SLAVE_ID", NetUtils.getip()+"|"+System.getProperty("instance.name")+"|"+logPosition.getIdentity().getSlaveId());
         map.put("JOURNAL_NAME",logPosition.getPostion().getJournalName());
         map.put("POSITION_NUM",logPosition.getPostion().getPosition());
         map.put("HOST_IP",logPosition.getIdentity().getSourceAddress().getAddress().toString());

@@ -19,6 +19,7 @@ import redis.clients.jedis.JedisPubSub;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -35,7 +36,7 @@ public class SessionManager extends XMLDoObject {
     static String StartWith_KeySession="KS_"; //存放用户名.密码
     //static String StartWith_AUTHSRV="SRV_"; //存放用户配置的授权信息
     static String StartWith_JSessionRelSessionID="JS_"; //存放id
-    static Map<String,Session> sessions = new LinkedHashMap<String, Session>();
+    static Map<String,Session> sessions = new ConcurrentHashMap<String, Session>();
 
     String[] activeexpirekeys=null;
 
@@ -316,6 +317,12 @@ public class SessionManager extends XMLDoObject {
                 jedis.setex(StartWith_JSessionRelSessionID+s.getSessionId(),sessionTimeout,jsessionId);
             }
             log.debug("set session to redis:"+s);
+            if(null != s) {
+                String outSysID = (String) s.get("OUT_SYSTEM_ID");
+                if (StringUtils.isNotBlank(outSysID) && StringUtils.isNotBlank(jsessionId)){
+                    jedis.expire(StartWith_JSessionRelSessionID+outSysID+"-"+jsessionId,sessionTimeout);
+                }
+            }
             if(issetdata) {
                 jedis.setex(StartWith_Session + s.getSessionId(), sessionTimeout, ObjectUtils.convertMap2String(s));
             }else{
@@ -449,7 +456,7 @@ public class SessionManager extends XMLDoObject {
                 Session session = getSession(sessionId,null);
                 if(null != session) {
                     ExecutorUtils.work(new ActiveSession(sessionId, jsessionID));
-                    sessions.put(jsessionID,session);
+                    sessions.put(sessionId,session);
                 }
                 return session;
             }
@@ -481,6 +488,9 @@ public class SessionManager extends XMLDoObject {
             jedis=rc.getRedis("Session");
             if(StringUtils.isBlank(sessionId) && StringUtils.isNotBlank(jsessionID)){
                 sessionId = jedis.get(StartWith_JSessionRelSessionID+jsessionID);
+                if(StringUtils.isBlank(sessionId)){
+                    sessionId=jsessionID;
+                }
             }
             if(StringUtils.isNotBlank(sessionId)){
                 String str = jedis.get(StartWith_Session+sessionId);
@@ -492,8 +502,9 @@ public class SessionManager extends XMLDoObject {
                         log.debug("get session:"+s+" by id:"+StartWith_Session+sessionId);
                     return active(s,null,(String)s.get("expire"),jsessionID,false);
                 }
+                sessions.remove(sessionId);
             }
-            sessions.remove(sessionId);
+
             return null;
         }finally {
             if(null !=jedis)
@@ -560,6 +571,8 @@ public class SessionManager extends XMLDoObject {
                 addSessionAttrs(s,attrs);
                 ((RequestParameters)env).setSession(getSessionByUser(un));
 
+            }else if("getSessionIdEndWith".equals(input.get("op"))){
+                return jvmRoute;
             }
         }
         return null;  //To change body of implemented methods use File | Settings | File Templates.
@@ -606,5 +619,15 @@ public class SessionManager extends XMLDoObject {
     @Override
     public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
         return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    public static void main(String[] args){
+        try{
+            SessionManager sm = new SessionManager(null,null,null);
+            String s= sm.generateSessionId("");
+            System.out.println(s);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }

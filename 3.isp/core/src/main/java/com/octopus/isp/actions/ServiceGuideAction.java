@@ -49,73 +49,82 @@ public class ServiceGuideAction extends XMLDoObject {
                 return getLogicElementListAndDesc();
             }else if("getProperties".equals(op)){
                 String elementName = (String)input.get("element");
-                Map m = new HashMap();
-                if(StringUtils.isNotBlank(elementName)) {
-                    Map pros = getElementPropertiesAndDesc(elementName);
-                    if(null != pros) {
-                        ObjectUtils.appendDeepMapNotReplaceKey(pros, m);
-                    }
-                }
-                if(StringUtils.isBlank(elementName)||"do".equals(elementName)) {
-                    Map commonPros = getCommonXMLPropertiesAndDesc();
-                    if (null != commonPros) {
-                        if (m.size() > 0) {
-                            ObjectUtils.appendDeepMapNotReplaceKey(commonPros, m);
-                        } else {
-                            m = commonPros;
+                String action = (String)input.get("action");
+                String valuePath = (String)input.get("path");
+                if(StringUtils.isBlank(action)) {
+                    Map m = new HashMap();
+                    if (StringUtils.isNotBlank(elementName)) {
+                        Map pros = getElementPropertiesAndDesc(elementName);
+                        if (null != pros) {
+                            ObjectUtils.appendDeepMapNotReplaceKey(pros, m);
                         }
                     }
+                    if (StringUtils.isBlank(elementName) || "do".equals(elementName)) {
+                        Map commonPros = getCommonXMLPropertiesAndDesc();
+                        if (null != commonPros) {
+                            if (m.size() > 0) {
+                                ObjectUtils.appendDeepMapNotReplaceKey(commonPros, m);
+                            } else {
+                                m = commonPros;
+                            }
+                        }
+                    }
+                    if(StringUtils.isNotBlank(valuePath)){
+                        return ObjectUtils.getValueByPath(m,valuePath);
+                    }
+                    return m;
+                }else{
+                    return getElementPropertiesValueDesc(elementName,action,valuePath);
                 }
-
-                return m;
 
             }else if("getChildren".equals(op)){
                 String elementName = (String)input.get("element");
                 if(StringUtils.isNotBlank(elementName)) {
                     return getElementChildrenAndDesc(elementName);
                 }
-            }else if("getByPath".equals(op)){
-                String elementName = (String)input.get("element");
-                String action = (String)input.get("action");
-                String valuePath = (String)input.get("path");
-                return getElementPropertiesValueDesc(elementName,action,valuePath);
-            }else if("getEnumValue".equals(op)){
-                String elementName = (String)input.get("element");
-                String action = (String)input.get("action");
-                String valuePath = (String)input.get("path");
-                return getElementPropertiesValue(elementName,action,valuePath);
             }else if("getValue".equals(op)){
+                String elementName = (String)input.get("element");
+                String action = (String)input.get("action");
+                String valuePath = (String)input.get("path");
                 String v = (String)input.get("value");
-                if("${actions}".equals(v)){
-                    return getAllServiceNameAndDesc();
-                }else if(v.startsWith("${env}")){
-                    Object o = ObjectUtils.getValueByPath(env,v);
-                    if(null != o && o instanceof Map){
-                        Iterator its = ((Map)o).keySet().iterator();
-                        HashMap m = new HashMap();
-                        while(its.hasNext()){
-                            String k = (String)its.next();
-                            if(k.contains("[")){
-                                m.put(k.substring(k.indexOf("[")),"");
-                            }else{
-                                m.put(k,"");
-                            }
-                        }
-                        ObjectUtils.sortMapByCompareTo(m);
-                        return m;
-
-                    }
-                    return null;
-                }else if("${methods}".equals(v)){
-                    return getStringMethodsAndDesc();
-                }else if("${structures}".equals(v)){
-                    return getDataStructureAndDesc();
+                if(StringUtils.isBlank(v)) {
+                    return getElementPropertiesValue(elementName, action, valuePath);
+                }else{
+                    return getValue(env,v);
                 }
             }
 
         }
         return null;
 
+    }
+    Map getValue(XMLParameter env,String v){
+        if("${actions}".equals(v)){
+            return getAllServiceNameAndDesc();
+        }else if(v.startsWith("${env}")){
+            Object o = ObjectUtils.getValueByPath(env,v);
+            if(null != o && o instanceof Map){
+                Iterator its = ((Map)o).keySet().iterator();
+                HashMap m = new HashMap();
+                while(its.hasNext()){
+                    String k = (String)its.next();
+                    if(k.contains("[")){
+                        m.put(k.substring(k.indexOf("[")),"");
+                    }else{
+                        m.put(k,"");
+                    }
+                }
+                ObjectUtils.sortMapByCompareTo(m);
+                return m;
+
+            }
+            return null;
+        }else if("${methods}".equals(v)){
+            return getStringMethodsAndDesc();
+        }else if("${structures}".equals(v)){
+            return getDataStructureAndDesc();
+        }
+        return null;
     }
 
     @Override
@@ -167,7 +176,7 @@ public class ServiceGuideAction extends XMLDoObject {
         return getChildrenAndDesc("do_element"+"."+elementName+".children");
     }
 
-    Map getElementPropertiesValueDesc(String elementName,String action,String valuePath){
+    Object getElementPropertiesValueDesc(String elementName,String action,String valuePath){
         if("do".equals(elementName) && StringUtils.isNotBlank(action)){
             XMLObject obj = getObjectById(action);
             Map pros = (Map)ObjectUtils.getValueByPath(logicDesc,"do_element.do.properties");
@@ -176,22 +185,30 @@ public class ServiceGuideAction extends XMLDoObject {
                     Map m = new HashMap();
                     ObjectUtils.appendDeepMapNotReplaceKey(pros, m);
                     ObjectUtils.appendDeepMapNotReplaceKey(obj.getDescStructure(), m);
-                    Object o = ObjectUtils.getValueByPath(m,valuePath);
-                    if(null != o && o instanceof Map) {
-                        return (Map)o;
-                        //return Desc.getParameterDesc((Map)o);
+                    if(StringUtils.isNotBlank(valuePath)) {
+                        Object o = ObjectUtils.getValueByPath(m, valuePath);
+                        if (null != o && o instanceof Map) {
+                            return (Map) o;
+                            //return Desc.getParameterDesc((Map)o);
+                        }
+                    }else{
+                        return m;
                     }
-
-                    return null;
                 }catch (Exception e){
                     log.error("",e);
                 }
-            }else {
-                return getDesc("do_element" + "." + elementName + ".properties." + valuePath);
+            }else if(null != pros){
+                return ObjectUtils.getValueByPath(pros,valuePath);
+            }else if(null != obj){
+                try {
+                    return ObjectUtils.getValueByPath(obj.getDescStructure(), valuePath);
+                }catch (Exception e){
+
+                }
             }
 
         }else {
-            return getDesc("do_element" + "." + elementName + ".properties." + valuePath);
+            return ObjectUtils.getValueByPath(logicDesc,"do_element" + "." + elementName + ".properties." + valuePath);
         }
         return null;
     }

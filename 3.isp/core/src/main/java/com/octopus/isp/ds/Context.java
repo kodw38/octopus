@@ -1,7 +1,9 @@
 package com.octopus.isp.ds;
 
 import com.octopus.tools.i18n.II18N;
+import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.time.DateTimeUtils;
+import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.auto.XMLParameter;
 
 import java.text.SimpleDateFormat;
@@ -51,5 +53,19 @@ public class Context extends XMLParameter {
 
     public II18N getI18n(){
         return i18n;
+    }
+
+
+    public boolean checkFormat(String type,Object value){
+        if(StringUtils.isNotBlank(type) && null != value && !"".equals(value)){
+            if(!type.startsWith("format")){
+                type="format."+type;
+            }
+            String format = (String)getParameter(type);
+            if(null != format) {
+                return StringUtils.regExpress(value.toString(), format);
+            }
+        }
+        return true;
     }
 }

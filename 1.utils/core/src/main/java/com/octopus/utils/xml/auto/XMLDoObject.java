@@ -16,9 +16,12 @@ import com.octopus.utils.xml.auto.defpro.IObjectInitProperty;
 import com.octopus.utils.xml.auto.defpro.IObjectInvokeProperty;
 import com.octopus.utils.xml.auto.defpro.impl.*;
 import com.octopus.utils.xml.auto.defpro.impl.utils.DoAction;
+import com.octopus.utils.xml.desc.Desc;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import scala.collection.parallel.ParIterableLike;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
@@ -222,6 +225,70 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
             return null;
         }
     }
+
+    protected boolean checkInputParameterByDesc(XMLParameter env,Map inputData) throws ISPException, IOException {
+
+        if (null != getDescStructure()) {
+            Map dc = (Map)getDescStructure().get("input");
+            if(null != dc){
+                return checkByDesc(env,dc,inputData);
+            }
+        }
+
+        return true;
+    }
+
+    private boolean checkByDesc(XMLParameter env,Object parameterDesc,Object inputData)throws ISPException{
+        if(null!=inputData && null != parameterDesc ){
+            if(inputData.getClass().isArray() && (parameterDesc.getClass().isArray() || parameterDesc instanceof Collection)){
+                for(Object o:(Object[])inputData){
+                    boolean b = checkByDesc(env,parameterDesc.getClass().isArray()?((Object[])parameterDesc)[0]:((Collection)parameterDesc).iterator().next(),o);
+                    if(!b) return b;
+                }
+            }else if(inputData instanceof Collection){
+                Iterator it = ((Collection)inputData).iterator();
+                while(it.hasNext()){
+                    Object v1 = it.next();
+                    boolean b = checkByDesc(env,parameterDesc.getClass().isArray()?((Object[])parameterDesc)[0]:((Collection)parameterDesc).iterator().next(),v1);
+                    if(!b) return b;
+                }
+            }else if(inputData instanceof Map && parameterDesc instanceof Map) {
+                Iterator its = ((Map)inputData).keySet().iterator();
+                while (its.hasNext()) {
+                    Object k = its.next();
+                    Object v = ((Map)inputData).get(k);
+                    Object dv = ((Map)parameterDesc).get(k);
+                    if (null != dv && null != v) {
+                        if (dv instanceof Map && Desc.isDescriptionField((Map) dv)) {
+                            //check
+                            boolean b= Desc.checkItemByDesc(k.toString(),env,this,v,(Map)dv);
+                            if(!b) return b;
+                        }
+                        if (v.getClass().isArray()) {
+                            for(Object o:(Object[])v){
+                                boolean b = checkByDesc(env,dv.getClass().isArray()?((Object[])dv)[0]:((Collection)dv).iterator().next(),o);
+                                if(!b) return b;
+                            }
+                        } else if (v instanceof Collection) {
+                            Iterator it = ((Collection)v).iterator();
+                            while(it.hasNext()){
+                                Object v1 = it.next();
+                                boolean b = checkByDesc(env,dv.getClass().isArray()?((Object[])dv)[0]:((Collection)dv).iterator().next(),v1);
+                                if(!b) return b;
+                            }
+                        } else if (v instanceof Map && dv instanceof Map) {
+                            checkByDesc(env,(Map) dv, (Map) v);
+                        }
+                    }
+                }
+            }else if(parameterDesc instanceof Map && Desc.isDescriptionField((Map) parameterDesc)){
+                boolean b= Desc.checkItemByDesc(null,env,this,inputData,(Map)parameterDesc);
+                if(!b) return b;
+            }
+        }
+        return true;
+    }
+
 
 
     public void notifyObject(String op,Object obj)throws Exception{
@@ -630,7 +697,9 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         //if before interrupt point for redo flow sr , do nothing
         if(null != xml && !xml.isEnable())
             return;
-
+        if(log.isDebugEnabled()){
+            log.debug(xml.toString());
+        }
         //从参数中构造mapping参数
         Map input=null,output=null,config=null;
         String xmlid=null;
@@ -650,9 +719,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
             isAsyn = isAsyn(getXML());
         }
 
-        if(Logger.isInfoEnabled()) {
-            Logger.info(this.getClass(), parameter, (null != xml?xml.getId():getXML().getId()), "begin doThing",input, null);
-        }
+
         //debug模式时，可以端点
         if (StringUtils.isNotBlank(debug)) {
             Map map = StringUtils.convert2MapJSONObject(debug);
@@ -745,6 +812,9 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         if(null != xml){
             //获取引用调用的参数
             String parmap = xml.getProperties().getProperty("input");
+            if(log.isDebugEnabled()){
+                log.debug("referXml input:"+parmap);
+            }
             if (StringUtils.isNotBlank(parmap)) {
                 if (parmap.startsWith("${")) {
                     Object o = ObjectUtils.getValueByPath(parameter, parmap);
@@ -759,7 +829,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                     }
                     referInputMap = getValueMap(referInputMap, parameter, xml.getProperties());
                     if(Logger.isDebugEnabled()){
-                        Logger.info(this.getClass(), parameter, getXML().getId()+"-"+xmlid, "input value map",referInputMap, null);
+                        Logger.debug(this.getClass(), parameter, getXML().getId()+"-"+xmlid, "input value map",referInputMap, null);
                     }
                 }
             }
@@ -892,6 +962,9 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         //        input = parameter.getMapValueFromParameter(input);
         //    }
         //}
+        if(Logger.isInfoEnabled()) {
+            Logger.info(this.getClass(), parameter, (null != xml?xml.getId():getXML().getId()), "begin doThing",input, null);
+        }
         //从参数中构造json配置参数
         if (!parameter.containsParameter("^${output}")) {
             if (null != xml && xml.getProperties().containsKey("output")) {
@@ -981,16 +1054,16 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                     int duringTime=preJudgeTimeoutIntervalMinutes;
                     Map redocfg = getRedoCfg();
                     if(null != redocfg){
-                        if(StringUtils.isNotBlank(redocfg.get("count"))){
+                        if(StringUtils.isNotBlank(redocfg.get("count"))){//连续超时次数
                             cc = Integer.valueOf((String)redocfg.get("count"));
                         }
-                        if(StringUtils.isNotBlank(redocfg.get("message"))){
+                        if(StringUtils.isNotBlank(redocfg.get("message"))){//超时，或等待时的提示信息
                             msg = (String)redocfg.get("message");
                         }
-                        if(StringUtils.isNotBlank(redocfg.get("overTime"))){
+                        if(StringUtils.isNotBlank(redocfg.get("overTime"))){ //超时时间
                             timeout = Integer.parseInt((String)redocfg.get("overTime"));
                         }
-                        if(StringUtils.isNotBlank(redocfg.get("duringTime"))){
+                        if(StringUtils.isNotBlank(redocfg.get("duringTime"))){ //等待重试时间
                             duringTime = Integer.parseInt((String)redocfg.get("duringTime"));
                         }
                     }

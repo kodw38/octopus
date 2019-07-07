@@ -4,6 +4,7 @@ import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.cls.jcl.MyURLClassLoader;
 import com.octopus.utils.cls.proxy.*;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.exception.Logger;
 import com.octopus.utils.file.FileUtils;
 import com.octopus.utils.time.DateTimeUtils;
@@ -360,13 +361,24 @@ public class ClassUtils {
         }
     }
 
+    static String getFieldGetSetName(String name){
+        StringBuffer sb = new StringBuffer();
+        sb.append(name);
+        if (Character.isLowerCase(sb.charAt(0))) {
+            if (sb.length() == 1 || !Character.isUpperCase(sb.charAt(1))) {
+                sb.setCharAt(0, Character.toUpperCase(sb.charAt(0)));
+            }
+        }
+        return sb.toString();
+    }
+
     public static Field[] getGetFields(Object obj){
         Field[] fs = getAllFieldExcludeJDK(obj.getClass());//obj.getClass().getDeclaredFields();
         Method[] ms = obj.getClass().getMethods();
         List<Field> ret = new ArrayList<Field>();
         for(Field f:fs){
-            String mn = "get"+POJOUtil.firstCharUpcase(f.getName());
-            String mi = "is"+POJOUtil.firstCharUpcase(f.getName());
+            String mn = "get"+getFieldGetSetName(f.getName());
+            String mi = "is"+getFieldGetSetName(f.getName());
 
             try{
                 for(Method m:ms){
@@ -402,7 +414,7 @@ public class ClassUtils {
             else if( f.getType().equals(value.getClass()) && f.getType().isAssignableFrom(value.getClass())){
                 f.set(obj,value);
             }else{
-                f.set(obj,chgValue(f.getType(),value));
+                f.set(obj,chgValue(fieldName,f.getType(),value));
             }
             return true;
         }
@@ -411,158 +423,164 @@ public class ClassUtils {
             throw new Exception(obj.getClass().getName(),e);
         }
     }
-    public static Object chgValue(Class c,Object o){
-        if(null == o)return o;
-        if(isSameType(c,o.getClass())){
-            return o;
-        }
-        if(c.getName().equals("java.lang.String") && !o.getClass().isArray() && !Collection.class.isAssignableFrom(o.getClass())){
-            return o.toString();
-        }
-        if(c.getName().equals("double")){
-            return Double.valueOf(o.toString());
-        }
-        if(c.getName().equals("java.lang.Boolean") || c.getName().equals("boolean")){
-            if(o instanceof Integer){
-                return (Integer)o>0;
-            }else if(o instanceof String){
-                return StringUtils.isTrue((String)o);
-            }else{
-                return null!=o;
+    public static Object chgValue(String name,Class c,Object o)throws Exception{
+        try {
+            if (null == o) return o;
+            if(null == c)return o;
+            if (isSameType(c, o.getClass())) {
+                return o;
             }
-        }
-        if ((c.getName().equals("java.lang.Float")) || ((c.getName().equals("float")))) {
-            try {
-                if(null ==o || "".equals(o)){
-                    return 0;
-                }
-                if((o instanceof String)) {
-                    return Float.valueOf((String) o);
-                }
-                if( o instanceof Integer){
-                    return new Float((Integer)o);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
+            if (c.getName().equals("java.lang.String") && !o.getClass().isArray() && !Collection.class.isAssignableFrom(o.getClass())) {
+                return o.toString();
             }
-        }
-        if(c.getName().equals("java.util.Date") && o instanceof String){
-            try {
-                return DateTimeUtils.getDate((String) o);
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
+            if (c.getName().equals("double")) {
+                return Double.valueOf(o.toString());
             }
-        }
-        if(c.getName().equals("java.sql.Timestamp") && o instanceof String){
-            try {
-                Date d= DateTimeUtils.getDate((String) o);
-                return new Timestamp(d.getTime());
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
-            }
-        }
-        if(c.getName().equals("int")){
-            try {
-                if(null == o || "".equals(o)){
-                    return 0;
+            if (c.getName().equals("java.lang.Boolean") || c.getName().equals("boolean")) {
+                if (o instanceof Integer) {
+                    return (Integer) o > 0;
+                } else if (o instanceof String) {
+                    return StringUtils.isTrue((String) o);
+                } else {
+                    return null != o;
                 }
-                if(o instanceof String) {
-                    return Integer.parseInt((String) o);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
             }
-        }
-        if(c.getName().equals("java.lang.Integer")){
-            try {
-                if(null == o || "".equals(o)){
+            if ((c.getName().equals("java.lang.Float")) || ((c.getName().equals("float")))) {
+                //try {
+                    if (null == o || "".equals(o)) {
+                        return 0;
+                    }
+                    if ((o instanceof String)) {
+                        return Float.valueOf((String) o);
+                    }
+                    if (o instanceof Integer) {
+                        return new Float((Integer) o);
+                    }
+                /*} catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }*/
+            }
+            if (c.getName().equals("java.util.Date") && o instanceof String) {
+                //try {
+                    return DateTimeUtils.getDate((String) o);
+                /*} catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }*/
+            }
+            if (c.getName().equals("java.sql.Timestamp") && o instanceof String) {
+                //try {
+                    Date d = DateTimeUtils.getDate((String) o);
+                    return new Timestamp(d.getTime());
+                /*} catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }*/
+            }
+            if (c.getName().equals("int")) {
+                //try {
+                    if (null == o || "".equals(o)) {
+                        return 0;
+                    }
+                    if (o instanceof String) {
+                        return Integer.parseInt((String) o);
+                    }
+                /*} catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }*/
+            }
+            if (c.getName().equals("java.lang.Integer")) {
+                //try {
+                    if (null == o || "".equals(o)) {
+                        return null;
+                    }
+                    if (o instanceof String) {
+                        return Integer.parseInt((String) o);
+                    }
+
+                /*} catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }*/
+            }
+            if (c.getName().equals("long")) {
+                //try {
+                    if (null == o || "".equals(o)) {
+                        return 0;
+                    }
+                    if (o instanceof String) {
+                        return Long.parseLong((String) o);
+                    }
+                /*} catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }*/
+            }
+            if (c.getName().equals("java.lang.Long")) {
+                //try {
+                    if (null == o || "".equals(o)) {
+                        return null;
+                    }
+                    if (o instanceof String) {
+                        return Long.parseLong((String) o);
+                    }
+                /*} catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }*/
+            }
+            if (c.getName().equals("java.lang.Long") || c.getName().equals("long") && o instanceof Integer) {
+                //try {
+                    return new Long((Integer) o);
+                /*} catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }*/
+            }
+            if (List.class.isAssignableFrom(c) && o instanceof List) {
+                return o;
+            }
+            if (Map.class.isAssignableFrom(c) && o instanceof Map) {
+                return o;
+            }
+            if (Map.class.isAssignableFrom(c) && o instanceof String) {
+                if (StringUtils.isNotBlank((String) o)) {
+                    return StringUtils.convert2MapJSONObject((String) o);
+                } else {
                     return null;
                 }
-                if(o instanceof String) {
-                    return Integer.parseInt((String) o);
-                }
+            }
+            if (o.getClass().isArray()) {
+                List list = new ArrayList();
+                for (Object n : (Object[]) o)
+                    list.add(n);
+                return list;
+            }
+            if (o instanceof String && c.isArray()) {
+                List list = new ArrayList();
+                list.add(o);
+                return list;
+            }
+            if (o instanceof String && List.class.isAssignableFrom(c)) {
+                List list = new ArrayList();
+                list.add(o);
+                return list;
+            }
+            if (c.getName().equals("java.lang.Object")) {
+                return o;
+            }
 
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
+            if (InputStream.class.isAssignableFrom(c)) {
+                return o;
             }
-        }
-        if(c.getName().equals("long")){
-            try {
-                if(null == o || "".equals(o)){
-                    return 0;
-                }
-                if(o instanceof String) {
-                    return Long.parseLong((String) o);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
+            if (c.isAssignableFrom(o.getClass())) {
+                return o;
             }
-        }
-        if(c.getName().equals("java.lang.Long")){
-            try {
-                if(null == o || "".equals(o)){
-                    return null;
-                }
-                if(o instanceof String) {
-                    return Long.parseLong((String) o);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
-            }
-        }
-        if(c.getName().equals("java.lang.Long") || c.getName().equals("long") && o instanceof Integer){
-            try {
-                return new Long((Integer) o);
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
-            }
-        }
-        if(List.class.isAssignableFrom(c) && o instanceof List){
-            return o;
-        }
-        if(Map.class.isAssignableFrom(c) && o instanceof Map){
-            return o;
-        }
-        if(Map.class.isAssignableFrom(c) && o instanceof String){
-            if(StringUtils.isNotBlank((String)o)){
-                return StringUtils.convert2MapJSONObject((String)o);
-            }else{
-                return null;
-            }
-        }
-        if(o.getClass().isArray()){
-            List list= new ArrayList();
-            for(Object n:(Object[])o)
-                list.add(n);
-            return list;
-        }
-        if(o instanceof String && c.isArray()){
-            List list= new ArrayList();
-            list.add(o);
-            return list;
-        }
-        if(o instanceof String && List.class.isAssignableFrom(c)){
-            List list= new ArrayList();
-            list.add(o);
-            return list;
-        }
-        if(c.getName().equals("java.lang.Object")){
-            return o;
-        }
-
-        if(InputStream.class.isAssignableFrom(c)){
-            return o;
-        }
-        if(c.isAssignableFrom(o.getClass())){
-            return o;
+        }catch (Exception e){
+            log.error(e);
+            throw new ISPException("ISP00017","Invalid data [(data)] type in [(classType)] parameter name [(name)]",new String[]{(o==null?"":o.toString()),c.getName(),name});
         }
         throw new RuntimeException(ClassUtils.class.getName()+". now not support the type convert value:"+o.getClass().getName() +" to "+c.getName()+" value "+o);
     }
@@ -926,7 +944,7 @@ public class ClassUtils {
 
     }
 
-    public static Object instance(String c,Object o) throws ClassNotFoundException, IllegalAccessException, InstantiationException, InvocationTargetException {
+    public static Object instance(String c,Object o) throws Exception {
         Class ct = getClass(null,c);
         if(null == o){
             return ct.newInstance();
@@ -936,7 +954,7 @@ public class ClassUtils {
             for(Constructor cm:cs){
                 Class[] cc = cm.getParameterTypes();
                 if(!o.getClass().isArray() && cc.length==1){
-                    return cm.newInstance(chgValue(cc[0],o));
+                    return cm.newInstance(chgValue(cm.getName(),cc[0],o));
                 }
             }
         }

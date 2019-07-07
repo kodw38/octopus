@@ -81,12 +81,15 @@ public class ImageUtils {
 
     }
 
+
+
     public static void main(String[] args){
 
         try {
             //ImageUtils.addImage("c://log/bg.jpg","c://log/add.jpg",200,400,"c://log/chg.jpg");
-            String s = ImageUtils.getBase64String("C:\\Users\\Administrator\\Pictures\\storage_light_box.png");
-            System.out.println(s);
+            //String s = ImageUtils.getBase64String("C:\\Users\\Administrator\\Pictures\\storage_light_box.png");
+            //System.out.println(s);
+
         } catch (Exception e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }

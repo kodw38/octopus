@@ -6,6 +6,7 @@ import com.octopus.utils.cls.POJOUtil;
 import com.octopus.utils.thread.ds.InvokeTaskByObjName;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
+import com.octopus.utils.xml.auto.XMLParameter;
 
 import java.util.*;
 
@@ -42,14 +43,14 @@ public class ConvertReturn2POJO extends XMLObject implements IConvert{
     }
 
     @Override
-    public Object convert(Object par) throws Exception {
+    public Object convert(XMLParameter env,Object par) throws Exception {
         ISPDictionary dictionary = (ISPDictionary)getObjectById("Dictionary");
         if(null != par && null != dictionary){
             if( par instanceof Collection){
                 List ls = new LinkedList();
                 Iterator its = ((Collection)par).iterator();
                 while(its.hasNext()){
-                    ls.add(convert(its.next()));
+                    ls.add(convert(env,its.next()));
                 }
                 return ls.toArray();
             }else if(par instanceof Map){

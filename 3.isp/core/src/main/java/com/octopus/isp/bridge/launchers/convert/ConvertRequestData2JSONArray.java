@@ -5,6 +5,7 @@ import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.thread.ds.InvokeTaskByObjName;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
+import com.octopus.utils.xml.auto.XMLParameter;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
@@ -46,7 +47,7 @@ public class ConvertRequestData2JSONArray extends XMLObject implements IConvert 
     }
 
     @Override
-    public Object convert(Object par) throws IOException {
+    public Object convert(XMLParameter env,Object par) throws IOException {
         HttpServletRequest request = (HttpServletRequest)par;
         request.setCharacterEncoding("UTF-8");
         String paramStr=null;

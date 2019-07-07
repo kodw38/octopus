@@ -48,7 +48,7 @@ public class POJOUtil {
     static String[] NotNillableType={
             "int","double","long","boolean","short","float"
     };
-
+    public static String[] NumberType = new String[]{"int","long","double","float","java.lang.Integer","java.lang.Long","java.lang.Double","java.lang.Float"};
     static Map<String,Class> primitiveMap  = new HashMap();
     static {
         primitiveMap.put("int",int.class);
@@ -88,6 +88,9 @@ public class POJOUtil {
         }else{
             return name;
         }
+    }
+    public static boolean isNumberClass(String type){
+        return ArrayUtils.isInStringArray(NumberType,type);
     }
 
     public static boolean isPrimitive(String className){
@@ -976,7 +979,7 @@ public class POJOUtil {
                 Object o = map.get(parNames[i]);
                 if(null != o) {
                     if (isPrimitive(o.getClass().getName())) {
-                        ret[i] = ClassUtils.chgValue((Class) typs[i], o);
+                        ret[i] = ClassUtils.chgValue(parNames[i],(Class) typs[i], o);
                     } else if (o instanceof List) {
                         ret[i] = convertUSDL2POJO(map.get(parNames[i]), typs[i], null);
                     }
@@ -1020,9 +1023,10 @@ public class POJOUtil {
         long l = System.currentTimeMillis();
         if(null != c){
             if(isPrimitive(c.getName()) && null != map && map.size()==1){
-                Object r = map.entrySet().iterator().next().getValue();
+                Map.Entry e = map.entrySet().iterator().next();
+                Object r = e.getValue();
                 calPrimateSize(r,calDataSize);
-                return r;
+                return ClassUtils.chgValue((String)e.getKey(),c,r);
             }else {
                 Object o = c.newInstance();
                 if(Map.class.isAssignableFrom(o.getClass())){

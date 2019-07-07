@@ -45,7 +45,7 @@ public class XMLLogicHandle extends XMLLogic implements ICanalMessageHandler {
     }
     @Override
     public void handle(XMLParameter env,List<CanalEntry.Entry> entrys) throws Exception {
-
+        log.debug("----receive mysql binlog entrys");
         HashMap transmap = null;
         Map splitTables = (Map)env.get("${canal_split_tables}");
         for (CanalEntry.Entry entry : entrys) {
@@ -53,6 +53,7 @@ public class XMLLogicHandle extends XMLLogic implements ICanalMessageHandler {
                 continue;
             }
             try {
+
                 CanalEntry.RowChange rowChage = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
                 CanalEntry.EventType eventType = rowChage.getEventType();
                 Map oldData = new LinkedHashMap();
@@ -62,6 +63,7 @@ public class XMLLogicHandle extends XMLLogic implements ICanalMessageHandler {
                 for (CanalEntry.RowData rowData : rowChage.getRowDatasList()) {
 
                     if (eventType == CanalEntry.EventType.DELETE) {
+                        log.debug("----deal binlog data DELETE");
                         for (CanalEntry.Column column : rowData.getBeforeColumnsList()) {
                             if(!column.getIsNull()) {
                                 if(nottrim){
@@ -77,6 +79,7 @@ public class XMLLogicHandle extends XMLLogic implements ICanalMessageHandler {
                             }
                         }
                     } else if (eventType == CanalEntry.EventType.INSERT) {
+                        log.debug("----deal binlog data INSERT");
                         for (CanalEntry.Column column : rowData.getAfterColumnsList()) {
                             if(!column.getIsNull()){
                                 if(nottrim){
@@ -92,7 +95,7 @@ public class XMLLogicHandle extends XMLLogic implements ICanalMessageHandler {
                             }
                         }
                     } else {
-
+                        log.debug("----deal binlog data UPDATE");
                         for (CanalEntry.Column column : rowData.getBeforeColumnsList()) {
                             if(!column.getIsNull()) {
                                 if(nottrim){

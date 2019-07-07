@@ -123,29 +123,34 @@ public class SystemAction extends XMLDoObject {
             t.schedule(new TimerTask() {
                 @Override
                 public void run() {
+
                     try{
                         initRegInfo(true);
                     }catch (Exception e){
-
+                        e.printStackTrace();
                     }
-                    //load all services to local
-                    Map<String,List<Map>> srvs = new HashMap();
-                    Map<String,List<Map>>  li  = getSrvInfoRelIns(srvs);// when ins remove or srv add delete will notification this store
-                    if(null != li) {
-                        if (null != srvIdRelIns) {
-                            synchronized (srvIdRelIns) {
+                    try {
+                        //load all services to local
+                        Map<String, List<Map>> srvs = new HashMap();
+                        Map<String, List<Map>> li = getSrvInfoRelIns(srvs);// when ins remove or srv add delete will notification this store
+                        if (null != li) {
+                            if (null != srvIdRelIns) {
+                                synchronized (srvIdRelIns) {
+                                    srvIdRelIns = li;
+                                }
+                            } else {
                                 srvIdRelIns = li;
                             }
-                        } else {
-                            srvIdRelIns = li;
                         }
-                    }
-                    if(null != srvInfoInCenter) {
-                        synchronized (srvInfoInCenter) {
+                        if (null != srvInfoInCenter) {
+                            synchronized (srvInfoInCenter) {
+                                srvInfoInCenter = srvs;
+                            }
+                        } else {
                             srvInfoInCenter = srvs;
                         }
-                    }else{
-                        srvInfoInCenter=srvs;
+                    }catch (Exception e){
+                        log.error("",e);
                     }
                 }
             },0,60000);
@@ -212,7 +217,7 @@ public class SystemAction extends XMLDoObject {
         }
     }
     //init rel by srvlist, key is service name, map is ins info
-    Map<String,List<Map>> getSrvInfoRelIns(Map<String,List<Map>> getSrvs) {
+    Map<String,List<Map>> getSrvInfoRelIns(Map<String,List<Map>> getSrvs) throws Exception{
         try {
             //service inovke info in zk, all service init will sync the info
             HashMap in = new HashMap();
@@ -220,11 +225,17 @@ public class SystemAction extends XMLDoObject {
             in.put("path", statpath);
             //all service stat data
             Map<String, String> servicesStatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
+            if(log.isInfoEnabled()){
+                log.info("all services of stat data\n"+servicesStatus);
+            }
             if(null != servicesStatus) {
                 List<Map> activeIns = getInsList();//获取活动的实例名称
                 Map<String,Map> insNames = new HashMap();
                 if (null != activeIns) {
                     for (Map n : activeIns) {
+                        if(log.isInfoEnabled()){
+                            log.info("get active instance :"+n);
+                        }
                         if (StringUtils.isNotBlank(n.get("insId"))) {
                             insNames.put((String) n.get("insId"), n);
                             n.put("INS_ID",n.get("insId"));
@@ -243,7 +254,9 @@ public class SystemAction extends XMLDoObject {
                     String v= servicesStatus.get(k);
                     Map m = StringUtils.convert2MapJSONObject(v);
                     if(null != m) {
-                        if (insNames.containsKey(m.get("INS_ID")) && StringUtils.isTrue((String)m.get("isable")) && StringUtils.isNotBlank(m.get("PID"))) {
+                        if (insNames.containsKey(m.get("INS_ID")) && StringUtils.isTrue((String)m.get("isable"))
+                                && StringUtils.isNotBlank(m.get("PID"))
+                                ) {
                             if (!ret.containsKey(name)) ret.put(name, new ArrayList());
                             ret.get(name).add(insNames.get(m.get("INS_ID")));
 
@@ -253,14 +266,16 @@ public class SystemAction extends XMLDoObject {
                     }
 
                 }
-                if(log.isDebugEnabled()){
-                    log.debug("load service in instances\n"+ret);
+                if(log.isInfoEnabled()){
+                    log.info("load service in instances\n"+ret);
                 }
                 return ret;
+            }else{
+                log.info("load zero stat service from zk path:"+statpath);
             }
 
         }catch (Exception e){
-
+            throw e;
         }
 
         return null;
@@ -343,12 +358,12 @@ public class SystemAction extends XMLDoObject {
         }
 
         addInsInBySrv(srvName,insId);
-        if(log.isDebugEnabled()) {
+        if(log.isInfoEnabled()) {
             log.info("syn center info, notifyByActiveSrv " + srvName + " " + ArrayUtils.toJoinString(insId));
         }
     }
     void notifyByRemoveSrv(String srvName,String insId){
-        if(log.isDebugEnabled()) {
+        if(log.isInfoEnabled()) {
             log.info("syn center info, notifyByRemoveSrv " + srvName + " " + insId);
         }
         synchronized (srvIdRelIns) {
@@ -362,6 +377,9 @@ public class SystemAction extends XMLDoObject {
         }
     }
     void notifyBySuspendSrv(String srvName,String insId){
+        if(log.isInfoEnabled()) {
+            log.info("syn center info, removeSrv " +srvName+ " from " + insId);
+        }
         synchronized (srvIdRelIns) {
             if (StringUtils.isBlank(insId)) {//if insId is null means remove srv in all instances
                 srvIdRelIns.remove(srvName);
@@ -377,8 +395,8 @@ public class SystemAction extends XMLDoObject {
         }
     }
     void  notifyByRemoveIns(String insId){
-        if(log.isDebugEnabled()) {
-            log.info("syn center info, notifyByRemoveIns " + " " + insId);
+        if(log.isInfoEnabled()) {
+            log.info("syn center info, notifyByRemoveIns " + " from " + insId);
         }
         if(null != srvIdRelIns) {
             synchronized (srvIdRelIns) {
@@ -401,7 +419,7 @@ public class SystemAction extends XMLDoObject {
     }
     void removeInsInBySrv(String srvName,String insId){
         if(log.isDebugEnabled()) {
-            log.info("syn center info, removeInsInBySrv " +srvName+ " " + insId);
+            log.info("syn center info, removeInsInBySrv " +srvName+ " from " + insId);
         }
         synchronized (srvIdRelIns) {
             List<Map> t = srvIdRelIns.get(srvName);
@@ -467,7 +485,7 @@ public class SystemAction extends XMLDoObject {
     void addInsInBySrv(String srvName,String[] insId){
         if(log.isDebugEnabled()) {
             if(null != insId) {
-                log.info("syn center info, addInsInBySrv " + srvName + " " + ArrayUtils.toJoinString(insId));
+                log.info("syn center info, addInsInBySrv " + srvName + " to ins " + ArrayUtils.toJoinString(insId));
             }
         }
         if(null != srvIdRelIns) {
@@ -561,7 +579,7 @@ public class SystemAction extends XMLDoObject {
         }
         return null;
     }
-    Map getServiceInfoAndStatus(String id,Map st,List<Map> cs ){
+    Map getServiceInfoAndStatus(String id,Map st,List<Map> cs,Map<String,Boolean> servicesStatus ){
         HashMap map = new HashMap();
         map.put("NAME", id);
         if(null != st) {
@@ -594,8 +612,16 @@ public class SystemAction extends XMLDoObject {
         map.put("IS_LOCAL",getObjectById(id)!=null);
         try {
             if(null != st) {
-                boolean isaa = isPublishActive((String)st.get("opType"),(String)st.get("package"),id);
-                map.put("STATUS", isaa);
+                if(null !=servicesStatus && servicesStatus.size()>0){
+                    String k =  getZkPath("",(String)st.get("opType"),(String)st.get("package"),id);
+                    if(null !=servicesStatus.get(k)){
+                        map.put("STATUS", servicesStatus.get(k));
+                    }
+                }
+                if(null == map.get("STATUS")) {
+                    boolean isaa = isPublishActive((String) st.get("opType"), (String) st.get("package"), id);
+                    map.put("STATUS", isaa);
+                }
             }
         } catch (Exception e) {
            // map.put("STATUS", "NOT EXIST");
@@ -625,8 +651,13 @@ public class SystemAction extends XMLDoObject {
                     c.put("IS_PUBLISH", "N");
                 }
                 try {
-                    boolean isa = isPublishOneActive((String) c.get("INS_ID"), id);
-                    c.put("STATUS", isa);
+                    String r = getPublishStateZkPath("",(String) c.get("INS_ID"), id);
+                    if(null != servicesStatus && servicesStatus.containsKey(r)){
+                        c.put("STATUS", servicesStatus.get(r));
+                    }else {
+                        boolean isa = isPublishOneActive((String) c.get("INS_ID"), id);
+                        c.put("STATUS", isa);
+                    }
                 } catch (Exception e) {
                    // map.put("STATUS","NOT EXIST");
                 }
@@ -643,7 +674,7 @@ public class SystemAction extends XMLDoObject {
         return map;
     }
     long getINVOKE_COUNTData(Map d ,String key){
-        if (null != d.get(key) && !"null".equals(d.get(key))) {
+        if (null != d.get(key) && !"null".equals(d.get(key)) && !"".equals(d.get(key))) {
             if(d.get(key) instanceof String) {
                 if("".equals(d.get(key))){
                     return 0;
@@ -658,7 +689,7 @@ public class SystemAction extends XMLDoObject {
         }
         return 0;
     }
-    void appendFindServiceByPublish(String opTypeOrInsId,String desc,List<Map> ret,List retName,String name,String[] insids,Map<String,String> servicesStatus,List<String> usedList)throws Exception{
+    void appendFindServiceByPublish(String opTypeOrInsId,String desc,List<Map> ret,List retName,String name,String[] insids,Map<String,String> servicesStat,Map<String,Boolean> servicesStatus,List<String> usedList)throws Exception{
         if(StringUtils.isNotBlank(desc)) {
             String s = desc;
             Map st = com.octopus.utils.alone.StringUtils.convert2MapJSONObject(s);
@@ -667,12 +698,12 @@ public class SystemAction extends XMLDoObject {
 
             if(StringUtils.isNotBlank(id)) {
                 if ((StringUtils.isBlank(name) || id.contains(name))) {
-                    List<Map> cs = getStatByCenter(opTypeOrInsId,id,insids,servicesStatus,usedList);// find instance by this service name
+                    List<Map> cs = getStatByCenter(opTypeOrInsId,id,insids,servicesStat,usedList);// find instance by this service name
                     if(log.isDebugEnabled()) {
                         log.debug("find publish srv list:" + cs);
                         log.debug("find like package:" + servicesearch);
                     }
-                    Map map = getServiceInfoAndStatus(id,st,cs);// assemble show data
+                    Map map = getServiceInfoAndStatus(id,st,cs,servicesStatus);// assemble show data
                     if(!retName.contains(id)) {
                         if(null != servicesearch && servicesearch.size()>0){
                             String pk = (String)st.get("package");
@@ -720,11 +751,16 @@ public class SystemAction extends XMLDoObject {
             in.put("op", "getChildrenData");
             in.put("path", statpath);
             //all service stat data
-            Map<String, String> servicesStatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-
-            if (null != servicesStatus && servicesStatus.size() > 0) {
+            Map<String, String> servicesStat = (Map) srvhandler.doSomeThing(null, null, in, null, null);
+            in.clear();
+            in.put("op", "getChildrenData");
+            in.put("path", statuspath);
+            //all service stat data
+            Map<String, String> s_servicesStatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
+            Map<String,Boolean> serviceStatus = getSrvStatus(s_servicesStatus);
+            if (null != servicesStat && servicesStat.size() > 0) {
                 Map<String, Map<String, String>> tem = new HashMap();
-                Iterator<String> its = servicesStatus.keySet().iterator();
+                Iterator<String> its = servicesStat.keySet().iterator();
                 Bridge thisroot = (Bridge) getObjectById("bridge");
                 while (its.hasNext()) {
                     String k = its.next();//.INS-NJ_115.ProvisioningDomainV1.0Op.
@@ -735,9 +771,9 @@ public class SystemAction extends XMLDoObject {
 
                         if ((StringUtils.isBlank(name) || (StringUtils.isNotBlank(name) && na.contains(name)))) {
                             if (!tem.containsKey(na)) tem.put(na, new HashMap());
-                            tem.get(na).put(k, servicesStatus.get(k));
+                            tem.get(na).put(k, servicesStat.get(k));
                             if (log.isDebugEnabled()) {
-                                log.debug("search service in status info:" + k + " " + servicesStatus.get(k));
+                                log.debug("search service in status info:" + k + " " + servicesStat.get(k));
                             }
                         }
                     }
@@ -751,7 +787,7 @@ public class SystemAction extends XMLDoObject {
                     }
                     List<Map> tt = getStatByCenter(null, id, insids, tem.get(id), null);
                     log.debug("get stat by center " + id + " " + tt);
-                    Map m = getServiceInfoAndStatus(id, null, tt);
+                    Map m = getServiceInfoAndStatus(id, null, tt,serviceStatus);
                     log.debug("get service info and status " + id + " " + m);
                     if (null != m) {
                         m.put("IS_PUBLISH", "N");
@@ -784,6 +820,18 @@ public class SystemAction extends XMLDoObject {
         return null;
     }
 
+    Map<String ,Boolean> getSrvStatus(Map<String,String> data){
+        if(null != data){
+            HashMap<String,Boolean> ret = new HashMap<String, Boolean>();
+            Iterator<String> its = data.keySet().iterator();
+            while(its.hasNext()){
+                String s = its.next();
+                ret.put(s,StringUtils.isTrue(data.get(s)));
+            }
+            return ret;
+        }
+        return null;
+    }
     /**
      *
      * @param name
@@ -797,13 +845,13 @@ public class SystemAction extends XMLDoObject {
                 in.put("op", "getChildrenData");
                 in.put("path", statpath);
                 //all service stat data
-                Map<String, String> servicesStatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
+                Map<String, String> servicesStat = (Map) srvhandler.doSomeThing(null, null, in, null, null);
                 if(log.isDebugEnabled()){
-                    if(null != servicesStatus){
-                        Iterator<String> lo = servicesStatus.keySet().iterator();
+                    if(null != servicesStat){
+                        Iterator<String> lo = servicesStat.keySet().iterator();
                         while(lo.hasNext()){
                             String k = lo.next();
-                            log.debug("query srv stat:"+k+"\n"+servicesStatus.get(k));
+                            log.debug("query srv stat:"+k+"\n"+servicesStat.get(k));
                         }
                     }
 
@@ -823,6 +871,11 @@ public class SystemAction extends XMLDoObject {
                 List<Map> ret = new ArrayList(); // list contains result
                 List<String> retName = new ArrayList(); //list contains result service name
                 List<String> usedList = new ArrayList(); //list contains instance name in each result map
+                in.clear();
+                in.put("op", "getChildrenData");
+                in.put("path", statusstorepath);
+                Map<String, String> s_srvstatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
+                Map<String,Boolean> srvstatus = getSrvStatus(s_srvstatus);
                 if(null != ll) {
                     for(String l:ll) {
                         in.put("op", "getChildrenData");
@@ -835,7 +888,7 @@ public class SystemAction extends XMLDoObject {
                                 if(log.isDebugEnabled()){
                                     log.debug("query srv item:"+l);
                                 }
-                                appendFindServiceByPublish(l,ls.get(k), ret, retName, name,insids, servicesStatus, usedList);
+                                appendFindServiceByPublish(l,ls.get(k), ret, retName, name,insids, servicesStat,srvstatus, usedList);
                             }
 
                         }else{
@@ -845,7 +898,7 @@ public class SystemAction extends XMLDoObject {
                             if(log.isDebugEnabled()){
                                 log.debug("query srv item:"+l);
                             }
-                            appendFindServiceByPublish(null,s,ret,retName,name,insids,servicesStatus,usedList);
+                            appendFindServiceByPublish(null,s,ret,retName,name,insids,servicesStat,srvstatus,usedList);
                         }
                     }
                 }
@@ -853,9 +906,9 @@ public class SystemAction extends XMLDoObject {
                     log.debug("publish search services "+ret);
                 }
                 //add other not in zk and exist status service.
-                if(null !=servicesStatus && servicesStatus.size()>0){
+                if(null !=servicesStat && servicesStat.size()>0){
                     Map<String,Map<String,String>> tem = new HashMap();
-                    Iterator<String> its = servicesStatus.keySet().iterator();
+                    Iterator<String> its = servicesStat.keySet().iterator();
                     Bridge thisroot = (Bridge)getObjectById("bridge");
                     while(its.hasNext()){
                         String k = its.next();//.INS-NJ_115.ProvisioningDomainV1.0Op.
@@ -866,9 +919,9 @@ public class SystemAction extends XMLDoObject {
 
                             if((StringUtils.isBlank(name) || (StringUtils.isNotBlank(name) && na.contains(name)))) {
                                 if (!tem.containsKey(na)) tem.put(na, new HashMap());
-                                tem.get(na).put(k, servicesStatus.get(k));
+                                tem.get(na).put(k, servicesStat.get(k));
                                 if(log.isDebugEnabled()){
-                                    log.debug("search service in status info:"+k+" "+servicesStatus.get(k));
+                                    log.debug("search service in status info:"+k+" "+servicesStat.get(k));
                                 }
                             }
                         }
@@ -882,7 +935,7 @@ public class SystemAction extends XMLDoObject {
                         }
                         List<Map> tt = getStatByCenter(null,id,insids, tem.get(id), null);
                         log.debug("get stat by center "+id+" "+tt);
-                        Map m = getServiceInfoAndStatus(id, null, tt);
+                        Map m = getServiceInfoAndStatus(id, null, tt,srvstatus);
                         log.debug("get service info and status "+id+" "+m);
                         if (null != m) {
                             m.put("IS_PUBLISH","N");
@@ -1011,6 +1064,9 @@ public class SystemAction extends XMLDoObject {
                     log.debug("query srv result:"+res);
                 }
                 filterAuth(env,res);
+                if(log.isDebugEnabled()){
+                    log.debug("query srv result2:"+res);
+                }
                 return res;
             }
         }catch (Exception e){
@@ -1140,20 +1196,19 @@ public class SystemAction extends XMLDoObject {
      */
     void filterAuth(XMLParameter env,List<Map> res){
         if(null != auth && null != res){
-
-                HashMap map = new HashMap();
-                for(int i=res.size()-1;i>=0;i--){
-                    map.put("op","isCanSee");
-                    map.put("srvId",res.get(i).get("NAME"));
-                    try {
-                        if (!((Boolean)auth.doSomeThing(null,env, map, null, null))) {
-                            res.remove(i);
-                        }
-                    }catch (Exception e){
+            HashMap map = new HashMap();
+            for(int i=res.size()-1;i>=0;i--){
+                map.put("op","isCanSee");
+                map.put("srvId",res.get(i).get("NAME"));
+                try {
+                    if (!((Boolean)auth.doSomeThing(null,env, map, null, null))) {
                         res.remove(i);
                     }
-                    map.clear();
+                }catch (Exception e){
+                    res.remove(i);
                 }
+                map.clear();
+            }
 
         }
     }
@@ -1222,11 +1277,13 @@ public class SystemAction extends XMLDoObject {
                                     d.put("AUTHOR",st.get("author"));
                                     d.put("STATUS", o.isActive());
                                     d.put("IS_LOCAL", true);
+                                    log.debug("local service:"+name);
                                     if (null != srvstat) {
                                         HashMap map = new HashMap();
                                         map.put("srvId", name);
                                         map.put("op", "getStatInfo");
                                         Object rr = srvstat.doSomeThing(null, null, map, null, null);
+                                        log.debug("stat local service:"+name);
                                         if (null != rr && rr instanceof Map) {
                                             ((Map) rr).put("STATUS", o.isActive());
                                            // ((Map) rr).put("IS_LOCAL", "Yes");
@@ -1380,6 +1437,7 @@ public class SystemAction extends XMLDoObject {
                         map.put("op","initStatInfo");
                         map.put("name",allDesc.get("name"));
                         srvstat.doSomeThing(null, null, map, null, null);
+                        log.debug("stat service:"+allDesc.get("name"));
                         //set the service in instance status
                         setThisStatus((String) allDesc.get("name"), isa);
                     }
@@ -1446,7 +1504,7 @@ return false;
                         map.put("op", "initStatInfo");
                         map.put("name", desc.get("name"));
                         srvstat.doSomeThing(null, null, map, null, null);
-
+                        log.debug("stat local service:"+desc.get("name"));
                         setThisStatus((String) desc.get("name"), oo.isActive());
                     }
 
@@ -2129,6 +2187,7 @@ return false;
                     //set INS_STATUS
                     HashMap map = new HashMap();
                     String p = (String)input.get("path");
+                    log.info("will remove path:"+p);
                     String id = p.substring(p.lastIndexOf("/")+1);
                     map.put("op","setInsStatusStopped");
                     map.put("insId",id);
@@ -2185,8 +2244,16 @@ return false;
                     }
 
                 }else if("addPath".equals(op)){
-                    //todo
-                    //System.out.println("---add path---");
+                    //set INS_STATUS
+                    HashMap map = new HashMap();
+                    String p = (String)input.get("path");
+                    log.info("will update path srv to RUNNING:"+p);
+                    String id = p.substring(p.lastIndexOf("/")+1);
+                    map.put("op","setInsStatusRunning");
+                    map.put("insId",id);
+                    srvstat.doSomeThing(null,null,map,null,null);
+                    //add insid from invoke ins list
+
                 }else if("getServicesFileRel".equals(op)){
                     List<String> fs = (List)input.get("data");
                     if(null != fs){
@@ -2251,8 +2318,8 @@ return false;
                         if(null != limitIn && limitIn.size()>0){
                             ret = ArrayUtils.innerList(ret,limitIn);
                         }
-                        if(log.isDebugEnabled()){
-                            log.debug("find instance list by "+srv+"["+ret+"]");
+                        if(log.isInfoEnabled()){
+                            log.info("find instance list by "+srv+"["+ret+"]");
                         }
                         return ret;
                     }
@@ -2961,7 +3028,7 @@ return false;
 
     List<Map> getInsList(){
         try {
-            HashMap map = new HashMap();
+            /*HashMap map = new HashMap();
             map.put("op", "getChildren");
             map.put("path", serverspath);
             List<String> d = (List<String>) srvhandler.doSomeThing(null, null, map, null, null);
@@ -2978,6 +3045,20 @@ return false;
                     if(StringUtils.isNotBlank(t)){
                         ret.add(StringUtils.convert2MapJSONObject(t));
                     }
+                }
+                //return ret;
+                System.out.println();
+            }*/
+            HashMap in = new HashMap();
+            in.put("op", "getChildrenData");
+            in.put("path", serverspath);
+            Map<String, String> map2 = (Map)srvhandler.doSomeThing(null, null, in, null, null);
+            if(null != map2 && map2.size()>0){
+                List<Map> ret = new ArrayList();
+                Iterator<String> its = map2.keySet().iterator();
+                while(its.hasNext()){
+                    String k = its.next();
+                    ret.add(StringUtils.convert2MapJSONObject(map2.get(k)));
                 }
                 return ret;
             }

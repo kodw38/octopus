@@ -726,7 +726,8 @@ public abstract class XMLObject implements Serializable,Comparable{
 
                 List<IMethodAddition> ret = new ArrayList();
                 for(int i=0;i<li.size();i++){
-                    if(((XMLObject)li.get(i)).getXML().getProperties().containsKey("targetxmlids") && StringUtils.isNotBlank(xml.getProperties().getProperty("xmlid"))){
+                    String id= xml.getProperties().getProperty("xmlid");
+                    if(((XMLObject)li.get(i)).getXML().getProperties().containsKey("targetxmlids") && StringUtils.isNotBlank(id)){
                         String[] targetXmls = ((XMLObject)li.get(i)).getXML().getProperties().getProperty("targetxmlids").split(",");
                         List ms = new ArrayList();
                         for(String s:targetXmls){
@@ -746,14 +747,14 @@ public abstract class XMLObject implements Serializable,Comparable{
                                 methodMap.put(ss[0],null);
                             }
                         }
-                        if(methodMap.containsKey(xml.getProperties().getProperty("xmlid"))){
+                        if(methodMap.containsKey(id)){
                             IMethodAddition addition1 = (IMethodAddition)li.get(i);
                             //addition1.setMethods(methodMap.get(xml.getProperties().getProperty("xmlid")));
                             if(ms.size()>0) {
                                 addition1.setMethods(ms);
                             }
                             ret.add(addition1);
-                            proxyMethods = methodMap.get(xml.getProperties().getProperty("xmlid"));
+                            proxyMethods = methodMap.get(id);
                         }
                     }else if(((XMLObject)li.get(i)).getXML().getProperties().contains("targetids") && StringUtils.isNotBlank(xml.getId()) ){
                         String[] targetids = ((XMLObject)li.get(i)).getXML().getProperties().getProperty("targetids").split(",");

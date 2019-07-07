@@ -17,6 +17,7 @@ import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.serialize.BytesPushThroughSerializer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.zookeeper.Op;
 import org.apache.zookeeper.Watcher;
 
 import java.util.*;
@@ -232,6 +233,7 @@ public class ZkClientListen extends XMLLogic {
             //用于监听zookeeper中servers节点的子节点列表变化
             public void handleChildChange(String parentPath, List<String> currentChilds) throws Exception {
                 //更新服务器列表
+                log.info("current zk listener path Childs:\n"+currentChilds);
                 if(envHandles.size()>0){
                     doEvent("path",parentPath,currentChilds);
                 }
@@ -253,7 +255,7 @@ public class ZkClientListen extends XMLLogic {
                         for (int i = currentList.size() - 1; i >= 0; i--) {
                             if (!currentChilds.contains(currentList.get(i))) {
                                 //delete
-                                log.info(" zk delete path [" + currentList.get(i) + "]");
+                                log.info(" zk delete path ["+parentPath+"/" + currentList.get(i) + "]");
                                 XMLParameter par = new XMLParameter();
                                 par.put("${event_op}", "removePathEvent");
                                 par.put("${path}", parentPath + "/" + currentList.get(i));

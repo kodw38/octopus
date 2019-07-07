@@ -5,6 +5,7 @@ import com.octopus.utils.cls.POJOUtil;
 import com.octopus.utils.thread.ds.InvokeTaskByObjName;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
+import com.octopus.utils.xml.auto.XMLParameter;
 
 /**
  * User: wfgao_000
@@ -37,7 +38,7 @@ public class ConvertPOJO2Map extends XMLObject implements IConvert {
     }
 
     @Override
-    public Object convert(Object par) throws Exception {
+    public Object convert(XMLParameter env,Object par) throws Exception {
         if(null == par)return null;
         if(!POJOUtil.isSimpleType(par.getClass().getName()))
             return POJOUtil.convertPojo2Map(par,null);

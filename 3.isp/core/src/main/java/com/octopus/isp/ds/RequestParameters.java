@@ -42,10 +42,10 @@ public class RequestParameters extends FlowParameters{
     }
 
     public RequestParameters(){
-        addParameter("${clientInfo}",clientInfo);
-        addParameter("${requestHeaders}",requestHeaders);
-        addParameter("${requestCookies}",requestCookies);
-        addParameter("${requestProperties}",requestProperties);
+        addGlobalParameter("${clientInfo}",clientInfo);
+        addGlobalParameter("${requestHeaders}",requestHeaders);
+        addGlobalParameter("${requestCookies}",requestCookies);
+        addGlobalParameter("${requestProperties}",requestProperties);
     }
     public HashMap getRequestProperties() {
         return requestProperties;
@@ -58,7 +58,7 @@ public class RequestParameters extends FlowParameters{
     public boolean isThisInstance(String usedInstancs){
         if(StringUtils.isBlank(usedInstancs)|| ArrayUtils.isLikeStringArray(usedInstancs.split(","),getInstanceid())) {
             String tarid = getHeader("targetinsid");
-            if (StringUtils.isBlank(tarid) || tarid.equals(getInstanceid())) {
+            if (StringUtils.isBlank(tarid) || StringUtils.isBlank(usedInstancs) || ArrayUtils.isLikeStringArray(usedInstancs.split(","),tarid)) {
                 return true;
             }
         }
@@ -72,7 +72,7 @@ public class RequestParameters extends FlowParameters{
     }
 
     public void setRequestURI(String requestURI) {
-        addParameter("${requestURI}",requestURI);
+        addGlobalParameter("${requestURI}",requestURI);
     }
 
     public void setProtocol(String protocol){
@@ -98,7 +98,7 @@ public class RequestParameters extends FlowParameters{
     }
 
     public void setRequestHeaders(Hashtable requestHeaders) {
-        addParameter("${requestHeaders}",requestHeaders);
+        addGlobalParameter("${requestHeaders}",requestHeaders);
     }
 
     public Hashtable<String,String> getRequestCookies() {
@@ -106,7 +106,7 @@ public class RequestParameters extends FlowParameters{
     }
 
     public void setRequestCookies(Hashtable requestHeaders) {
-        addParameter("${requestCookies}",requestHeaders);
+        addGlobalParameter("${requestCookies}",requestHeaders);
     }
 
     public HashMap getQueryStringMap() {
@@ -114,7 +114,7 @@ public class RequestParameters extends FlowParameters{
     }
 
     public void setQueryStringMap(HashMap queryStringMap) {
-        addParameter("${queryStringMap}",queryStringMap);
+        addGlobalParameter("${queryStringMap}",queryStringMap);
     }
 
 
@@ -131,7 +131,7 @@ public class RequestParameters extends FlowParameters{
     }
 
     public void setRequestDate(Date requestDate) {
-        addParameter("${requestDate}",requestDate);
+        addGlobalParameter("${requestDate}",requestDate);
     }
 
     public String getRequestId() {
@@ -139,11 +139,11 @@ public class RequestParameters extends FlowParameters{
     }
 
     public void setRequestId(String requestId) {
-        addParameter("${requestId}",requestId);
+        addGlobalParameter("${requestId}",requestId);
     }
 
     public void setRequestDataSize(long size){
-        addParameter("${requestDataSize}",size);
+        addGlobalParameter("${requestDataSize}",size);
     }
     public long getRequestDataSize(){
         Object o = getParameter("${requestDataSize}");
@@ -205,7 +205,7 @@ public class RequestParameters extends FlowParameters{
     }
 
     public void setRequestURL(String requestURL) {
-        addParameter("${requestURL}",requestURL);
+        addGlobalParameter("${requestURL}",requestURL);
     }
 
     public String getQueryString() {
@@ -213,7 +213,7 @@ public class RequestParameters extends FlowParameters{
     }
 
     public void setQueryString(String queryString) {
-        addParameter("${queryString}",queryString);
+        addGlobalParameter("${queryString}",queryString);
     }
 
     public void addClientInfo(String key,String value) throws IOException {

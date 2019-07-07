@@ -132,9 +132,13 @@ public class XMLLogic extends XMLDoObject{
         p.addParameter("${input_data}",inmap);
         p.addParameter("${session}",par.getParameter("${session}"));
         p.addParameter("${AuthInfo}",par.getParameter("${AuthInfo}"));
+        p.addParameter("${requestHeaders}",par.getParameter("${requestHeaders}"));
+        p.addParameter("${requestProperties}",par.getParameter("${requestProperties}"));
+        p.addParameter("${insid}",par.getParameter("${insid}"));
         inmap.remove("exe_id");
         inmap.remove("exe_xml");
         inmap.remove("exe_error");
+        log.error("remote XMLParameter\n"+p);
         obj.doThing(p, x);
         par.setResult(p.getResult());
     }
@@ -572,7 +576,7 @@ public class XMLLogic extends XMLDoObject{
             Object o = env.getExpressValueFromMap(s,this);
             AtomicInteger count = (AtomicInteger)env.getParameter("${while_same_cond_exe_count}");
             if(null!=count){
-                if(count.get()>2){
+                if(count.get()>100){
                     throw new Exception("do while always cycle "+o);
                 }
                 Object t = (Object)env.getParameter("${while_same_cond_exe_obj}");
@@ -1002,6 +1006,9 @@ public class XMLLogic extends XMLDoObject{
 
     @Override
     public boolean checkInput(String xmlid,XMLParameter env, Map input,Map output, Map config) throws Exception {
+        if(null != getEnvData() && null != input && null != getEnvData().get("isSrvCheckInput") && StringUtils.isTrue(getEnvData().get("isSrvCheckInput").toString())){
+             checkInputParameterByDesc(env,input);
+        }
         return true;  //To change body of implemented methods use File | Settings | File Templates.
     }
 

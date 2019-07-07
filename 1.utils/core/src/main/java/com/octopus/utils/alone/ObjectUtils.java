@@ -753,7 +753,16 @@ public class ObjectUtils {
             StructInfo root = new StructInfo();
             root.setName((String) map.get("name"));
             root.setType(Class.forName((String) map.get("type")));
-            root.setArray(StringUtils.isTrue((String) map.get("isarray")));
+            Object o =map.get("isarray");
+            if(null != o){
+                if(o instanceof Boolean){
+                    root.setArray((Boolean)o);
+                }else{
+                    root.setArray(StringUtils.isTrue( map.get("isarray").toString()));
+                }
+            }else{
+                root.setArray(false);
+            }
             List<Map> cl = (List) map.get("children");
             if(null != cl && cl.size()>0){
                 for(Map m:cl){
@@ -1232,18 +1241,24 @@ public class ObjectUtils {
         }
     }
 
+    public static Object getValueWithArrayNullByPath(Object o,String path){
+        return getValue(o,path,true);
+    }
+    public static Object getValueByPath(Object o,String path){
+        return getValue(o,path,false);
+    }
     /**
      * 根据路径获取值,能获取数组,map,list,具体属性中的值
      * @param o
      * @param path
      * @return
      */
-    public static Object getValueByPath(Object o,String path){
+    public static Object getValue(Object o,String path,boolean isAppendArrayNull){
         try{
             if(null == o) return null;
             if(null == path)return o;
             if(o.getClass().isArray()|| Collection.class.isAssignableFrom(o.getClass())){
-                return handleArray(o,path);
+                return handleArray(o,path,isAppendArrayNull);
             }
             Object findO = findObj(o,path);
             if(null != findO)return findO;
@@ -1253,10 +1268,10 @@ public class ObjectUtils {
                 int n = StringUtils.lastOutOfIndex(p,'.','(',')');
                 if(n<=0)break;
                 p = p.substring(0,n);
-                findO=getValueByPath(o,p);
+                findO=getValue(o,p,isAppendArrayNull);
                 if(null != findO){
                     sub = path.substring(p.length()+1);
-                    Object array = handleArray(findO,sub);
+                    Object array = handleArray(findO,sub,isAppendArrayNull);
                     if(null != array){
                         findO=array;
                         return findO;
@@ -1266,7 +1281,7 @@ public class ObjectUtils {
             }
             p=null;
             if(null == findO)return null;
-            return getValueByPath(findO,sub);
+            return getValue(findO,sub,isAppendArrayNull);
         }catch (Throwable e){
             log.error(path,e);
             return null;
@@ -1291,7 +1306,7 @@ public class ObjectUtils {
                 if(null != ((Map)obj).get(key))
                     t = ((Map)obj).get(key).getClass();
                 if(null != t)
-                    ((Map)obj).put(key,ClassUtils.chgValue(t,v));
+                    ((Map)obj).put(key,ClassUtils.chgValue(key,t,v));
                 else
                     ((Map)obj).put(key,v);
             }else if(obj instanceof List){
@@ -1336,24 +1351,31 @@ public class ObjectUtils {
             return false;
         }
     }
-    static Object handleArray(Object findO,String path){
+    static Object handleArray(Object findO,String path,boolean isAppendNull){
         if(null != findO){
             if(findO.getClass().isArray()){
                 Object[] os = (Object[])findO;
                 List list = new ArrayList();
                 for(Object o1:os){
-                    Object ret = getValueByPath(o1,path);
+                    Object ret = getValue(o1,path,isAppendNull);
                     if(null != ret)
                         list.add(ret);
+
+                    if(isAppendNull && null == ret){
+                        list.add(ret);
+                    }
                 }
                 return list;
             }else if(findO instanceof Collection){
                 Iterator its = ((Collection)findO).iterator();
                 List list = new ArrayList();
                 while(its.hasNext()){
-                    Object ret = getValueByPath(its.next(),path);
+                    Object ret = getValue(its.next(),path,isAppendNull);
                     if( (null != ret && ret instanceof Map && ((Map)ret).size()>0) || (null != ret && ret instanceof Collection && ((Collection)ret).size()>0) || (null != ret && !(ret instanceof Map) && !(ret instanceof Collection)))
                         list.add(ret);
+                    if(isAppendNull && null == ret){
+                        list.add(ret);
+                    }
                 }
                 return list;
             }

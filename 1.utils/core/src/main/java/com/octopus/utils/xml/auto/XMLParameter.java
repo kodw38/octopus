@@ -43,6 +43,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
 
     public static char[][] NestTagsBegin = new char[][]{
             "getallparameters(".toCharArray()
+            ,"isnotnullbypath(".toCharArray()
             ,"base64_encode(".toCharArray()
             ,"geterrortrace(".toCharArray()
             ,"substrnotag(".toCharArray()
@@ -117,12 +118,14 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,")".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
+            ,")".toCharArray()
             ,"}".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
     };
     public static IPointParse[] PointParses = {
              new PointParseGetAllParameters()
+            ,new PointParseNotNullPath()
             ,new PointParseBase64()
             ,new PointParseGetErrorTrace()
             ,new PointParseSubStrNoTag()
@@ -157,6 +160,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
 
     static char[][] AllTagsBegin = new char[][]{
             "getallparameters(".toCharArray()
+            ,"isnotnullbypath(".toCharArray()
             ,"base64_encode(".toCharArray()
             ,"geterrortrace(".toCharArray()
             ,"substrnotag(".toCharArray()
@@ -190,6 +194,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
 
     public static char[][] FilterTagsBegin = new char[][]{
             "getallparameters(".toCharArray()
+            ,"isnotnullbypath(".toCharArray()
             ,"base64_encode(".toCharArray()
             ,"geterrortrace(".toCharArray()
             ,"substrnotag(".toCharArray()
@@ -227,6 +232,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
     static {
 
         NestMap.put("getallparameters(",")");//获取环境所有参数json字符串
+        NestMap.put("isnotnullbypath(",")");//根据路径获取到的末尾值不能为空
         NestMap.put("base64_encode(",")");//base64字符编码
         NestMap.put("geterrortrace(",")");//base64字符编码
         NestMap.put("substrnotag(",")");//字符运算

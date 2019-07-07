@@ -207,6 +207,7 @@ public class LoadActions extends XMLDoObject {
                         stathandler.doSomeThing(null, null, in, null, null);
                         XMLObject o = getObjectById(s);
                         setActive( s, o.isActive());
+                        log.debug("stat local service:"+s);
                     }
                 }catch (Exception e){
 
@@ -375,6 +376,7 @@ public class LoadActions extends XMLDoObject {
             if (null != stathandler) {
                 stathandler.doSomeThing(null, null, in, null, null);
                 setActive((String) desc.get("name"), isactive);
+                log.debug("stat local service:"+desc.get("name"));
             }
         }catch (Exception e){
             log.error("load service error "+(null == desc?"name is null":desc.get("name")),e);

@@ -164,7 +164,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             LauncherCommon.setCookie(pars, request.getCookies());
 
             if (null != inputconvert)
-                obj = inputconvert.convert(obj);
+                obj = inputconvert.convert(pars,obj);
 
             //set env
             pars.setEnv(env.getEnv());
@@ -190,6 +190,10 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 //if request from other tb instance with auth info , it will not search user info from redis ,improve performance
                 Session session = sm.createEmptySession();
                 session.putAll(m);
+                if(null != m.get("SESSION_ID") && StringUtils.isNotBlank(m.get("SESSION_ID"))){
+                    log.info("session id changed "+m.get("SESSION_ID")+" from "+session.getSessionId());
+                    session.setSessionId((String)m.get("SESSION_ID"));
+                }
                 session.put("UserName", m.get("UserName"));
                 session.put("USER_TYPE", m.get("USER_TYPE"));
                 if(log.isDebugEnabled()){
@@ -205,7 +209,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                     log.debug("receive request data\n" + objpar);
                 }
                 if (null != inputconvert) {
-                    objpar = inputconvert.convert(objpar);
+                    objpar = inputconvert.convert(pars,objpar);
                 }
                 if (null != objpar) {
                     pars.setRequestData(objpar);
@@ -258,7 +262,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                             ret = ((ResultCheck) ret).getRet();
                         }
                         if (null != outputconvert) {
-                            ret = outputconvert.convert(ret);
+                            ret = outputconvert.convert(pars,ret);
                         }
 
                     }
@@ -352,6 +356,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                                     if(log.isDebugEnabled()) {
                                         log.debug("set session from " + k + " value " + v + " session:" + session);
                                     }
+                                    break;
                                 }
                             }
                         }else if(k.equals("JSESSIONID") && parameters.getSession()==null){
@@ -365,6 +370,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                                         if (log.isDebugEnabled()) {
                                             log.debug("set jssession from " + k + " value " + v + " session:" + session);
                                         }
+                                        break;
                                     } else {
                                         //log.debug("not find session by JSESSIONID=" + v);
                                     }

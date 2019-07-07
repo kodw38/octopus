@@ -1,10 +1,14 @@
 package com.octopus.utils.xml.desc;
 
+import com.octopus.isp.bridge.impl.Bridge;
+import com.octopus.isp.ds.Context;
 import com.octopus.utils.alone.ArrayUtils;
+import com.octopus.utils.alone.NumberUtils;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.cls.ClassUtils;
 import com.octopus.utils.cls.POJOUtil;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.file.FileInfo;
 import com.octopus.utils.file.FileUtils;
 import com.octopus.utils.net.ws.wsdl.WSDLParse;
@@ -21,6 +25,7 @@ import org.apache.hadoop.hbase.util.Hash;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -339,6 +344,7 @@ public class Desc extends XMLDoObject{
             }
         }
     }
+
     static void removeParameterDesc(Collection src,List li){
         Iterator ks = ((Collection)src).iterator();
         while(ks.hasNext()){
@@ -955,14 +961,33 @@ public class Desc extends XMLDoObject{
                     Map m = (Map)mm.get(id);
                     String key = (String)m.get("name");
                     String name = (String)m.get("svname");
-                    String isend = (String)m.get("isend");
-                    String left = (String)m.get("left");
-                    String top = (String)m.get("top");
+                    String isend = null;
+                    if(null != m.get("isend")) {
+                        isend = (String) m.get("isend").toString();
+                    }
+                    String left=null;
+                    if(null != m.get("left")) {
+                        left =  m.get("left").toString();
+                    }
+                    String top = null;
+                    if(null != m.get("top")) {
+                        top =  m.get("top").toString();
+                    }
                     String type = (String)m.get("type");
 
-                    String width = (String)m.get("width");
-                    String height = (String)m.get("height");
-                    String alt = (String)m.get("alt");
+                    String width = null;
+                    if(null != m.get("width")) {
+                        width = m.get("width").toString();
+                    }
+
+                    String height = null;
+                    if(null != m.get("height")) {
+                        height= m.get("height").toString();
+                    }
+                    String alt = null;
+                    if(null != m.get("alt")) {
+                        alt = m.get("alt").toString();
+                    }
                     Map input = null;
                     if(StringUtils.isTrue(isend)){
                         hd+=" result=\"${"+key+"}\"";
@@ -989,6 +1014,8 @@ public class Desc extends XMLDoObject{
                     }
                     if(null != input && input.size()>0){
                         String in = ObjectUtils.convertMap2String(input);
+                        in = in.replaceAll("\\\"","\\\\\"");
+                        log.debug("flow input:"+in);
                         a.append(" input=\"").append(in).append("\"");
                     }
                     a.append(" nodeid=\"").append(id).append("\"");
@@ -1014,8 +1041,14 @@ public class Desc extends XMLDoObject{
                     String from = (String)m.get("from");
                     String to = (String)m.get("to");
                     String name = (String)m.get("name");
-                    String dash = (String)m.get("dash");
-                    String alt = (String)m.get("alt");
+                    String dash = null;
+                    if(null != m.get("dash")) {
+                        dash =  m.get("dash").toString();
+                    }
+                    String alt = null;
+                    if(null != m.get("alt")) {
+                        alt = m.get("alt").toString();
+                    }
                     if(!ls.contains(from) && !ls.contains(to)){
                         ls.add(from);
                         ls.add(to);
@@ -1265,6 +1298,11 @@ public class Desc extends XMLDoObject{
         log.info("generator desc :"+pa);
     }
     static String saveDescFile(String type,String savepath,String pack,String name,String body,String invoker,String pars,String ret,String address,String[] parNames,String src)throws Exception{
+        HashMap olddesc = new HashMap();
+        appExistDescInfo(savepath,pack,name+".desc",olddesc);
+        if(log.isDebugEnabled()) {
+            log.debug("old desc:" + olddesc);
+        }
         StringBuffer sb = new StringBuffer("{");
         sb.append("name:'"+name+"'");
         if(StringUtils.isNotBlank(type)){
@@ -1273,13 +1311,13 @@ public class Desc extends XMLDoObject{
         sb.append(",package:'"+pack+"'");
         sb.append(",path:'file:"+savepath+"'");
         if(null != pars) {
-            sb.append(",input:" + pars);
+            sb.append(",input:" + getAppendString(pars,olddesc.get("input")));
         }
         if(StringUtils.isNotBlank(body)){
             sb.append(",body:\""+"<action key=\\\""+name+"\\\" input=\\\"{outsvid:'"+name+"'}\\\" result=\\\"${end}\\\" xmlid=\\\"Logic\\\">"+body+"</action>"+"\"");
         }
         if(null != ret){
-            sb.append(",output:" + ret);
+            sb.append(",output:" + getAppendString(ret,olddesc.get("output")));
         }
         sb.append(",original:{");
         boolean isin=false;
@@ -1316,13 +1354,13 @@ public class Desc extends XMLDoObject{
             sb.append(" src:\""+src+"\"");
         }
         sb.append("}");
-        HashMap map = new HashMap();
-        appExistDescInfo(savepath,pack,name+".desc",map);
-        if(map.size()>0){
-            Iterator its = map.keySet().iterator();
+
+        if(olddesc.size()>0){
+            Iterator its = olddesc.keySet().iterator();
             while(its.hasNext()){
                 Object k = its.next();
-                Object v = map.get(k);
+                if("input".equals(k) || "output".equals(k)) continue;
+                Object v = olddesc.get(k);
                 sb.append(","+k.toString()+":"+convertDescValueString(v));
             }
         }
@@ -1331,6 +1369,54 @@ public class Desc extends XMLDoObject{
         //FileUtils.makeDirectoryPath(savepath);
         //FileUtils.saveFile(sb, savepath + "/" + name + ".desc", true, false);
         return savepath +"/"+pack+ "/" + name + ".desc";
+    }
+
+    static String getAppendString(String s,Object m){
+        if(null != m && m instanceof Map){
+            Map n = StringUtils.convert2MapJSONObject(s);
+            if(null != n){
+                appendDescProperties(n,(Map)m);
+                return ObjectUtils.convertMap2String(n);
+            }
+        }
+        return s;
+    }
+
+    public static void appendDescProperties(Map n,Map o){
+        if(null != n && null != o){
+            Iterator its = n.keySet().iterator();
+            while(its.hasNext()){
+                Object k = its.next();
+                Object v = n.get(k);
+                Object ov = o.get(k);
+                if(null != k && k.toString().startsWith("@")){
+                    if( null != ov && ov instanceof Map && isDescriptionField((Map)ov)){
+                        if(v==null)
+                        n.put(k,ov);
+                        else if(v instanceof Map){
+                            ObjectUtils.appendDeepMapNotReplaceKey((Map)ov,(Map)v);
+                        }
+                    }
+                }else if( ( null == v || (v instanceof String && StringUtils.isBlank((String)v)) ||(v instanceof Map && ((Map)v).size()==0) )
+                        && null != ov && ov instanceof Map && isDescriptionField((Map)ov)){
+                    n.put(k, ov);
+                }else if ( (null == v || null!=v && (v instanceof List && ((List)v).size()==0))
+                        && null != ov && ov instanceof List && null != ((List) ov).get(0) && ((List) ov).get(0) instanceof Map && isDescriptionField((Map)((List) ov).get(0)) ){
+                    n.put(k,ov);
+                }else if(null != v && v instanceof Map && null != ov && ov instanceof Map){
+                    appendDescProperties((Map)v,(Map)ov);
+                }
+            }
+            if(null != o && isDescriptionField(o)){
+                Iterator it = o.keySet().iterator();
+                while(it.hasNext()){
+                    Object k = it.next();
+                    if(!n.containsKey(k)){
+                        n.put(k,o.get(k));
+                    }
+                }
+            }
+        }
     }
 
     static String convertDescValueString(Object o){
@@ -1387,6 +1473,12 @@ public class Desc extends XMLDoObject{
                             }
                             if (null != m.get("techArchitecture")) {
                                 newdesc.put("techArchitecture",m.get("techArchitecture"));
+                            }
+                            if (null != m.get("input")) {
+                                newdesc.put("input",m.get("input"));
+                            }
+                            if (null != m.get("output")) {
+                                newdesc.put("output",m.get("output"));
                             }
                         }
                     }
@@ -1483,16 +1575,24 @@ public class Desc extends XMLDoObject{
 
     Map trans(XMLParameter pars,Map m){
         if(null == m)return null;
-        if(m.containsKey("original")){
-            Object o = m.get("original");
+        Map ret = new HashMap();
+        ObjectUtils.appendDeepMapNotReplaceKey(m,ret);
+        if(ret.containsKey("original")){
+            Object o = ret.get("original");
             if(null != o && o instanceof Map){
+                if(log.isDebugEnabled()) {
+                    log.debug("original 1:" + o + "    " + pars.getParameter("${input_data}"));
+                }
                 Map r = pars.getMapValueFromParameter((Map)o,this);
+                if(log.isDebugEnabled()) {
+                    log.debug("original 2:" + r);
+                }
                 if(null != r){
-                    m.put("original",r);
+                    ret.put("original",r);
                 }
             }
         }
-        return m;
+        return ret;
     }
     @Override
     public Object doSomeThing(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
@@ -1627,6 +1727,85 @@ public class Desc extends XMLDoObject{
             }
         }
         return null;
+    }
+
+    public static boolean checkItemByDesc(String name,XMLParameter env,XMLObject obj,Object o,Map desc)throws ISPException{
+        if(null != desc){
+            if(null != desc.get("@type") && null != o){
+                String type = (String)desc.get("@type");
+                if(POJOUtil.isNumberClass(type) && !NumberUtils.isNumber(o.toString())){
+                    throw new ISPException("ISP02001","Invalid data [(data)] type in [(classType)] parameter name [(name)]",new String[]{(o==null?"":o.toString()),type,name});
+                }
+            }
+            if(null != desc.get("@enum")){
+                Object ev = desc.get("@enum");
+                if(null!=ev && null != o){
+                    if(ev instanceof Collection){
+                        Iterator it= ((Collection)ev).iterator();
+                        boolean b = false;
+                        while(it.hasNext()){
+                            Object v = it.next();
+                            if(o.equals(v)){
+                                b=true;
+                                break;
+                            }
+                            if(null !=o && null != v && o.toString().equals(v.toString())){
+                                b=true;
+                                break;
+                            }
+                        }
+                        if(!b){
+                            throw new ISPException("ISP02001",o+" is not in enum [(enum)] parameter name [(name)]",new String[]{ev.toString(),name});
+                        }
+                    }
+                }
+            }
+            if(null != desc.get("@check") && desc.get("@check") instanceof String && null != o){
+                if(null != env) {
+                    Object v = env.getParameter("${context}");
+                    if(null != v && v instanceof Context) {
+                        boolean b= ((Context)v).checkFormat((String)desc.get("@check"),o);
+                        if(!b){
+                            throw new ISPException("ISP02001", "data [(value)] isinvalid type parameter name [(name)]", new String[]{o.toString(), name});
+                        }
+
+                    }
+                }
+            }
+            if(null != desc.get("@depend")){
+
+            }
+            if(null != desc.get("@length")){
+                Object l = desc.get("@length");
+                int n = 0;
+                if(l instanceof String) n = Integer.parseInt((String)l);
+                else n = (int)l;
+                if(null != o ){
+                    if(o.getClass().isArray() && ((Object[])o).length>n){
+                        throw new ISPException("ISP02001","data length is over [(length)]",new String[]{n+""});
+                    }else if(o instanceof Collection && ((Collection)o).size()>n){
+                        throw new ISPException("ISP02001","data length is over [(length)]",new String[]{n+""});
+                    }else if(o instanceof String && ((String)o).length()>n){
+                        throw new ISPException("ISP02001","data length is over [(length)]",new String[]{n+""});
+                    }
+                }
+            }
+            if(null != desc.get("@isMust")){
+                if(StringUtils.isTrue(desc.get("@isMust").toString()) && (null == o || "".equals(o))){
+                    throw new ISPException("ISP02001","data is must need in parameter name [(name)]",new String[]{name});
+                }
+            }
+            if(null != desc.get("@checkExpress")){
+                    /*Object v = null;
+                    if (null != v && !StringUtils.isTrue(v.toString())) {
+                        throw new ISPException("ISP02001", "data [(value)] isinvalid type parameter name [(name)]", new String[]{o.toString(), name});
+                    }*/
+            }
+            if(null != desc.get("@dependFields")){
+
+            }
+        }
+        return true;
     }
 
 

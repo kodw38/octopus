@@ -401,11 +401,13 @@ public class LauncherCommon {
                     srvid = (String)c.get("SRV_ID");
                     if(null != param) {
                         List<String> p = (List) c.get("PAR_NAMES");
-                        String pv = uri.substring(uri.indexOf(u) + u.length());
-                        String[] vs = pv.split("/");
-                        for (int i = 0; i < vs.length; i++) {
-                            if (p.size() > i) {
-                                param.put(p.get(i), vs[i]);
+                        if(null != p) {
+                            String pv = uri.substring(uri.indexOf(u) + u.length());
+                            String[] vs = pv.split("/");
+                            for (int i = 0; i < vs.length; i++) {
+                                if (p.size() > i) {
+                                    param.put(p.get(i), vs[i]);
+                                }
                             }
                         }
                     }

@@ -28,14 +28,14 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
     static transient Log log = LogFactory.getLog(ConvertObject2JSONString.class);
-    static Map<Class,Map> exceptionMsg = new HashMap();
+    static List<Map> exceptionMsg = new LinkedList<Map>();
     public ConvertObject2JSONString(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
 
     }
 
     @Override
-    public Object convert(Object par) throws IOException {
+    public Object convert(XMLParameter env,Object par) throws IOException {
         if(null != par){
             List ids = new ArrayList();
             String res =null;
@@ -55,14 +55,24 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
                 //log.error("return exception:",(Exception)par);
                 Throwable r = ExceptionUtil.getRootCase((Exception)par);
                 if(null != r) {
-                    res = getException(r);
+                    res = getException(env,r);
                     if(null == res) {
                         String code, msg;
                         if (r instanceof ISPException) {
+                            Map vm = ((ISPException) r).getMsgArgs();
+                            if(null != vm){
+                                env.addParameter("${^ExceptionMessageArgs}",vm);
+                            }
                             code = ((ISPException) r).getCode();
                             msg = ((ISPException) r).getRealMsg();
                             if (null == msg) {
                                 msg = ((ISPException) r).getMsg();
+                            }
+
+                            if(null == code && msg.startsWith("{")){
+                                StringBuffer sb=  new StringBuffer(msg);
+                                sb.insert(1,"\"is_error\":\"true\",");
+                                return sb.toString();
                             }
                         } else {
                             code = "B-000";
@@ -71,7 +81,9 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
                             msg = StringUtils.replace(msg, "\r", "");
                             msg = StringUtils.replace(msg, "\t", "");
                         }
-                        res = getErrorMsg(code, msg);
+                        env.addParameter("${^ExceptionMessage}",msg);
+                        env.addParameter("${^ExceptionCode}",code);
+                        res = getErrorMsg(env,code, msg);
                         if (StringUtils.isBlank(res)) {
                             res = "{\"is_error\":\"true\",\"errorcode\":\"" + code + "\",\"msg\":\"" + msg + "\"}";
                         }
@@ -79,7 +91,7 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
                 }
             }else if(Map.class.isAssignableFrom(par.getClass())){
                 if((StringUtils.isTrue((String)((Map)par).get("is_error")) && ((Map)par).containsKey("errorcode") && ((Map)par).containsKey("msg"))){
-                    res = getErrorMsg((String)((Map)par).get("errorcode"),(String)((Map)par).get("msg"));
+                    res = getErrorMsg(env,(String)((Map)par).get("errorcode"),(String)((Map)par).get("msg"));
                     if(StringUtils.isBlank(res)){
                         res = ObjectUtils.convertMap2String((Map) par);
                     }
@@ -110,7 +122,8 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
                 res= par.toString();
                 if(res.contains("is_error") && res.contains("errorcode") && res.startsWith("{")){
                     Map m= StringUtils.convert2MapJSONObject(res);
-                    String re = getErrorMsg((String)m.get("errorcode"),(String)m.get("msg"));
+
+                    String re = getErrorMsg(env,(String)m.get("errorcode"),(String)m.get("msg"));
                     if(StringUtils.isNotBlank(re)){
                         res = re;
                     }
@@ -124,18 +137,23 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
         return null;
     }
 
-    String getException(Throwable e){
+    String getException(XMLParameter par,Throwable e){
         if(null != exceptionMsg) {
-            Iterator<Class> its = exceptionMsg.keySet().iterator();
-            while(its.hasNext()) {
-                Class c = its.next();
+            for(Map m:exceptionMsg) {
+                Class c = (Class)m.get("clazz");
                 if(c.isAssignableFrom(e.getClass())){
-                    Map map = exceptionMsg.get(c);
-                    if (null != map) {
-                        Map m = ObjectUtils.getObjectMapping2Map(e, map);
-                        ObjectUtils.appendDeepMapNotReplaceKey(map,m);
-                        if (null != m) {
-                            return ObjectUtils.convertMap2String(m);
+                    if(StringUtils.isNotBlank(m.get("cond"))){
+                        log.debug("cond:"+m.get("cond")+" :");
+                        String t = par.getValueFromExpress(m.get("cond"),this).toString();
+                        if(!StringUtils.isTrue(t)){
+                            continue;
+                        }
+                    }
+                    if (null != m) {
+                        Map mt = ObjectUtils.getObjectMapping2Map(e, (Map)m.get("mapping"));
+                        ObjectUtils.appendDeepMapNotReplaceKey((Map)m.get("mapping"),mt);
+                        if (null != mt) {
+                            return ObjectUtils.convertMap2String(mt);
                         }
                     }
                 }
@@ -144,7 +162,7 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
         }
         return null;
     }
-    String getErrorMsg(String code,String msg){
+    String getErrorMsg(XMLParameter par,String code,String msg){
         if(StringUtils.isNotBlank(code)){
             XMLMakeup[] xs = getXML().getChild("errors");
             if(null != xs && xs.length>0) {
@@ -154,12 +172,22 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
                         if(null != e && code.equals(e.getProperties().getProperty("code")) &&
                                 (null == e.getProperties().getProperty("isenable") || StringUtils.isTrue(e.getProperties().getProperty("isenable")) )
                                 ) {
-                            HashMap map = new HashMap();
-                            map.put("${code}", code);
-                            map.put("${msg}", msg);
+                            if(StringUtils.isNotBlank(e.getProperties().getProperty("cond"))){
+                                String t = par.getValueFromExpress(e.getProperties().getProperty("cond"),this).toString();
+                                if(!StringUtils.isTrue(t)){
+                                    continue;
+                                }
+                            }
+                            if(par.isHasRetainChars(msg)){
+                                msg = par.getValueFromExpress(msg,this).toString();
+                            }
+                            log.debug("response message:"+msg);
+
+                            par.put("${code}", code);
+                            par.put("${msg}", msg);
                             String v = e.getProperties().getProperty("output");
                             if(StringUtils.isNotBlank(v)) {
-                                Object o = XMLParameter.getExpressValueFromMap(v, map, null);
+                                Object o = par.getExpressValueFromMap(v, null);
                                 return o.toString();
                             }
 
@@ -174,9 +202,9 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
     @Override
     public Object doSomeThing(String xmlid,XMLParameter env, Map input, Map output, Map config) throws Exception {
         if(env.getResult() instanceof ResultCheck){
-            return convert(((ResultCheck)env.getResult()).getRet());
+            return convert(env,((ResultCheck)env.getResult()).getRet());
         }else{
-            return convert(env.getResult());
+            return convert(env,env.getResult());
         }
     }
 
@@ -189,7 +217,11 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
                 for(XMLMakeup x:es){
                     if(x.getProperties().containsKey("classname") && x.getProperties().containsKey("mapping") && !(x.getProperties().containsKey("isenable") && !StringUtils.isTrue(x.getProperties().getProperty("isenable")))){
                         try {
-                            exceptionMsg.put(Class.forName(x.getProperties().getProperty("classname")), StringUtils.convert2MapJSONObject(x.getProperties().getProperty("mapping")));
+                            HashMap map = new HashMap();
+                            map.put("clazz",Class.forName(x.getProperties().getProperty("classname")));
+                            map.put("mapping",StringUtils.convert2MapJSONObject(x.getProperties().getProperty("mapping")));
+                            map.put("cond",x.getProperties().getProperty("cond"));
+                            exceptionMsg.add(map);
                         }catch (Exception e){
                             log.error(e);
                         }

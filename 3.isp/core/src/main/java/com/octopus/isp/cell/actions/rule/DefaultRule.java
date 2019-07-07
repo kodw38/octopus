@@ -84,4 +84,13 @@ public class DefaultRule extends XMLDoObject {
     public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
         throw new Exception("now support rollback");
     }
+
+    public static void main(String[] args){
+        try {
+            Object o = RuleUtil.doRule("(1==1 and true==true) or false==false", null);
+            System.out.println(o);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 }

@@ -2,6 +2,7 @@ package com.octopus.isp.handlers;
 
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.cls.proxy.IMethodAddition;
+import com.octopus.utils.exception.ExceptionUtil;
 import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.rule.RuleUtil;
 import com.octopus.utils.xml.XMLMakeup;
@@ -53,8 +54,13 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
                             XMLParameter e = ((XMLParameter)args[1]);
                             if(StringUtils.isNotBlank(mp) && data instanceof XMLParameter){
                                 Map d = ((XMLParameter)data).getMapValueFromParameter(StringUtils.convert2MapJSONObject(mp),this);
-                                if(null != d){
+                                if(log.isDebugEnabled()){
+                                    log.debug("check rule:\ndata:"+d);
+                                }
+                                if(null == e){
                                     e = getEmptyParameter();
+                                }
+                                if(null != d){
                                     e.putAll(d);
                                 }
 
@@ -62,17 +68,27 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
 
                             Object rul = e.getExpressValueFromMap((String)rule.get("RULE"),this);
                             if(rul instanceof String) {
-
-                                Object o = RuleUtil.doRule((String) rul, data);
-                                if (null != o && o instanceof Boolean && !(Boolean) o) {
-                                    Object s = ((XMLParameter) args[1]).getValueFromExpress(rule.get("NOT_CHECK_MESSAGE"), this);
-                                    if(null != s){
-                                        s = s.toString();
-                                        s = StringUtils.replace((String)s,"\"","\\\"");
-                                        s = StringUtils.replace((String)s,"\\\\\"","\\\\\\\"");
+                                if(log.isDebugEnabled()){
+                                    log.debug("check rule:\nrule:"+rul+"\ndata:"+data);
+                                }
+                                try {
+                                    Object o = RuleUtil.doRule((String) rul, data);
+                                    if (null != o && o instanceof Boolean && !(Boolean) o) {
+                                        Object s = ((XMLParameter) args[1]).getValueFromExpress(rule.get("NOT_CHECK_MESSAGE"), this);
+                                        if (null != s) {
+                                            if((s instanceof String && ((String) s).startsWith("{"))){
+                                                throw new ISPException(null,(String)s);
+                                            }else {
+                                                s = s.toString();
+                                                s = StringUtils.replace((String) s, "\"", "\\\"");
+                                                s = StringUtils.replace((String) s, "\\\\\"", "\\\\\\\"");
+                                                throw new ISPException("600", "check [" + id + "] input parameters fail: " + s);
+                                            }
+                                        }
 
                                     }
-                                    throw new ISPException("600", "check [" + id + "] input parameters fail: " + s);
+                                }catch(Exception ex){
+                                    throw ex;
                                 }
                             }
                         }

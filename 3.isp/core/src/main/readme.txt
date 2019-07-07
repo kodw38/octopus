@@ -1,0 +1,1 @@
+url contains ^OnlyRuleCheck=input: only check main service input parameter with inputcheck.

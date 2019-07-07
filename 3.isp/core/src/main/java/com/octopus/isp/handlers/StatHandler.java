@@ -4,6 +4,7 @@ import com.octopus.isp.bridge.impl.Bridge;
 import com.octopus.isp.ds.RequestParameters;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.bftask.BFParameters;
 import com.octopus.utils.cls.proxy.IMethodAddition;
 import com.octopus.utils.net.NetUtils;
 import com.octopus.utils.si.jvm.JVMUtil;
@@ -35,6 +36,8 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
     boolean isNextInvoke;
     String logpathparent;
     String instanceId;
+    String serverpath;
+    XMLDoObject remote;
     String ip;
     public StatHandler(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
@@ -43,6 +46,7 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
         isWaitResult= StringUtils.isTrue(xml.getProperties().getProperty("iswaitresult"));
         isNextInvoke= StringUtils.isTrue(xml.getProperties().getProperty("isnextinvoke"));
         logpathparent = xml.getProperties().getProperty("logpathparent");
+        serverpath = xml.getProperties().getProperty("serverpath");
         addSystemLoadInitAfterAction(this,"init",null,null);
     }
 
@@ -174,7 +178,7 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
             INVOKE_THROUGH_DATA_SIZE.put(id, new AtomicLong((Long.valueOf((String) d.get("INVOKE_SIZE")))));*/
     }
     void setINVOKE_COUNTData(Map d ,String id,String key){
-        if (null != d.get(key) && !"null".equals(d.get(key))) {
+        if (null != d.get(key) && !"null".equals(d.get(key)) && !"".equals(d.get(key))) {
             if(d.get(key) instanceof String) {
                 if("".equals(d.get(key))){
                     INVOKE_COUNT.put(id, new AtomicLong(0));
@@ -433,7 +437,7 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
                 }
             }else if("setInsStatusStopped".equals(input.get("op"))){
                 String id = (String)input.get("insId");
-                if("console".equals(id)){
+                if("console".equalsIgnoreCase(id)){
                     return null;
                 }
                 if(StringUtils.isNotBlank(id)){
@@ -459,13 +463,99 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
                                 loghandler.doSomeThing(null,null,mt,null,null);
                             }
                         }
+                        log.info("has stop all services in instance["+id+"]");
                     }
                 }
+            }else if("setInsStatusRunning".equals(input.get("op"))){
+                if(log.isDebugEnabled()) {
+                    log.debug("setInsStatusRunning ....");
+                }
+                String id = (String)input.get("insId");
+                if("console".equalsIgnoreCase(id)){
+                    return null;
+                }
+                if(StringUtils.isNotBlank(id)){
+                    HashMap map = new HashMap();
+                    map.put("op","getData");
+                    if(StringUtils.isNotBlank(serverpath)) {
+                        map.put("path", serverpath + "/" + id);
+                        Object t = loghandler.doSomeThing(null, null, map, null, null);
+                        if(log.isDebugEnabled()) {
+                            log.debug("setInsStatusRunning  " + t);
+                        }
+                        if (null != t && !"".equals(t)) {
+                            if(t instanceof String){
+                                t = StringUtils.convert2MapJSONObject((String)t);
+                            }
+                            String pid = (String) ((Map) t).get("pid");
+                            if(log.isDebugEnabled()) {
+                                log.debug("setInsStatusRunning  pid:" + pid);
+                            }
+                            map.clear();
+                            map.put("op", "getChildrenData");
+                            map.put("path", logpathparent);
+                            Map<String, String> m = (Map) loghandler.doSomeThing(null, null, map, null, null);
+                            if (null != m) {
+                                Iterator<String> its = m.keySet().iterator();
+                                while (its.hasNext()) {
+                                    String k = its.next();
+                                    if (k.contains("." + id + ".")) {
+                                        if(k.length()>(k.indexOf(id)+id.length()+1) && checkRemoteSrvExist(id,k.substring(k.indexOf(id)+id.length()+1,k.length()-1))) {
+                                            String s = m.get(k);
+                                            Map sm = StringUtils.convert2MapJSONObject(s);
+
+                                            sm.put("INS_STATUS", "RUNNING");
+                                            sm.put("PID", pid);
+                                            //s = StringUtils.replace(s,"RUNNING","STOPPED");
+                                            s = ObjectUtils.convertMap2String(sm);
+                                            HashMap mt = new HashMap();
+                                            mt.put("op", "onlySetData");
+                                            mt.put("path", logpathparent + "/" + k);
+                                            mt.put("data", s);
+                                            loghandler.doSomeThing(null, null, mt, null, null);
+                                        }
+                                    }
+                                }
+                                log.info("has running all services in instance[" + id + "]");
+                            }
+                        }
+                    }
+                }
+
             }else if("uploadStat".equals(input.get("op"))){
                 timerUpload();
             }
         }
         return null;
+    }
+    boolean checkRemoteSrvExist(String insId,String srvName){
+        try {
+            if(null !=remote) {
+                BFParameters p = new BFParameters(false);
+                p.addParameter("${targetNames}", new String[]{"isExistService"});
+                HashMap inmap = new HashMap();
+                inmap.put("name", srvName);
+                p.addParameter("${input_data}", inmap);
+                p.addParameter("${insid}", insId);
+                remote.doThing(p, null);
+                Object o = p.getResult();
+                if (null != o) {
+                    if (o instanceof ResultCheck) {
+                        o = ((ResultCheck) o).getRet();
+                    }
+                    if (null != o && o instanceof Boolean) {
+                        log.debug("remote ["+insId+"] check srv ["+srvName+"] return "+o);
+                        return (Boolean) o;
+                    }
+                }
+            }
+        }catch (Exception e){
+            log.error("",e);
+            log.debug("remote ["+insId+"] check srv ["+srvName+"] return false");
+            return false;
+        }
+        log.debug("remote ["+insId+"] check srv ["+srvName+"] return false");
+        return false;
     }
     synchronized void uploadzk(String id,XMLParameter env,boolean isable) throws IOException {
         HashMap in = new HashMap();

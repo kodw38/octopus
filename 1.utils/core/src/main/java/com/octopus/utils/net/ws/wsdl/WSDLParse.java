@@ -694,7 +694,7 @@ public class WSDLParse {
      * @param descType
      * @return
      */
-    public static Object convertXMLString2Map(String name,String text,List<XMLMakeup> os,Object descType){
+    public static Object convertXMLString2Map(String name,String text,List<XMLMakeup> os,Object descType)throws Exception{
         if(null != descType) {
             Object ret =null;
             if (List.class.isAssignableFrom(descType.getClass())) {
@@ -704,7 +704,7 @@ public class WSDLParse {
                 		&& org.apache.commons.lang.StringUtils.isNotEmpty(text)
                 			&& org.apache.commons.lang.StringUtils.isNotEmpty(name))
                 {
-                	li.add(ClassUtils.chgValue(String.class, text));
+                	li.add(ClassUtils.chgValue(name,String.class, text));
                 	ret = li;
                 }
                 else{
@@ -732,7 +732,7 @@ public class WSDLParse {
                 }
                 ret = map;
             } else {
-            	ret = ClassUtils.chgValue(descType.getClass(), text);
+            	ret = ClassUtils.chgValue(name,descType.getClass(), text);
             }
             return ret;
         }

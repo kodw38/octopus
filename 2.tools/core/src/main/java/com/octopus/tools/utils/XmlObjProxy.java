@@ -109,8 +109,13 @@ public class XmlObjProxy extends XMLDoObject {
                                     Object ret = ClassUtils.invokeStaticMethod(Class.forName(invokerClazz), "invoke", new Class[]{Map.class, String.class, String.class, Class[].class, Object[].class}, new Object[]{session, originalClazz, originalMethod, c_pars, pars});
                                     if (log.isInfoEnabled()) {
                                         if(null != ret) {
-                                            Object o = ClassUtils.getFieldValue(ret,"orderBatchID",false);
-                                            log.error("return orderBatchID:"+o);
+                                            Object o = ClassUtils.getFieldValue(ret,"receiptOrderInformations",false);
+                                            if(null != o) {
+                                                if(o.getClass().isArray()) {
+                                                    Object ov = ClassUtils.getFieldValue(((Object[])o)[0],"eRechargeTrxNo",false);
+                                                    log.error("return eRechargeTrxNo:" + ov);
+                                                }
+                                            }
                                             log.info(originalMethod + " costTime:" + (System.currentTimeMillis() - l) + "\n" + ArrayUtils.toJoinString(new Object[]{POJOUtil.convertPOJO2USDL(ret, new AtomicLong(0))}));
                                         }
                                     }
@@ -237,18 +242,21 @@ public class XmlObjProxy extends XMLDoObject {
     public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
         return false;  //To change body of implemented methods use File | Settings | File Templates.
     }
-    Object[] convertParams(Class[] type,List<String> value){
-        if(null != type) {
-            Object[] ret = new Object[type.length];
-            for (int i = 0; i < type.length; i++) {
-                if (null != value.get(i))
-                    ret[i] = ClassUtils.chgValue(type[i], value.get(i));
-                else
-                    ret[i] = null;
+    Object[] convertParams(Class[] type,List<String> value)throws Exception{
+
+            if (null != type) {
+                Object[] ret = new Object[type.length];
+                for (int i = 0; i < type.length; i++) {
+                    if (null != value.get(i))
+                        ret[i] = ClassUtils.chgValue(null, type[i], value.get(i));
+                    else
+                        ret[i] = null;
+                }
+                return ret;
+            } else {
+                return null;
             }
-            return ret;
-        }else{
-            return null;
-        }
+
+
     }
 }

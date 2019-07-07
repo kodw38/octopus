@@ -10,6 +10,7 @@ import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
 import com.octopus.utils.xml.desc.Desc;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.commons.httpclient.*;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
@@ -19,8 +20,10 @@ import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.httpclient.protocol.Protocol;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.mapreduce.HashTable;
 import sun.misc.BASE64Encoder;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -427,8 +430,10 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
             ds =(HttpDS)input.get("ds");
             method = (String)input.get("method");
             url = (String)input.get("url");
+            log.debug("remote url 1:"+url+" "+env.getParameter("${input_data}"));
+            log.debug("remote url 2:"+url+" "+env.getValueFromExpress("(${input_data}.web_password)",this));
             url = (String)env.getValueFromExpress(url,this);
-
+            log.debug("remote url 3:"+url);
             if(url.startsWith("https")){
                 Protocol myhttps = new Protocol("https", new MySSLProtocolSocketFactory(), 443);
                 Protocol.registerProtocol("https", myhttps);
@@ -535,6 +540,19 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
         if(null == ret){
             if(log.isDebugEnabled()){
                 System.out.println("["+Thread.currentThread().getName()+"] [debug] httpclient3 return null url:"+url+" \nrespnse string:"+str);
+            }
+        }
+        if(null !=ds.getResponseHeaders()){
+            Hashtable<String,String> ht = ds.getResponseHeaders();
+            if(null != env.getParameter("${response}") && env.getParameter("${response}") instanceof HttpServletResponse ){
+                HttpServletResponse hr = (HttpServletResponse)env.getParameter("${response}");
+
+                Iterator<String> its = ht.keySet().iterator();
+                while(its.hasNext()) {
+                    String k = its.next();
+                    String v = ht.get(k);
+                    hr.setHeader(k, v);
+                }
             }
         }
 
