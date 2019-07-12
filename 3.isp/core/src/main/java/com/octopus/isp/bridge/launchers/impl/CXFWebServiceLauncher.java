@@ -250,6 +250,10 @@ public class CXFWebServiceLauncher extends XMLDoObject{
                                 Map map = StringUtils.convert2MapJSONObject(s);
                                 if (null != map) {
                                     hostport = (String) env.getValueFromExpress((String) map.get("host"),this);
+                                    String ad = System.getProperty("tb-wsaddress");
+                                    if(StringUtils.isNotBlank(ad)){
+                                        hostport =ad;
+                                    }
                                     keypath = (String) env.getValueFromExpress((String) map.get("key"),this);
                                     pwd = (String) env.getValueFromExpress((String) map.get("pwd"),this);
                                     storepwd = (String) env.getValueFromExpress((String) map.get("storepwd"),this);
@@ -289,6 +293,10 @@ public class CXFWebServiceLauncher extends XMLDoObject{
         if (null != config && null == input) {
             CXFUtil wrap = new CXFUtil();
             hostport = (String) config.get("host");
+            String ad = System.getProperty("tb-wsaddress");
+            if(StringUtils.isNotBlank(ad)){
+                hostport =ad;
+            }
             keypath = (String)config.get("key");
             pwd = (String)config.get("pwd");
             storepwd = (String)  config.get("storepwd");

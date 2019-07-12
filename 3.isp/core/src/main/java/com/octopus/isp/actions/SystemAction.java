@@ -198,7 +198,18 @@ public class SystemAction extends XMLDoObject {
                                 log.info("log path is "+logpath);
                             }
                             Map properties = getEnvProperties();
-                            map.put("data", "{\"insId\":\""+id+"\",\"ip\":\"" + NetUtils.getip() +"\",\"port\":\""+properties.get("webport")+"\",\"ws_host\":\""+properties.get("ws_host")+"\",\"loginuser\":\""+properties.get("logUserName")+"\",\"loginpwd\":\""+properties.get("logPassword")+"\",\"jmxRemotePort\":\""+System.getProperty("com.sun.management.jmxremote.port")+"\",\"pid\":\"" + JVMUtil.getPid() + "\",\"logPath\":\""+logpath+"\"}");
+                            String webport= (String)properties.get("webport");
+                            String wshost = (String)properties.get("ws_host");
+
+                            String twp = System.getProperty("tb-webport");
+                            if(StringUtils.isNotBlank(twp)){
+                                webport =twp;
+                            }
+                            String twsp = System.getProperty("tb-wsaddress");
+                            if(StringUtils.isNotBlank(twsp)){
+                                wshost =twsp;
+                            }
+                            map.put("data", "{\"insId\":\""+id+"\",\"ip\":\"" + NetUtils.getip() +"\",\"port\":\""+webport+"\",\"ws_host\":\""+wshost+"\",\"loginuser\":\""+properties.get("logUserName")+"\",\"loginpwd\":\""+properties.get("logPassword")+"\",\"jmxRemotePort\":\""+System.getProperty("com.sun.management.jmxremote.port")+"\",\"pid\":\"" + JVMUtil.getPid() + "\",\"logPath\":\""+logpath+"\"}");
                             srvhandler.doSomeThing(null, null, map, null, null);
                             log.info("syn center info,register ins:" + map.get("data"));
 
@@ -225,8 +236,8 @@ public class SystemAction extends XMLDoObject {
             in.put("path", statpath);
             //all service stat data
             Map<String, String> servicesStatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-            if(log.isInfoEnabled()){
-                log.info("all services of stat data\n"+servicesStatus);
+            if(log.isDebugEnabled()){
+                log.debug("all services of stat data\n"+servicesStatus);
             }
             if(null != servicesStatus) {
                 List<Map> activeIns = getInsList();//获取活动的实例名称
@@ -266,8 +277,8 @@ public class SystemAction extends XMLDoObject {
                     }
 
                 }
-                if(log.isInfoEnabled()){
-                    log.info("load service in instances\n"+ret);
+                if(log.isDebugEnabled()){
+                    log.debug("load service in instances\n"+ret);
                 }
                 return ret;
             }else{
@@ -375,6 +386,12 @@ public class SystemAction extends XMLDoObject {
                 removeSrvInfoFromCache(srvName, insId);
             }
         }
+        if(addressmap.size()>0){
+            String k = getAddressMapKey(insId,srvName);
+            if(addressmap.containsKey(k)){
+                addressmap.remove(k);
+            }
+        }
     }
     void notifyBySuspendSrv(String srvName,String insId){
         if(log.isInfoEnabled()) {
@@ -391,6 +408,12 @@ public class SystemAction extends XMLDoObject {
             }
             if (log.isDebugEnabled()) {
                 log.info("syn center info, notifyBySuspendSrv " + srvName + " " + insId);
+            }
+        }
+        if(addressmap.size()>0){
+            String k = getAddressMapKey(insId,srvName);
+            if(addressmap.containsKey(k)){
+                addressmap.remove(k);
             }
         }
     }
@@ -416,6 +439,15 @@ public class SystemAction extends XMLDoObject {
                 }
             }
         }
+        if(addressmap.size()>0){
+            Iterator its = addressmap.keySet().iterator();
+            while(its.hasNext()){
+                String k = (String)its.next();
+                if(k.contains(insId)){
+                    addressmap.remove(k);
+                }
+            }
+        }
     }
     void removeInsInBySrv(String srvName,String insId){
         if(log.isDebugEnabled()) {
@@ -431,6 +463,7 @@ public class SystemAction extends XMLDoObject {
                 }
             }
         }
+
     }
     void removeSrvInfoFromCache(String srvName,String insId){
         synchronized (srvInfoInCenter){
@@ -3083,9 +3116,32 @@ return false;
     }
 
     ConcurrentHashMap addressmap = new ConcurrentHashMap();
+    String getAddressMapKey(String insid,String name){
+        return insid+"_"+"_"+name;
+    }
+    String getCacheInsAddress(Map insinfo,String name){
+        String insid = (String)insinfo.get("insId");
+        if(log.isDebugEnabled()){
+            log.debug("get instance info by "+insid+" "+insinfo);
+        }
+        if(null != insinfo) {
+            String ip = (String) insinfo.get("ip");
+            String webport = (String) insinfo.get("port");
+
+            if (StringUtils.isNotBlank(ip)) {
+                String ad =  "http://" + ip + ":" + webport + "/" + "service?actions=" + name;
+                addressmap.put(getAddressMapKey(insid,name),ad);
+                if(log.isDebugEnabled()) {
+                    log.debug(insid + " address " + ad);
+                }
+                return ad;
+            }
+        }
+        return null;
+    }
     String getAddress(String insid,String port,String name){
-        if(addressmap.containsKey(insid+"_"+"_"+name)){
-            String ad = (String)addressmap.get(insid+"_"+"_"+name);
+        if(addressmap.containsKey(getAddressMapKey(insid,name))){
+            String ad = (String)addressmap.get(getAddressMapKey(insid,name));
             if(log.isDebugEnabled()) {
                 log.debug("instance "+insid + " address " + ad);
             }
@@ -3093,51 +3149,18 @@ return false;
         }
         try {
             Map insinfo = getInstanceInfo(insid);
-            if(log.isDebugEnabled()){
-                log.debug("get instance info by "+insid+" "+insinfo);
+            String ad =getCacheInsAddress(insinfo,name);
+            if(StringUtils.isNotBlank(ad)){
+                return ad;
             }
-            if(null != insinfo) {
-                String ip = (String) insinfo.get("ip");
-                String webport = (String) insinfo.get("port");
-                if(StringUtils.isNotBlank(webport)){
-                    port = webport;
-                }
-                if (StringUtils.isNotBlank(ip)) {
-                    String ad =  "http://" + ip + ":" + port + "/" + "service?actions=" + name;
-                    addressmap.put(insid+"_"+"_"+name,ad);
-                    if(log.isDebugEnabled()) {
-                        log.debug(insid + " address " + ad);
-                    }
-                    return ad;
-                }
-            }
-            /*if(null != srvhandler) {
-                HashMap map = new HashMap();
-                map.put("op", "getData");
-                map.put("path", serverspath + "/" + insid);
-                String d = (String) srvhandler.doSomeThing(null, null, map, null, null);
-                if (StringUtils.isNotBlank(d)) {
-                     ip = "";
-                    if (StringUtils.isNotBlank(d)) {
-                        Map m = StringUtils.convert2MapJSONObject(d);
-                        ip = (String) m.get("ip");
-                        port = (String) m.get("port");
-                    }
-                    if (StringUtils.isNotBlank(ip)) {
-                        String ad =  "http://" + ip + ":" + port + "/" + "service?actions=" + name;
-                        addressmap.put(insid+"_"+"_"+name,ad);
-                        System.out.println(insid+"  http address "+ad);
-                        return ad;
-                    }
-                }
-            }*/
+
         }catch (Exception e){
             log.error("",e);
         }
         Bridge root = (Bridge)getObjectById("bridge");
         if(root.getInstanceId().equals(insid)) {
             String ad = "http://127.0.0.1:" + port + "/" + "service?actions=" + name;
-            addressmap.put(insid + "_" + "_" + name, ad);
+            addressmap.put(getAddressMapKey(insid,name), ad);
             return ad;
         }else{
             return null;

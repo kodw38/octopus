@@ -85,6 +85,14 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             if(StringUtils.isNotBlank(p)){
                 sslport = Integer.parseInt(p);
             }
+            String tport = System.getProperty("tb-webport");
+            if(StringUtils.isNotBlank(tport)){
+                port=Integer.parseInt(tport);
+            }
+            String tsslport = System.getProperty("tb-sslport");
+            if(StringUtils.isNotBlank(tsslport)){
+                sslport =Integer.parseInt(tsslport);
+            }
             start((String) env.getEnv().get("webcontextpath"), (String) env.getEnv().get("webcontentpath"), port,isUsedWebSocket, sslport, (String) env.getEnv().get("ishttps"), (String) env.getEnv().get("ssl_keystoretype"), (String) env.getEnv().get("ssl_keystore"), (String) env.getEnv().get("ssl_password"), (String) env.getEnv().get("ssl_mgr_password"));
         }
 
@@ -655,6 +663,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 HttpConfiguration httpConf = new HttpConfiguration();
                 httpConf.setSecurePort(sslport);
                 httpConf.setSecureScheme("https");
+                //httpConf.setRequestHeaderSize(8192);//default 8k
                 httpConnector = new ServerConnector(server, new HttpConnectionFactory(httpConf));
                 // Setup HTTPS Configuration
                 HttpConfiguration httpsConf = new HttpConfiguration(httpConf);
@@ -752,6 +761,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             }
             context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
             context.setClassLoader(Thread.currentThread().getContextClassLoader());
+            
             try {
                 if (StringUtils.isNotBlank(resourcePath)) {
                     context.setResourceBase(resourcePath);
@@ -809,8 +819,9 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                         response.setContentType("text/html;charset=UTF-8");
                     }else
                         response.setContentType("application/text;charset=UTF-8");
-
-                    response.getOutputStream().write(ret.toString().getBytes("UTF-8"));
+                    byte[] bs = ret.toString().getBytes("UTF-8");
+                    response.setContentLength(bs.length);
+                    response.getOutputStream().write(bs);
                     response.flushBuffer();
                 }else if(!response.isCommitted()){
                     //System.out.println("--websocket--");

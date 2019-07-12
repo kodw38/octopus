@@ -43,13 +43,17 @@ public class Bridge extends XMLDoObject implements IBridge {
 
     public Bridge(XMLMakeup xml,XMLObject parent,Object[] containers) throws Exception {
         super(xml,parent,containers);
-
+        String id = System.getProperty("tb-instanceid");// can set by start script
+        if(StringUtils.isNotBlank(id)){
+            this.instanceid = id;
+        }
         if(StringUtils.isBlank(instanceid)){
            throw new RuntimeException("this instance name is null. please set in bridge.xml");
         }
         if(!instanceid.startsWith("INS-")){
             throw new RuntimeException("this instance name is must start with [INS-]");
         }
+
         /*XMLMakeup cs = (XMLMakeup)ArrayUtils.getFirst(getXML().getChild("cells"));
         if(null != cs){
             XMLMakeup[] xs = cs.getChild("cell");

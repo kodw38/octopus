@@ -5,6 +5,7 @@ import com.octopus.isp.bridge.launchers.impl.pageframe.channel.IPageCodePathMapp
 import com.octopus.isp.ds.ClientInfo;
 import com.octopus.isp.ds.RequestParameters;
 import com.octopus.utils.alone.ArrayUtils;
+import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.thread.ds.InvokeTaskByObjName;
 import com.octopus.utils.xml.XMLMakeup;
@@ -237,10 +238,30 @@ public class HttpUtils extends XMLObject {
         }
 
         String basepath = null;
+        String protocol = request.getScheme();
+        if(log.isDebugEnabled()) {
+            Enumeration<String> el = request.getHeaderNames();
+            while (el.hasMoreElements()) {
+                String k = el.nextElement();
+                log.error("header:" + k + ":" + request.getHeader(k));
+            }
+        }
+        String isHttps = request.getHeader("isHttps");
+        int port = request.getServerPort();
+        if(StringUtils.isNotBlank(isHttps)){
+            if(StringUtils.isNumeric(isHttps)){
+                port = Integer.parseInt(isHttps);
+            }
+            if(log.isDebugEnabled()){
+                log.debug("old protocol:"+protocol+" new https");
+            }
+            protocol="https";
+        }
+
         if(StringUtils.isNotBlank(pageseq)){
-            basepath=request.getScheme()+"://"+request.getServerName()+":"+request.getServerPort()+request.getContextPath()+"/"+startwith+"/"+pageseq+url.substring(0,url.lastIndexOf("/")+1);
+            basepath=protocol+"://"+request.getServerName()+":"+port+request.getContextPath()+"/"+startwith+"/"+pageseq+url.substring(0,url.lastIndexOf("/")+1);
         }else{
-            basepath=request.getScheme()+"://"+request.getServerName()+":"+request.getServerPort()+request.getContextPath()+url.substring(0,url.lastIndexOf("/")+1);
+            basepath=protocol+"://"+request.getServerName()+":"+port+request.getContextPath()+url.substring(0,url.lastIndexOf("/")+1);
         }
         response.setContentType("text/html;charset=UTF-8");
         response.setCharacterEncoding("UTF-8");

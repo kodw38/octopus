@@ -37,7 +37,9 @@ public class PointParseFormat implements IPointParse {
                         data.put("${return}", ret);
                     }
                     Object r = data.get("${return}");
-
+                    if(log.isDebugEnabled()){
+                        log.debug("before format obj:"+r);
+                    }
                     String decode = (String) map.get("decode");
                     if (StringUtils.isNotBlank(decode)) {
                         if (decode.equals("base64") && r instanceof String) {
@@ -104,6 +106,9 @@ public class PointParseFormat implements IPointParse {
                             r = XMLUtil.getDataFromString((String) r);
                     }
                     data.put("${return}", r);
+                    if(log.isDebugEnabled()){
+                        log.debug("after format obj:"+r);
+                    }
                 } else {
                     String[] ts = tm.split(",");
                     if (null != ts && ts.length == 2) {

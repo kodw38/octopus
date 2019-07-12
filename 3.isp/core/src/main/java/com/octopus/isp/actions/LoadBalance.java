@@ -83,7 +83,7 @@ public class LoadBalance extends XMLDoObject {
                             ret.add((Map) m);
                             ((Map) m).put("GetOutTime", System.currentTimeMillis());
                         }
-                        env.addParameter("~assignInsKey", xmlid);
+                        env.addParameter("${^~assignInsKey}", ret);
                         if (log.isDebugEnabled()) {
                             log.debug("maybe invoke service [" + ArrayUtils.toJoinString(env.getTargetNames()) + "] used instance [" + ret.get(0) + "]");
                         }
@@ -97,34 +97,34 @@ public class LoadBalance extends XMLDoObject {
                 //使用完成后反馈分配的实例信息
                 if("setStatus".equals(op)){
                     Throwable e = env.getException();
-                    String assignInsKey = (String)env.getParameter("~assignInsKey");
-                    env.removeParameter("~assignInsKey");
-                    if(StringUtils.isNotBlank(assignInsKey)) {
-                        //获取之前分配的实例信息
-                        List<Map> ls = (List) env.getParameter("${"+assignInsKey+"}");
-                        if (null != ls && ls.size() > 0) {
-                            Map ret = ls.get(0);
-                            if (null != ret) {
-                                ret.put("PutInTime", System.currentTimeMillis());
-                                if (null != ret.get("GetOutTime")) {
-                                    ret.put("Cost", ((Long) ret.get("PutInTime") - (Long) ret.get("GetOutTime")));
-                                }
-                                Object o = input.get("msg");
-                                //如果网络异常设置该实例为不可用
-                                if ((null != e &&
-                                        (ExceptionUtil.getRootCase(e) instanceof HttpException
-                                                || ExceptionUtil.getRootCase(e) instanceof ConnectException
-                                                || ExceptionUtil.getRootCase(e) instanceof SocketTimeoutException))
-                                        || (null != o && o instanceof Map && null != ((Map) o).get("is_error")
-                                        && StringUtils.isTrue((String) ((Map) o).get("is_error")) && ((String) ((Map) o).get("errorcode")).equals("S-404"))) {
-                                    //如果出现网络异常，设置可链接属性为不可链接
-                                    ret.put("isConnected", false);
-                                    log.error("remove loadBalance instance " + ret);
-                                    //return "disConnect";
-                                }
+                    //String assignInsKey = (String)env.getParameter("~assignInsKey");
+                    //env.removeParameter("~assignInsKey");
+                    List<Map> ls = (List) env.getParameter("${^~assignInsKey}");
+
+                    //获取之前分配的实例信息
+                    if (null != ls && ls.size() > 0) {
+                        Map ret = ls.get(0);
+                        if (null != ret) {
+                            ret.put("PutInTime", System.currentTimeMillis());
+                            if (null != ret.get("GetOutTime")) {
+                                ret.put("Cost", ((Long) ret.get("PutInTime") - (Long) ret.get("GetOutTime")));
+                            }
+                            Object o = input.get("msg");
+                            //如果网络异常设置该实例为不可用
+                            if ((null != e &&
+                                    (ExceptionUtil.getRootCase(e) instanceof HttpException
+                                            || ExceptionUtil.getRootCase(e) instanceof ConnectException
+                                            || ExceptionUtil.getRootCase(e) instanceof SocketTimeoutException))
+                                    || (null != o && o instanceof Map && null != ((Map) o).get("is_error")
+                                    && StringUtils.isTrue((String) ((Map) o).get("is_error")) && ((String) ((Map) o).get("errorcode")).equals("S-404"))) {
+                                //如果出现网络异常，设置可链接属性为不可链接
+                                ret.put("isConnected", false);
+                                log.error("remove loadBalance instance " + ret);
+                                //return "disConnect";
                             }
                         }
                     }
+
                 }
             }
         }

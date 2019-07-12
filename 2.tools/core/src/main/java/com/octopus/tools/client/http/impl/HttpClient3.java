@@ -181,14 +181,18 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
                     client.executeMethod(httppost);
 
                     Header[] hs = httppost.getResponseHeaders();
-                    if(null != hs)
+                    if(null != hs) {
                         setHeaderToHttpServletResponse(hs, saveResponseCookies, parameters);
+                    }
                     parameters.setStatusCode(httppost.getStatusCode());
                     if(null != httppost.getResponseBody()) {
                         parameters.getResponseOutputStream().write(httppost.getResponseBody());
+                        if(log.isDebugEnabled()){
+                            log.debug("url:"+url+" |response:"+new String(((ByteArrayOutputStream) parameters.getResponseOutputStream()).toByteArray(), "utf-8"));
+                        }
                     }else{
                         if(log.isDebugEnabled()){
-                            System.out.println("response body is null, url:"+url);
+                            log.debug("response body is null, url:"+url);
                         }
                     }
                     if(Logger.isInfoEnabled()){
@@ -282,6 +286,9 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
                     rhs.put("Set-Cookie",v);
                 }else
                     rhs.put(h.getName(),h.getValue());
+                if(log.isDebugEnabled()){
+                    log.debug("response header:"+h.toString());
+                }
             }
             httpDS.setResponseHeaders(rhs);
         }
