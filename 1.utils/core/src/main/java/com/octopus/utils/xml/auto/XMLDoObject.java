@@ -227,7 +227,6 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
     }
 
     protected boolean checkInputParameterByDesc(XMLParameter env,Map inputData) throws ISPException, IOException {
-
         if (null != getDescStructure()) {
             Map dc = (Map)getDescStructure().get("input");
             if(null != dc){
@@ -253,6 +252,10 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                     if(!b) return b;
                 }
             }else if(inputData instanceof Map && parameterDesc instanceof Map) {
+                //check multiRelation in map data
+                boolean bb = Desc.checkItemByDesc(null,env,this,inputData,(Map)parameterDesc);
+                if(!bb) return bb;
+
                 Iterator its = ((Map)inputData).keySet().iterator();
                 while (its.hasNext()) {
                     Object k = its.next();

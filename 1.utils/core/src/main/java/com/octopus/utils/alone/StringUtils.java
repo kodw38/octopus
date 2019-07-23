@@ -34,6 +34,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.AccessController;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -7999,6 +8000,61 @@ public class StringUtils {
             }
         }
         return ret;
+    }
+    public static String convertJsonList2XMLString(String name,List o) throws Exception{
+        if(null != o){
+            StringBuffer sb = new StringBuffer();
+            for(Object oo:o){
+                if(null== oo)continue;
+                if(List.class.isAssignableFrom(oo.getClass())){
+                    sb.append(convertJsonList2XMLString(name, (List) oo));
+                }else if(Map.class.isAssignableFrom(oo.getClass())){
+                    sb.append("<").append(name).append(">").append(convertJsonMap2XMLString((Map)oo)).append("</").append(name).append(">");
+                }else{
+                    sb.append("<").append(name).append(">").append(oo.toString()).append("</").append(name).append(">");
+                }
+            }
+            return sb.toString();
+        }
+        return "";
+    }
+    static SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    public static String convertJsonMap2XMLString(Map jsonMap)throws Exception{
+        StringBuffer sb = new StringBuffer();
+        Iterator its = jsonMap.keySet().iterator();
+        while(its.hasNext()){
+            String k = (String)its.next();
+            Object o = jsonMap.get(k);
+            //过滤空值(1.字符串)
+            if(null == o
+                    || (String.class.isAssignableFrom(o.getClass()) && StringUtils.isEmpty((String)o))){
+                continue;
+            }
+            else if(List.class.isAssignableFrom(o.getClass())){
+                sb.append(convertJsonList2XMLString(k, (List) o));
+            }else if(Map.class.isAssignableFrom(o.getClass())){
+                sb.append("<").append(k).append(">").append(convertJsonMap2XMLString((Map) o)).append("</").append(k).append(">");
+            }else if(o.toString().trim().startsWith("<")&&!o.toString().trim().startsWith("<![CDATA[")){
+                sb.append("<").append(k).append(">").append("<![CDATA[").append(o.toString().replaceAll("\n\t", "")).append("]]>").append("</").append(k).append(">");
+            }
+            else if(Date.class.isAssignableFrom(o.getClass())){
+
+                sb.append("<").append(k).append(">").append(format.format((Date)o)).append("</").append(k).append(">");
+            }
+            else if(String.class.isAssignableFrom(o.getClass())){
+                //TODO 时间格式转换待完善
+                String value = (String)o;
+                //value = value.contains(":")?value:value.trim()+" 00:00:00";
+                //Timestamp timeStamp = Timestamp.valueOf(value);
+                //SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+
+                sb.append("<").append(k).append(">").append(value).append("</").append(k).append(">");
+            }
+            else {
+                sb.append("<").append(k).append(">").append(o.toString()).append("</").append(k).append(">");
+            }
+        }
+        return sb.toString();
     }
 
 }

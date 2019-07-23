@@ -12,6 +12,7 @@ import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.file.FileInfo;
 import com.octopus.utils.file.FileUtils;
 import com.octopus.utils.net.ws.wsdl.WSDLParse;
+import com.octopus.utils.rule.RuleUtil;
 import com.octopus.utils.time.DateTimeUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
@@ -301,6 +302,9 @@ public class Desc extends XMLDoObject{
         while(p.hasNext()){
             String k = p.next();
             Object o = src.get(k);
+            if(k.startsWith("@")){
+                continue;
+            }
             if(o ==null){
                 target.put(k,o);
             }else if(o instanceof Map && ((Map)o).size()>0){
@@ -1764,7 +1768,27 @@ public class Desc extends XMLDoObject{
                 if(null != env) {
                     Object v = env.getParameter("${context}");
                     if(null != v && v instanceof Context) {
-                        boolean b= ((Context)v).checkFormat((String)desc.get("@check"),o);
+                        String rule = (String)desc.get("@check");
+                        boolean b=true;
+                        if(null != o && o instanceof Map && XMLParameter.isHasRetainChars(rule)||rule.startsWith("(")){
+                            try {
+                                XMLParameter pars = obj.getEmptyParameter();
+                                pars.putAll((Map)o);
+                                Object rul = pars.getExpressValueFromMap(rule, obj);
+                                if (rul instanceof String) {
+                                    Object r = RuleUtil.doRule((String) rul, (Map)o);
+                                    if (null != r && r instanceof Boolean && !(Boolean) r) {
+                                        b = (Boolean)r;
+                                    }else if(null != r && r instanceof String){
+                                        b = StringUtils.isTrue((String)r);
+                                    }
+                                }
+                            }catch (Exception e){
+                                log.error("",e);
+                            }
+                        }else {
+                            b = ((Context) v).checkFormat(rule, o);
+                        }
                         if(!b){
                             throw new ISPException("ISP02001", "data [(value)] isinvalid type parameter name [(name)]", new String[]{o.toString(), name});
                         }
@@ -1795,11 +1819,11 @@ public class Desc extends XMLDoObject{
                     throw new ISPException("ISP02001","data is must need in parameter name [(name)]",new String[]{name});
                 }
             }
-            if(null != desc.get("@checkExpress")){
-                    /*Object v = null;
-                    if (null != v && !StringUtils.isTrue(v.toString())) {
-                        throw new ISPException("ISP02001", "data [(value)] isinvalid type parameter name [(name)]", new String[]{o.toString(), name});
-                    }*/
+            if(null != desc.get("@checkExpress") && !"".equals(desc.get("@checkExpress"))){
+                Object v = env.getValueFromExpress(desc.get("@checkExpress"),obj);
+                if (null != v && !StringUtils.isTrue(v.toString())) {
+                    throw new ISPException("ISP02001", "data [(value)] does not match express [(express)] type parameter name [(name)]", new String[]{o.toString(),(String)desc.get("@checkExpress"), name});
+                }
             }
             if(null != desc.get("@dependFields")){
 

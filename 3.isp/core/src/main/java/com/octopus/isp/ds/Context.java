@@ -2,6 +2,7 @@ package com.octopus.isp.ds;
 
 import com.octopus.tools.i18n.II18N;
 import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.time.DateTimeUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.auto.XMLParameter;
@@ -56,7 +57,7 @@ public class Context extends XMLParameter {
     }
 
 
-    public boolean checkFormat(String type,Object value){
+    public boolean checkFormat(String type,Object value) throws ISPException{
         if(StringUtils.isNotBlank(type) && null != value && !"".equals(value)){
             if(!type.startsWith("format")){
                 type="format."+type;
