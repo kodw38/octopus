@@ -3,12 +3,15 @@ package com.octopus.utils.xml.auto.pointparses;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.cls.ClassUtils;
+import com.octopus.utils.exception.ExceptionUtil;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.time.DateTimeUtils;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.IPointParse;
 import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -24,7 +27,7 @@ import java.util.Map;
 public class PointParseRange implements IPointParse {
     transient static Log log = LogFactory.getLog(PointParseRange.class);
     @Override
-    public String parse(String str, Map data,XMLObject obj) {
+    public String parse(String str, Map data,XMLObject obj) throws ISPException{
         String t = str.substring(1,str.length()-1);
         if(t.equals("${msg}")){
             //System.out.println();
@@ -123,7 +126,9 @@ public class PointParseRange implements IPointParse {
                                         pars.put("^${input}",input);
                                         ((XMLDoObject) o).doThing(pars, null);
                                         v = ((ResultCheck)pars.getResult()).getRet();
-                                    }catch (Exception e){}
+                                    }catch (Exception e){
+                                        throw ExceptionUtil.getRootCase(e);
+                                    }
                                 }
                             }
                             if(null != v){
@@ -147,7 +152,10 @@ public class PointParseRange implements IPointParse {
             } else {
                 return str;
             }
-        }catch (Exception e){
+        }catch (ISPException e){
+            log.error("PointParseRange",e);
+            throw e;
+        }catch (Throwable e){
             log.error("PointParseRange",e);
         }
         return str;

@@ -31,13 +31,17 @@ public class ISPException extends Exception{
         this.msg=message;
     }
     public String getRealMsg(){
-        if(null == realMsg){
-            if(null != msg_args)
-                realMsg=(code==null?"":"["+code+"] ")+(String)XMLParameter.getExpressValueFromMap(msg,msg_args,null);
-            else
-                realMsg=(code==null?"":"["+code+"] ")+msg;
+        try {
+            if (null == realMsg) {
+                if (null != msg_args)
+                    realMsg = (code == null ? "" : "[" + code + "] ") + (String) XMLParameter.getExpressValueFromMap(msg, msg_args, null);
+                else
+                    realMsg = (code == null ? "" : "[" + code + "] ") + msg;
+            }
+            return realMsg;
+        }catch (Exception e){
+            return "";
         }
-        return realMsg;
     }
     public String getMessage(){
         return getRealMsg();
@@ -47,21 +51,25 @@ public class ISPException extends Exception{
     }
 
     static Object[] getTransferMsg(String message,String[] args){
-        Map msg_args=null;
-        if(null == message)return null;
-        if(null == args)return new Object[]{message,msg_args};
-        if(null != args && args.length>0){
-            List<String> m = StringUtils.getTagsNoMark(message,"[(",")]");
-            if(null != m) {
-                msg_args = new LinkedHashMap();
-                for (int i = 0; i < m.size(); i++) {
-                    if(null != args && args.length>=i && null !=args[i]) {
-                        msg_args.put(m.get(i), args[i]);
+        try {
+            Map msg_args = null;
+            if (null == message) return null;
+            if (null == args) return new Object[]{message, msg_args};
+            if (null != args && args.length > 0) {
+                List<String> m = StringUtils.getTagsNoMark(message, "[(", ")]");
+                if (null != m) {
+                    msg_args = new LinkedHashMap();
+                    for (int i = 0; i < m.size(); i++) {
+                        if (null != args && args.length >= i && null != args[i]) {
+                            msg_args.put(m.get(i), args[i]);
+                        }
                     }
                 }
             }
+            return new Object[]{(String) XMLParameter.getExpressValueFromMap(message, msg_args, null), msg_args};
+        }catch (Exception e){
+            return null;
         }
-        return new Object[]{(String)XMLParameter.getExpressValueFromMap(message,msg_args,null),msg_args};
     }
 
     public Map getMsgArgs(){

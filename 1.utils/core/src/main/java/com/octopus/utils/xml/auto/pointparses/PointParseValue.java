@@ -2,6 +2,7 @@ package com.octopus.utils.xml.auto.pointparses;
 
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.IPointParse;
 import com.octopus.utils.xml.auto.XMLParameter;
@@ -23,7 +24,7 @@ import java.util.Map;
 public class PointParseValue implements IPointParse {
     static transient Log log = LogFactory.getLog(PointParseValue.class);
     @Override
-    public String parse(String str, Map data,XMLObject obj) {
+    public String parse(String str, Map data,XMLObject obj) throws ISPException {
         String tm =str.substring("getvalue(".length(), str.length() - 1);
         String[] ts = tm.split(",");
         if(ts.length==3){

@@ -1,6 +1,7 @@
 package com.octopus.isp.ds;
 
 import com.octopus.utils.alone.ArrayUtils;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.thread.ds.InvokeTaskByObjName;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
@@ -37,7 +38,7 @@ public class Contexts extends XMLObject {
     }
 
 
-    public Context getContext(RequestParameters requestData){
+    public Context getContext(RequestParameters requestData)throws ISPException {
         //todo find a context by user requestData
         XMLMakeup xs = (XMLMakeup)ArrayUtils.getFirst(getXML().getChild("context"));
         //to generator a Context

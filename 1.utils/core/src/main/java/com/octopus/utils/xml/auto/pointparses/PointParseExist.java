@@ -2,6 +2,7 @@ package com.octopus.utils.xml.auto.pointparses;
 
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.IPointParse;
 import com.octopus.utils.xml.auto.XMLParameter;
@@ -70,7 +71,7 @@ public class PointParseExist implements IPointParse {
         throw new Exception(this.getClass().getName()+" now not support compare type:"+o.getClass());
     }
     //判断Map中的元素是否满足,参数二的表达式
-    boolean isMapElementExist(Map m,String exp,Map data,XMLObject obj){
+    boolean isMapElementExist(Map m,String exp,Map data,XMLObject obj)throws ISPException {
         if(null != m){
             Iterator its = m.keySet().iterator();
             while(its.hasNext()){

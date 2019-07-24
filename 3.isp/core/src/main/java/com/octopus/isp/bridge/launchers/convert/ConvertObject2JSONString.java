@@ -35,7 +35,7 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
     }
 
     @Override
-    public Object convert(XMLParameter env,Object par) throws IOException {
+    public Object convert(XMLParameter env,Object par) throws IOException, ISPException{
         if(null != par){
             List ids = new ArrayList();
             String res =null;
@@ -137,7 +137,7 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
         return null;
     }
 
-    String getException(XMLParameter par,Throwable e){
+    String getException(XMLParameter par,Throwable e)throws ISPException{
         if(null != exceptionMsg) {
             for(Map m:exceptionMsg) {
                 Class c = (Class)m.get("clazz");
@@ -162,7 +162,7 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
         }
         return null;
     }
-    String getErrorMsg(XMLParameter par,String code,String msg){
+    String getErrorMsg(XMLParameter par,String code,String msg)throws ISPException{
         if(StringUtils.isNotBlank(code)){
             XMLMakeup[] xs = getXML().getChild("errors");
             if(null != xs && xs.length>0) {

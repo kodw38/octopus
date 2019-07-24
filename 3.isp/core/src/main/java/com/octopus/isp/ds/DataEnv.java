@@ -84,15 +84,19 @@ public class DataEnv extends XMLDoObject {
     }
 
     void setEnvProperty(XMLParameter par,XMLMakeup xml){
-        List<XMLMakeup> ps = xml.getChildren();
-        if(null != ps && null != par){
-            for(XMLMakeup p:ps){
-                String  k = (String)p.getProperties().get("key");
-                String v = (String)p.getText();
-                if(StringUtils.isNotBlank(v) && StringUtils.isNotBlank(k)){
-                    par.addGlobalParameter(k,par.getExpressValueFromMap(v,this));
+        try {
+            List<XMLMakeup> ps = xml.getChildren();
+            if (null != ps && null != par) {
+                for (XMLMakeup p : ps) {
+                    String k = (String) p.getProperties().get("key");
+                    String v = (String) p.getText();
+                    if (StringUtils.isNotBlank(v) && StringUtils.isNotBlank(k)) {
+                        par.addGlobalParameter(k, par.getExpressValueFromMap(v, this));
+                    }
                 }
             }
+        }catch (Exception e){
+            log.error("",e);
         }
     }
 

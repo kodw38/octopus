@@ -272,7 +272,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                                 boolean b = checkByDesc(env,dv.getClass().isArray()?((Object[])dv)[0]:((Collection)dv).iterator().next(),o);
                                 if(!b) return b;
                             }
-                        } else if (v instanceof Collection) {
+                        } else if (v instanceof Collection && (dv.getClass().isArray() || dv instanceof Collection)) {
                             Iterator it = ((Collection)v).iterator();
                             while(it.hasNext()){
                                 Object v1 = it.next();
@@ -1198,7 +1198,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         }
     }
 
-    protected boolean checkStr(XMLParameter env,String exp){
+    protected boolean checkStr(XMLParameter env,String exp)throws ISPException{
         Object o = env.getExpressValueFromMap(exp,this);
         return ObjectUtils.isTrue(o);
     }
@@ -1228,7 +1228,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                     //String ex = (String)((Map)exp).get("check");
                     if(/*!checkStr(env,ex)*/!ObjectUtils.isTrue(((Map)srcMap.get("check")).get("check"))){
                         srcMap.put("check",false);
-
+                        exp = env.getMapValueFromParameter((Map)exp,this);
                         Object error = ((Map)exp).get("error");
                         if(null != error){
                             if(error instanceof String){
@@ -1243,11 +1243,12 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                                 Map em= (Map)error;
                                 String msg = (String)em.get("msg");
                                 String go = (String)em.get("break");
+                                String code = (String)em.get("code");
                                 if(StringUtils.isNotBlank(msg)){
                                     if(log.isDebugEnabled())
                                         log.debug(msg);
                                     if(StringUtils.isBlank(go)){
-                                        throw new Exception(msg+" - "+error.toString());
+                                        throw new ISPException(code,msg);
                                     }
                                 }
                                 if(StringUtils.isNotBlank(go)){
@@ -1357,7 +1358,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
      * @param c
      * @param parameter
      */
-    void doOneNotification(Map c,XMLParameter parameter){
+    void doOneNotification(Map c,XMLParameter parameter)throws ISPException{
         if(StringUtils.isNotBlank(c.get("action")) && StringUtils.isNotBlank(c.get("op"))) {
             boolean isAsyn = true;
             if(null != c.get("isAsyn")) {
@@ -1377,7 +1378,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
             }
         }
     }
-    void doNotification(Map config,XMLParameter parameter){
+    void doNotification(Map config,XMLParameter parameter)throws ISPException{
         //任务执行成功后，执行通知任务do notification
         if(null != config && config.containsKey("notification")){
             Object notification = config.get("notification");

@@ -1577,7 +1577,7 @@ public class Desc extends XMLDoObject{
        return null;
     }
 
-    Map trans(XMLParameter pars,Map m){
+    Map trans(XMLParameter pars,Map m)throws ISPException{
         if(null == m)return null;
         Map ret = new HashMap();
         ObjectUtils.appendDeepMapNotReplaceKey(m,ret);
@@ -1769,29 +1769,34 @@ public class Desc extends XMLDoObject{
                     Object v = env.getParameter("${context}");
                     if(null != v && v instanceof Context) {
                         String rule = (String)desc.get("@check");
-                        boolean b=true;
-                        if(null != o && o instanceof Map && XMLParameter.isHasRetainChars(rule)||rule.startsWith("(")){
+
+                        boolean b = true;
+                        if (null != o && o instanceof Map && XMLParameter.isHasRetainChars(rule) || rule.startsWith("(")) {
                             try {
                                 XMLParameter pars = obj.getEmptyParameter();
-                                pars.putAll((Map)o);
+                                pars.putAll((Map) o);
                                 Object rul = pars.getExpressValueFromMap(rule, obj);
                                 if (rul instanceof String) {
-                                    Object r = RuleUtil.doRule((String) rul, (Map)o);
+                                    Object r = RuleUtil.doRule((String) rul, (Map) o);
                                     if (null != r && r instanceof Boolean && !(Boolean) r) {
-                                        b = (Boolean)r;
-                                    }else if(null != r && r instanceof String){
-                                        b = StringUtils.isTrue((String)r);
+                                        b = (Boolean) r;
+                                    } else if (null != r) {
+                                        b = StringUtils.isTrue(r.toString());
                                     }
                                 }
-                            }catch (Exception e){
-                                log.error("",e);
+                            } catch (ISPException e) {
+                                throw e;
+                            } catch (Exception e) {
+                                log.error("", e);
+
                             }
-                        }else {
+                        } else {
                             b = ((Context) v).checkFormat(rule, o);
                         }
-                        if(!b){
+                        if (!b) {
                             throw new ISPException("ISP02001", "data [(value)] isinvalid type parameter name [(name)]", new String[]{o.toString(), name});
                         }
+
 
                     }
                 }

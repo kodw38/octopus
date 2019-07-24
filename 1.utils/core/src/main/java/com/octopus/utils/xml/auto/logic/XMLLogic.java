@@ -142,7 +142,7 @@ public class XMLLogic extends XMLDoObject{
         obj.doThing(p, x);
         par.setResult(p.getResult());
     }
-    boolean addResult2Parameter(XMLParameter env,XMLMakeup x){
+    boolean addResult2Parameter(XMLParameter env,XMLMakeup x)throws ISPException{
         try{
             if(null !=env && null != env.getResult() && env.getResult() instanceof ResultCheck){
                 ResultCheck os = (ResultCheck)env.getResult();
@@ -624,7 +624,7 @@ public class XMLLogic extends XMLDoObject{
         env.removeParameter("${while_same_cond_exe_count}");
         env.removeParameter("${while_same_cond_exe_obj}");
     }
-    void doResult(XMLParameter env,XMLMakeup xml){
+    void doResult(XMLParameter env,XMLMakeup xml)throws ISPException{
         String value = xml.getProperties().getProperty("value");
         if(StringUtils.isNotBlank(value)) {
             if (value.startsWith("{")) {

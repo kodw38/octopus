@@ -4,6 +4,7 @@ import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.SNUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.exception.ExceptionUtil;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.logic.XMLLogic;
@@ -271,7 +272,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             return true;
         return false;
     }
-    public static Object newInstance(XMLMakeup xml,Class c,Object data,boolean isGlobal,XMLObject obj) {
+    public static Object newInstance(XMLMakeup xml,Class c,Object data,boolean isGlobal,XMLObject obj)throws ISPException{
         XMLParameter x = null;
         try {
             x = (XMLParameter)c.newInstance();
@@ -299,7 +300,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
      *  </a>
      */
 
-    public static void setProperties(Map p,XMLMakeup x,Object data,boolean isGlobal,XMLObject obj){
+    public static void setProperties(Map p,XMLMakeup x,Object data,boolean isGlobal,XMLObject obj)throws ISPException{
        if(null != x && StringUtils.isNotBlank(x.getId())){
            if(x.getChildren().size()>0){
                if(!x.getId().equals(x.getName())) {
@@ -318,7 +319,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
            }
        }
     }
-    static void setProperty(Map p,XMLMakeup x,Object data,boolean isGlobal,XMLObject obj){
+    static void setProperty(Map p,XMLMakeup x,Object data,boolean isGlobal,XMLObject obj)throws ISPException{
         String key = x.getId();
         if(StringUtils.isNotBlank(key)) {
             if(null != data){
@@ -360,7 +361,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
      * @param jsonMap
      * @return
      */
-    public Map getMapValueFromParameter(Map jsonMap,XMLObject obj){
+    public Map getMapValueFromParameter(Map jsonMap,XMLObject obj)throws ISPException{
         return ObjectUtils.getValueMapFromMapDataByJsonMapExp(getReadOnlyParameter(),jsonMap,NestTagsBegin,NestTagsEnd,PointParses,StringReturnNestTagsBegin,null,obj);
     }
 
@@ -414,7 +415,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
      * @param jsonMap
      * @return
      */
-    public Map getManualMapValueFromParameter(Map jsonMap,XMLObject obj){
+    public Map getManualMapValueFromParameter(Map jsonMap,XMLObject obj)throws ISPException{
         return ObjectUtils.getValueMapFromMapDataByJsonMapExp(getReadOnlyParameter(),jsonMap,NestTagsBegin,NestTagsEnd,PointParses,StringReturnNestTagsBegin,manualChars,obj);
     }
 
@@ -424,16 +425,16 @@ public class XMLParameter extends ParameterMap implements Serializable {
      * @param jsonMap
      * @return
      */
-    public static Map getMapValueFromParameter(Map data,Map jsonMap,XMLObject obj){
+    public static Map getMapValueFromParameter(Map data,Map jsonMap,XMLObject obj)throws ISPException{
         return ObjectUtils.getValueMapFromMapDataByJsonMapExp(data,jsonMap,NestTagsBegin,NestTagsEnd,PointParses,StringReturnNestTagsBegin,null,obj);
     }
-    public static List getValueListFromMapDataByJsonMapExp(Map data,List strlist,XMLObject obj){
+    public static List getValueListFromMapDataByJsonMapExp(Map data,List strlist,XMLObject obj)throws ISPException{
         return ObjectUtils.getValueListFromMapDataByJsonMapExp(data,strlist,XMLParameter.NestTagsBegin,XMLParameter.NestTagsEnd,XMLParameter.PointParses,StringReturnNestTagsBegin,null,obj);
     }
-    public static Object getExpressValueFromMap(String exp,Map data,XMLObject obj){
+    public static Object getExpressValueFromMap(String exp,Map data,XMLObject obj)throws ISPException{
         return ObjectUtils.getExpressValueFromMap(exp,XMLParameter.NestTagsBegin,XMLParameter.NestTagsEnd,data,XMLParameter.PointParses,obj);
     }
-    public static Object getValueFromExpress(String exp,Map data,XMLObject obj){
+    public static Object getValueFromExpress(String exp,Map data,XMLObject obj)throws ISPException{
         return ObjectUtils.getValueFromExpress(exp,data,XMLParameter.NestTagsBegin,XMLParameter.NestTagsEnd,XMLParameter.PointParses,StringReturnNestTagsBegin,obj);
     }
     /**
@@ -441,10 +442,10 @@ public class XMLParameter extends ParameterMap implements Serializable {
      * @param exp
      * @return
      */
-    public Object getExpressValueFromMap(String exp,XMLObject obj){
+    public Object getExpressValueFromMap(String exp,XMLObject obj)throws ISPException{
         return ObjectUtils.getExpressValueFromMap(exp,XMLParameter.NestTagsBegin,XMLParameter.NestTagsEnd,getReadOnlyParameter(),XMLParameter.PointParses,obj);
     }
-    public Object getValueFromExpress(Object exp,XMLObject obj){
+    public Object getValueFromExpress(Object exp,XMLObject obj)throws ISPException{
         return ObjectUtils.getValueFromExpress(exp,getReadOnlyParameter(),XMLParameter.NestTagsBegin,XMLParameter.NestTagsEnd,XMLParameter.PointParses,StringReturnNestTagsBegin,obj);
     }
 
@@ -845,7 +846,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
         put("^iserror", String.valueOf(error));
     }
 
-    public void addXmlParameter(XMLMakeup xmlParameter,boolean isGlobal,XMLObject obj){
+    public void addXmlParameter(XMLMakeup xmlParameter,boolean isGlobal,XMLObject obj)throws ISPException{
         if(null != xmlParameter){
             HashMap m = new HashMap();
             setProperties(m,xmlParameter,null,isGlobal,obj);
@@ -964,7 +965,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
     }
 
 
-    public String getLoginUserName(){
+    public String getLoginUserName()throws ISPException{
        return (String)getValueFromExpress("${session}.UserName",null);
     }
 

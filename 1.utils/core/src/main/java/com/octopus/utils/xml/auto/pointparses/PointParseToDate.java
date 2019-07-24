@@ -2,6 +2,7 @@ package com.octopus.utils.xml.auto.pointparses;
 
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.cls.ClassUtils;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.IPointParse;
 import com.octopus.utils.xml.auto.XMLParameter;
@@ -16,7 +17,7 @@ import java.util.Map;
 public class PointParseToDate implements IPointParse {
     static transient Log log  = LogFactory.getLog(PointParseToDate.class);
     @Override
-    public String parse(String str, Map data,XMLObject obj) {
+    public String parse(String str, Map data,XMLObject obj) throws ISPException {
         String t =str.substring("todate(".length(), str.length() - 1);
         if(XMLParameter.isHasRetainChars(t, XMLParameter.NestTagsBegin)){
             return str;

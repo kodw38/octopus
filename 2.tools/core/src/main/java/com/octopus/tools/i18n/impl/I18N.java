@@ -337,7 +337,7 @@ public class I18N extends XMLDoObject implements II18N{
      * @param country
      * @return
      */
-    String chgItem(String lan,String country,String key,Object oldvalue,Map<String,String> nvalue,Map args,Map obj){
+    String chgItem(String lan,String country,String key,Object oldvalue,Map<String,String> nvalue,Map args,Map obj)throws ISPException{
         if(StringUtils.isNotBlank(key) && null != oldvalue && null != nvalue && null != args && null != obj && obj instanceof Map ){//exception
               if(nvalue.size()==1){
                   String k = nvalue.keySet().iterator().next();

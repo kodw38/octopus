@@ -20,6 +20,7 @@ import com.octopus.utils.alone.impl.MappingInfo;
 import com.octopus.utils.alone.impl.StructInfo;
 import com.octopus.utils.cls.ClassUtils;
 import com.octopus.utils.cls.POJOUtil;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.si.AgentMain;
 import com.octopus.utils.si.JavaSizeOf;
 import com.octopus.utils.si.jvm.JVMUtil;
@@ -519,7 +520,7 @@ public class ObjectUtils {
         }
     }
 
-    public static List getValueListFromMapDataByJsonMapExp(Map data,List list,char[][] begintag,char [][] endtag,IPointParse[] parses,char[][] stringBeginTag,Map rep,XMLObject obj){
+    public static List getValueListFromMapDataByJsonMapExp(Map data,List list,char[][] begintag,char [][] endtag,IPointParse[] parses,char[][] stringBeginTag,Map rep,XMLObject obj)throws ISPException{
         List ret = new LinkedList();
         Object o = null;
         for(int i=0;i<list.size();i++){
@@ -537,7 +538,7 @@ public class ObjectUtils {
         return ret;
     }
 
-    public static Object getValueFromExpress(Object v,Map data,char[][] begintag,char [][] endtag,IPointParse[] parses,char[][] stringBeginTag,XMLObject obj){
+    public static Object getValueFromExpress(Object v,Map data,char[][] begintag,char [][] endtag,IPointParse[] parses,char[][] stringBeginTag,XMLObject obj)throws ISPException{
         /*if(((String) v).startsWith("$${")){
             //光变量,获取真实值
             //performance is very good long l= System.currentTimeMillis();
@@ -615,7 +616,7 @@ public class ObjectUtils {
      * @return
      */
     static String[] excludeGet= new String[]{"exe_xml","exe_id","exe_error"};
-    public static Map getValueMapFromMapDataByJsonMapExp(Map data,Map map,char[][] begintag,char [][] endtag,IPointParse[] parses,char[][] stringBeginTag,Map rep,XMLObject obj){
+    public static Map getValueMapFromMapDataByJsonMapExp(Map data,Map map,char[][] begintag,char [][] endtag,IPointParse[] parses,char[][] stringBeginTag,Map rep,XMLObject obj)throws ISPException{
         if(null == map)return null;
         if(Desc.isDescriptionService(map)){ // if service desc not convert variable
             return map;
@@ -839,7 +840,7 @@ public class ObjectUtils {
      * @param data
      * @return
      */
-    public static Object getExpressValueFromMap(String exp,char[][] begintag,char [][] endtag,Map data,IPointParse[] parses,XMLObject obj){
+    public static Object getExpressValueFromMap(String exp,char[][] begintag,char [][] endtag,Map data,IPointParse[] parses,XMLObject obj)throws ISPException{
         /*long l=0;
         if(log.isInfoEnabled())
             l =System.currentTimeMillis();*/
@@ -1038,6 +1039,8 @@ public class ObjectUtils {
 
             }
             return new String(Arrays.copyOf(target,targetCur));
+        }catch (ISPException ex){
+            throw ex;
         }catch (Exception e){
             log.error("get value from map error:"+expchars.length+"\n"+exp,e);
             return exp;
