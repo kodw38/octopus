@@ -28,9 +28,7 @@ import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
 import sun.security.action.GetPropertyAction;
 
-import java.io.ByteArrayInputStream;
-import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.AccessController;
@@ -7171,8 +7169,17 @@ public class StringUtils {
             return Boolean.valueOf((String)v);
         }else if(v.equals("null")){
             return null;
-        }else
+        }else {
+            try {
+                InputStream n = ObjectUtils.convertBase64String2InputStream(v);
+                if(null != n){
+                    return n;
+                }
+            } catch (IOException e) {
+                log.error("",e);
+            }
             return v;
+        }
     }
 
     /**

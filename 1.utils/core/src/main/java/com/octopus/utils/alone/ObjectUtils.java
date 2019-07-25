@@ -39,6 +39,8 @@ import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
 
 import java.io.*;
 import java.lang.instrument.Instrumentation;
@@ -1656,7 +1658,7 @@ public class ObjectUtils {
             }
         }
     }
-    public static String convertMap2String(Map map){
+    public static String convertMap2String(Map map)  {
 /*
         if(log.isDebugEnabled()) {
             new Exception().printStackTrace();
@@ -1686,12 +1688,12 @@ public class ObjectUtils {
         }
         return "";
     }
-    public static String convertList2String(List li){
+    public static String convertList2String(List li) {
         StringBuffer sb = new StringBuffer();
         appendObject2StringBuffer(sb,null,li);
         return sb.toString();
     }
-    public static String convertKeyWithoutThreadNameMap2String(Map map,String[] keys) {
+    public static String convertKeyWithoutThreadNameMap2String(Map map,String[] keys)  {
         StringBuffer sb = new StringBuffer("{");
         boolean isfirst=true;
         if(null != map && map.size()>0){
@@ -1720,7 +1722,7 @@ public class ObjectUtils {
         return sb.toString();
     }
 
-    public static String convertKeyWithoutThreadNameMap2String(Map map){
+    public static String convertKeyWithoutThreadNameMap2String(Map map)  {
         StringBuffer sb = new StringBuffer("{");
         boolean isfirst=true;
         if(null != map && map.size()>0){
@@ -1745,7 +1747,7 @@ public class ObjectUtils {
         sb.append("}");
         return sb.toString();
     }
-    public static void appendObject2StringBuffer(StringBuffer sb,Object o,Object v){
+    public static void appendObject2StringBuffer(StringBuffer sb,Object o,Object v)  {
         if(v==null && o==null){
             return;
         }
@@ -1804,7 +1806,25 @@ public class ObjectUtils {
             sb.append(valuev(v));
         }
     }
-    static String valuev(Object v){
+    static BASE64Encoder base64Encoder = new BASE64Encoder();
+    static String inputStream2StringHeader="data;base64;";
+    public static String convertInputStream2Base64String(InputStream in) throws IOException {
+        byte[] b = new byte[in.available()];
+        in.read(b);
+        return inputStream2StringHeader+base64Encoder.encode(b);
+    }
+    static BASE64Decoder base64Decoder = new BASE64Decoder();
+    public static InputStream convertBase64String2InputStream(String in) throws IOException {
+        if(in.startsWith(inputStream2StringHeader)) {
+            in  = in.substring(inputStream2StringHeader.length());
+            byte[] b = base64Decoder.decodeBuffer(in);
+            ByteArrayInputStream ret = new ByteArrayInputStream(b);
+            return ret;
+        }else{
+            return null;
+        }
+    }
+    static String valuev(Object v)  {
         if(null == v)return "\"\"";
         if(v instanceof String){
             if(((String)v).startsWith("[") || ((String)v).startsWith("{")) {
@@ -1818,6 +1838,13 @@ public class ObjectUtils {
             }
         }else if(v instanceof Date){
             return "\""+DateTimeUtils.date2String((Date)v,"yyyy-MM-dd HH:mm:ss")+"\"";
+        }else if(v instanceof InputStream){
+            try {
+                return convertInputStream2Base64String((InputStream) v);
+            }catch (Exception e){
+                log.error("convert inputStream to String error",e);
+            }
+            return null;
         }else{
             return jsonReaminDeal(v.toString());
         }
@@ -2560,7 +2587,7 @@ public class ObjectUtils {
      * @param list 内容为list或map的字符串
      * @return
      */
-    public static String mergeListString(List<String> list){
+    public static String mergeListString(List<String> list) throws IOException {
         if(null != list){
             if(list.get(0).startsWith("[")){
                 List ret = new LinkedList();
@@ -2618,9 +2645,20 @@ public class ObjectUtils {
                 "                active: 2\n" +
                 "            },",jsonchar,jsonEncodeChars);
         System.out.print(s);*/
-        List ls = StringUtils.convert2ListJSONObject("[\"Home\",\"Service Manage\",\"Data Dictionary\",{\"Log Operations\":[\"Log Search\",\"Realtime Catch\"]},\"Server Operations\",\"Host Operations\",\"Alarm\",{\"Reports\":[\"Trade Log Analyze\"]},{\"I18N\":[\"Page I18N\",\"Data I18n\",\"Service I18N\",\"Exception I18n\"]},{\"Contract\":[\"roleManage\",\"account\"]},{\"Tools\":[\"Release Note Compare\",\"SVN Operate Log\",\"Shell Run Excel Config\",\"ZkQuery\",\"ES Tool\",\"Kibana\"]},\"Applications Manage\",\"Help\"]");
+        /*List ls = StringUtils.convert2ListJSONObject("[\"Home\",\"Service Manage\",\"Data Dictionary\",{\"Log Operations\":[\"Log Search\",\"Realtime Catch\"]},\"Server Operations\",\"Host Operations\",\"Alarm\",{\"Reports\":[\"Trade Log Analyze\"]},{\"I18N\":[\"Page I18N\",\"Data I18n\",\"Service I18N\",\"Exception I18n\"]},{\"Contract\":[\"roleManage\",\"account\"]},{\"Tools\":[\"Release Note Compare\",\"SVN Operate Log\",\"Shell Run Excel Config\",\"ZkQuery\",\"ES Tool\",\"Kibana\"]},\"Applications Manage\",\"Help\"]");
         List<Map> rt = convertJsons2TreeStructure(ls,"id","pId","children","name");
-        System.out.println(rt);
+        System.out.println(rt);*/
+        try {
+            String s = convertInputStream2Base64String(new FileInputStream(new File("C:\\Users\\Administrator\\Pictures\\7.png")));
+            System.out.println(s);
+            FileOutputStream out  = new FileOutputStream(new File("c:/logs/a.png"));
+            InputStream i = convertBase64String2InputStream(s);
+            byte[] b= new byte[i.available()];
+            i.read(b);
+            out.write(b);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
      }
 
     static String[] jsonchar = new String[]{"{","}","[","]","\"","'",":",",","\n"};

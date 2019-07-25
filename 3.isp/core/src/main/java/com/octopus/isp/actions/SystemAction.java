@@ -2236,7 +2236,12 @@ return false;
                             Iterator<String> its = m.keySet().iterator();
                             while(its.hasNext()){
                                 String name = its.next();
-                                InputStream in = (InputStream)m.get(name);
+                                InputStream in=null;
+                                if(m.get(name) instanceof InputStream) {
+                                    in = (InputStream) m.get(name);
+                                }else if(m.get(name) instanceof String){
+                                    in = ObjectUtils.convertBase64String2InputStream((String)m.get(name));
+                                }
                                 FileUtils.saveFile(s+"/"+name,in);
                                 fs = s+"/"+name;
                             }
