@@ -191,7 +191,7 @@ public class RequestParameters extends FlowParameters{
         return (SessionManager)getStaticParameter("${sessionManager}");
     }
     public Session getSession() {
-        return (Session)getParameter("${session}");
+        return (Session)getParameterWithoutThreadName("${session}");
         //return (Session)getGlobalParameter("${session}");
     }
 

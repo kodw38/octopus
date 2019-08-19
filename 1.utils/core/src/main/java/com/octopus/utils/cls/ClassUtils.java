@@ -716,7 +716,8 @@ public class ClassUtils {
     public static void main(String[] args){
         try{
 
-            getFilesFromLoader("com/alibaba/fastjson/annotation/", null);
+            //getFilesFromLoader("com/alibaba/fastjson/annotation/", null);
+
         }catch (Exception e){
             e.printStackTrace();
         }

@@ -923,12 +923,17 @@ public class XMLLogic extends XMLDoObject{
         }else{
             String n = root.getProperties().getProperty("action");
             if(StringUtils.isNotBlank(n)){
-                XMLMakeup p = getObjectById(n).getXML();
-                if(null != p){
-                    XMLMakeup o = findSuspendNode(p,key,srvname,nodeid);
-                    if(null != o){
-                        return o;
+                XMLObject obj = getObjectById(n);
+                if(null != obj) {
+                    XMLMakeup p = obj.getXML();
+                    if (null != p) {
+                        XMLMakeup o = findSuspendNode(p, key, srvname, nodeid);
+                        if (null != o) {
+                            return o;
+                        }
                     }
+                }else{
+                    log.error("can not find redo service by name ["+n+"]");
                 }
             }
             List<XMLMakeup> ls =  root.getChildren();

@@ -507,13 +507,23 @@ public class SystemAction extends XMLDoObject {
             ret.put("opType",desc.get("opType"));
             ret.put("path",desc.get("path"));
             ret.put("alarm",desc.get("alarm"));
-            ret.put("redo",desc.get("redo"));
+            ret.put("redo",getRedoFlag(desc.get("redo")));
             ret.put("share",desc.get("share"));
             ret.put("package",desc.get("package"));
             ret.put("author",desc.get("author"));
             return ret;
         }
         return null;
+    }
+    String getRedoFlag(Object o){
+        if(null != o) {
+            if (o instanceof String) {
+                return (String) o;
+            } else if (o instanceof Map) {
+                return "true";
+            }
+        }
+        return "false";
     }
     void addInsInBySrv(String srvName,String[] insId){
         if(log.isDebugEnabled()) {
@@ -617,7 +627,7 @@ public class SystemAction extends XMLDoObject {
         map.put("NAME", id);
         if(null != st) {
             map.put("PACKAGE", st.get("package"));
-            map.put("REDO", st.get("redo"));
+            map.put("REDO", getRedoFlag(st.get("redo")));
             map.put("SHARE", st.get("share"));
             map.put("IS_ALARM",isAlarm(st));
             map.put("IS_WORKTIME",isWorktime(st));
@@ -630,7 +640,7 @@ public class SystemAction extends XMLDoObject {
                 Map m = cs.get(0);
                 if(null != m){
                     map.put("PACKAGE", m.get("package"));
-                    map.put("REDO", m.get("redo"));
+                    map.put("REDO", getRedoFlag(m.get("redo")));
                     map.put("SHARE", m.get("share"));
                     map.put("IS_ALARM",m.get("isalarm"));
                     map.put("PATH", m.get("path"));
@@ -730,7 +740,7 @@ public class SystemAction extends XMLDoObject {
             String id = (String) st.get("name");
 
             if(StringUtils.isNotBlank(id)) {
-                if ((StringUtils.isBlank(name) || id.contains(name))) {
+                if ((StringUtils.isBlank(name) || ismatch(name,id,s))) {
                     List<Map> cs = getStatByCenter(opTypeOrInsId,id,insids,servicesStat,usedList);// find instance by this service name
                     if(log.isDebugEnabled()) {
                         log.debug("find publish srv list:" + cs);
@@ -950,7 +960,7 @@ public class SystemAction extends XMLDoObject {
                             //String na = kk.substring(kk.lastIndexOf(".")+1,kk.length());//0Op
                             String na = kk.substring(kk.indexOf(".",2)+1,kk.length());//0Op
 
-                            if((StringUtils.isBlank(name) || (StringUtils.isNotBlank(name) && na.contains(name)))) {
+                            if((StringUtils.isBlank(name) || ismatch(name,na,(Map)null))) {
                                 if (!tem.containsKey(na)) tem.put(na, new HashMap());
                                 tem.get(na).put(k, servicesStat.get(k));
                                 if(log.isDebugEnabled()){
@@ -1071,7 +1081,7 @@ public class SystemAction extends XMLDoObject {
                                                 self.put("IS_PUBLISH", "N");
                                                 //self.put("IS_LOCAL", "Yes");
                                                 appendCount(t, self);
-                                                t.put("REDO", m.get("REDO"));
+                                                t.put("REDO", getRedoFlag(m.get("REDO")));
                                                 t.put("SHARE", m.get("SHARE"));
                                                 if (log.isDebugEnabled()) {
                                                     log.debug("query srv self:" + self);
@@ -1106,6 +1116,35 @@ public class SystemAction extends XMLDoObject {
             log.error("get service list error",e);
         }
         return null;
+    }
+    boolean ismatch(String searchKey,String name,Map desc){
+        try {
+            if (StringUtils.isNotBlank(name) && name.contains(searchKey)) return true;
+            if(null != desc) {
+                String n = ObjectUtils.convertMap2String((Map)desc);
+
+                if(StringUtils.isNotBlank(n)) {
+                    n = n.replaceAll("\"","");
+                    return n.indexOf(searchKey) > 0;
+                }
+            }
+            return false;
+        }catch (Exception e){
+            return false;
+        }
+    }
+    boolean ismatch(String searchKey,String name,String desc){
+        try {
+            if (StringUtils.isNotBlank(name) && name.contains(searchKey)) return true;
+
+            if(StringUtils.isNotBlank(desc)) {
+                desc = desc.replaceAll("\"","");
+                return desc.indexOf(searchKey) > 0;
+            }
+            return false;
+        }catch (Exception e){
+            return false;
+        }
     }
 
     public List getTreeServices(List<Map> ss){
@@ -1281,7 +1320,7 @@ public class SystemAction extends XMLDoObject {
      * @param linkename
      * @return
      */
-    List<Map> findServices(XMLParameter env,String linkename){
+    List<Map> findServices(XMLParameter env,String linkename) throws IOException {
         LinkedList<Map> ls = new LinkedList<Map>();
         Map<String,XMLObject> objs = getXMLObjectContainer();
 
@@ -1289,7 +1328,8 @@ public class SystemAction extends XMLDoObject {
                 Iterator<String> aname = objs.keySet().iterator();
                 while (aname.hasNext()) {
                     String name = aname.next();
-                    if (null == linkename || name.contains(linkename)) {
+                    XMLObject m = objs.get(name);
+                    if (null == linkename || ismatch(linkename, name, m.getDescStructure())) {
                         XMLObject o = objs.get(name);
                         try {
 
@@ -1299,7 +1339,7 @@ public class SystemAction extends XMLDoObject {
                                 if (null != st.get("name") && st.get("name") instanceof String) {
                                     d.put("NAME", name);
                                     d.put("PACKAGE", st.get("package"));
-                                    d.put("REDO", st.get("redo"));
+                                    d.put("REDO", getRedoFlag(st.get("redo")));
                                     d.put("SHARE", st.get("share"));
                                     d.put("IS_ALARM",isAlarm(st));
                                     d.put("IS_WORKTIME",isWorktime(st));

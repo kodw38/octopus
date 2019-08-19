@@ -5,6 +5,7 @@ import com.caucho.services.server.ServiceContext;
 import com.octopus.isp.ds.ClientInfo;
 import com.octopus.isp.ds.Env;
 import com.octopus.isp.ds.RequestParameters;
+import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.cls.ClassUtils;
@@ -47,8 +48,15 @@ public class LauncherCommon {
         map.put("auth_level","0");
         env.addAuthInfo(map);
 
-        boolean iscacheheader= StringUtils.isTrue(luncherProperties.getProperty("iscacheheader"));
-        if(iscacheheader && cache_headers.containsKey(paramHttpServletRequest.getRemoteAddr())){
+        boolean iscacheheader= false;
+        String[] internal_skip_headers = null;
+        if(null != luncherProperties) {
+            iscacheheader = StringUtils.isTrue(luncherProperties.getProperty("iscacheheader"));
+            if(StringUtils.isNotBlank(luncherProperties.getProperty("internal_skip_headers"))){
+                internal_skip_headers = luncherProperties.getProperty("internal_skip_headers").split(",");
+            }
+        }
+        if(null != cache_headers && iscacheheader && cache_headers.containsKey(paramHttpServletRequest.getRemoteAddr())){
             paramHashtable.putAll((Map)cache_headers.get(paramHttpServletRequest.getRemoteAddr()));
         }else {
             Enumeration localEnumeration1 = paramHttpServletRequest.getHeaderNames();
@@ -57,6 +65,7 @@ public class LauncherCommon {
             while (localEnumeration1.hasMoreElements()) {
                 String str1 = (String) localEnumeration1.nextElement();
                 if(str1.equalsIgnoreCase("cookie")) continue;
+                if(null != internal_skip_headers && internal_skip_headers.length>0 && ArrayUtils.isInStringArray(internal_skip_headers,str1)) continue;
                 if (null != str1) {
                     Enumeration localEnumeration2 = paramHttpServletRequest.getHeaders(str1);
                     while (localEnumeration2.hasMoreElements()) {
@@ -81,7 +90,8 @@ public class LauncherCommon {
             if(iscacheheader) {
                 Hashtable t = new Hashtable();
                 t.putAll(paramHashtable);
-                cache_headers.put(paramHttpServletRequest.getRemoteAddr(), t);
+                if(null != cache_headers)
+                    cache_headers.put(paramHttpServletRequest.getRemoteAddr(), t);
             }
         }
         if(log.isDebugEnabled()) {

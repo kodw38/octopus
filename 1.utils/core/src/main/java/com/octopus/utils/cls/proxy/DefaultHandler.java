@@ -102,7 +102,6 @@ public class DefaultHandler implements IProxyHandler {
             if(isInvoke){
                 try{
                     ret = impl.getClass().getMethod("super_" + m, parclasses).invoke(impl, args);
-
                 }catch (Exception e){
                     isSuccess=false;
                     ex=e;
@@ -115,6 +114,16 @@ public class DefaultHandler implements IProxyHandler {
                     if(waitAfterList.size()>0) {
                         Object[] afList = null;
                         afList = ExecutorUtils.multiWorkSameParWaitingWithCachePool(waitAfterList.toArray(), "afterAction", new Class[]{Object.class, String.class, Object[].class, boolean.class, boolean.class, Throwable.class, Object.class}, new Object[]{impl, m, args, isInvoke, isSuccess, ex, ret});
+                        if(null != afList) {
+                            for (Object o : afList) {
+                                if(log.isDebugEnabled()){
+                                    log.debug("wait after data:"+o);
+                                }
+                                if (o instanceof Exception) {
+                                    throw (Exception) o;
+                                }
+                            }
+                        }
                         for (int i = 0; i < waitAfterList.size(); i++) {
                             if (waitAfterList.get(i).getLevel() == level) {
                                 if (null != afList[i]) {
@@ -123,6 +132,7 @@ public class DefaultHandler implements IProxyHandler {
                                 }
                             }
                         }
+
                     }
 
                     if(nowaitReturnList.size()>0){
@@ -131,6 +141,13 @@ public class DefaultHandler implements IProxyHandler {
                     if(waitReturnList.size()>0) {
                         Object[] resultList = null;
                         resultList = ExecutorUtils.multiWorkSameParWaitingWithCachePool(waitReturnList.toArray(), "resultAction", new Class[]{Object.class, String.class, Object[].class, Object.class}, new Object[]{impl, m, args, ret});
+                        if(null != resultList) {
+                            for (Object o : resultList) {
+                                if (o instanceof Exception) {
+                                    throw (Exception) o;
+                                }
+                            }
+                        }
                         for (int i = 0; i < waitReturnList.size(); i++) {
                             if (waitReturnList.get(i).getLevel() == level) {
                                 if (null != resultList[i]) {

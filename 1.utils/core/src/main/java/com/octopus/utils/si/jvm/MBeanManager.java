@@ -6,14 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import javax.management.InstanceNotFoundException;
-import javax.management.IntrospectionException;
-import javax.management.MBeanException;
-import javax.management.MBeanInfo;
-import javax.management.MBeanServerConnection;
-import javax.management.ObjectInstance;
-import javax.management.ObjectName;
-import javax.management.ReflectionException;
+import javax.management.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +25,7 @@ public class MBeanManager {
     MBeanServerConnection conn;
     public MBeanManager(MBeanServerConnection conn){
         this.conn=conn;
+
     }
 
     public int MBeanCount()throws IOException{
@@ -45,6 +39,9 @@ public class MBeanManager {
     }
     public MBeanInfo getMBeanInfo(ObjectName name)throws IOException, InstanceNotFoundException, IntrospectionException, ReflectionException{
         return conn.getMBeanInfo(name);
+    }
+    public AttributeList getAttributes(ObjectName name,String[] attributes)throws Exception{
+            return conn.getAttributes(name,attributes);
     }
     public Set<ObjectInstance> getMBean(ObjectName name)throws IOException{
         return conn.queryMBeans(name,null);

@@ -959,6 +959,21 @@ public class XMLParameter extends ParameterMap implements Serializable {
             log.debug(get("${requestId}") + "    " + System.currentTimeMillis() + "  " + message);
         }
     }*/
+    public Object getParameterWithoutThreadName(String key){
+        Object o = getParameter(key);
+        if(null != o){
+            return o;
+        }else{
+            Iterator its = keySet().iterator();
+            while(its.hasNext()){
+                Object k = its.next();
+                if(null != k && k.toString().startsWith(key+"[")){
+                    return get(k);
+                }
+            }
+        }
+        return null;
+    }
 
     public Object clone() throws CloneNotSupportedException {
         return super.clone();

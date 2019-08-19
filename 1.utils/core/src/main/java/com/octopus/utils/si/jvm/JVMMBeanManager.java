@@ -7,6 +7,10 @@ import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -15,7 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class JVMMBeanManager{
     transient static Log log = LogFactory.getLog(JVMMBeanManager.class);
-    private static ConcurrentHashMap<String,MBeanServerConnection> connCache = new ConcurrentHashMap<String, MBeanServerConnection>(); 
+    private static ConcurrentHashMap<String,MBeanServerConnection> connCache = new ConcurrentHashMap<String, MBeanServerConnection>();
+
     public static MBeanManager getInstance(String ip,int port){
         try{
         	final String key = ip+":"+port;
@@ -35,4 +40,10 @@ public class JVMMBeanManager{
             return null;
         }
     }
+    public static boolean removeCache(String ip,int port){
+        String key = ip+":"+port;
+        connCache.remove(key);
+        return true;
+    }
+
 }

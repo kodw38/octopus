@@ -1099,6 +1099,14 @@ public class ObjectUtils {
                     return ret;
                 }
             }
+        }else if(findO instanceof XMLParameter && !isarray && point.startsWith("${")){
+            Object o = ((XMLParameter)findO).getParameterWithoutThreadName(point);
+            if(log.isDebugEnabled()){
+                log.debug("getValue ["+o+"] by path ["+point+"]");
+            }
+            if(null != o){
+                return o;
+            }
         }else if(findO instanceof XMLMakeup && !point.startsWith("${") && (XMLParameter.startWithRetainChars(point) || point.startsWith("("))){
             //如果是xmlmakeup对象，根据结尾表达式判断如果表达式为真，返回表达式对象。如：RootInfo.RowSet.#{(Name)=SETDealerInfo}
             Object ret=XMLParameter.getExpressValueFromMap(point,((XMLMakeup)findO).getProperties(),null);
@@ -1260,6 +1268,9 @@ public class ObjectUtils {
      */
     public static Object getValue(Object o,String path,boolean isAppendArrayNull){
         try{
+            if(log.isDebugEnabled()){
+                log.debug("getValue ["+o+"] by path ["+path+"]");
+            }
             if(null == o) return null;
             if(null == path)return o;
             if(o.getClass().isArray()|| Collection.class.isAssignableFrom(o.getClass())){

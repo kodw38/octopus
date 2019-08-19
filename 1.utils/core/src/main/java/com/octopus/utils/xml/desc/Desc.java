@@ -1735,7 +1735,7 @@ public class Desc extends XMLDoObject{
 
     public static boolean checkItemByDesc(String name,XMLParameter env,XMLObject obj,Object o,Map desc)throws ISPException{
         if(null != desc){
-            if(null != desc.get("@type") && null != o){
+            if(null != desc.get("@type") && null != o && !"".equals(o)){
                 String type = (String)desc.get("@type");
                 if(POJOUtil.isNumberClass(type) && !NumberUtils.isNumber(o.toString())){
                     throw new ISPException("ISP02001","Invalid data [(data)] type in [(classType)] parameter name [(name)]",new String[]{(o==null?"":o.toString()),type,name});

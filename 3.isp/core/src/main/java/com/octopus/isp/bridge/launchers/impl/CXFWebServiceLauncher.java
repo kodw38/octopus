@@ -25,6 +25,7 @@ import org.apache.cxf.interceptor.Fault;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.phase.PhaseInterceptorChain;
 import org.apache.cxf.transport.http.AbstractHTTPDestination;
+import sun.misc.Launcher;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -115,7 +116,8 @@ public class CXFWebServiceLauncher extends XMLDoObject{
             if(null != message){
                 HttpServletRequest request = (HttpServletRequest)message.get(AbstractHTTPDestination.HTTP_REQUEST);
                 if(null != request) {
-                    getHeaders(request, par.getRequestHeaders());
+                    //getHeaders(request, par.getRequestHeaders());
+                    LauncherCommon.getHeaders(request,par.getRequestHeaders(),par,null,null);
                     LauncherCommon.setRequestCommonInfo(request,par);
                     LauncherCommon.setClientInfo(par,request);
 

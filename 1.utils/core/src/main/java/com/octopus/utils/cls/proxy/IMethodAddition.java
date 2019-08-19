@@ -12,7 +12,7 @@ public interface IMethodAddition {
 
     public Object beforeAction(Object impl, String m, Object[] args)throws Exception;
 
-    public Object afterAction(Object impl, String m, Object[] args,boolean isInvoke,boolean isSuccess,Throwable e,Object result);
+    public Object afterAction(Object impl, String m, Object[] args,boolean isInvoke,boolean isSuccess,Throwable e,Object result) throws Exception;
 
     public Object resultAction(Object impl, String m, Object[] args,Object result);
 

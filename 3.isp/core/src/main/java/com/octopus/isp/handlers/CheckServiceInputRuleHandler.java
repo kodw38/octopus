@@ -28,6 +28,7 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
     boolean isNextInvoke;
     Map in=null;
     XMLDoObject cache_srv_rule;
+    XMLDoObject cache_srv_rule_return;
 
     int level;
     static Map defineRuleElement=null;//在constant中定义的serviceinputcheckrules
@@ -46,72 +47,98 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
             Map data = getDataMap(args);
             String id =((XMLObject) impl).getXML().getId();
             List<Map> rules = getRuleByActionId((XMLParameter)args[1],id);
-            if(null != rules) {
-                for(Map rule:rules) {
-                    if (null !=rule && StringUtils.isNotBlank(rule.get("RULE"))) {
-                        if (null != data) {
-                            String mp = (String)rule.get("PARAMETER_MAPPING");
-                            XMLParameter e = ((XMLParameter)args[1]);
-                            if(StringUtils.isNotBlank(mp) && data instanceof XMLParameter){
-                                Map d = ((XMLParameter)data).getMapValueFromParameter(StringUtils.convert2MapJSONObject(mp),this);
-                                if(log.isDebugEnabled()){
-                                    log.debug("check rule:\ndata:"+d);
-                                }
-                                if(null == e){
-                                    e = getEmptyParameter();
-                                }
-                                if(null != d){
-                                    e.putAll(d);
-                                }
-
-                            }
-
-                            Object rul = e.getExpressValueFromMap((String)rule.get("RULE"),this);
-                            if(rul instanceof String) {
-                                if(log.isDebugEnabled()){
-                                    log.debug("check rule:\nrule:"+rul+"\ndata:"+data);
-                                }
-                                try {
-                                    Object o = RuleUtil.doRule((String) rul, data);
-                                    if (null != o && o instanceof Boolean && !(Boolean) o) {
-                                        Object s = ((XMLParameter) args[1]).getValueFromExpress(rule.get("NOT_CHECK_MESSAGE"), this);
-                                        if (null != s) {
-                                            if((s instanceof String && ((String) s).startsWith("{"))){
-                                                throw new ISPException(null,(String)s);
-                                            }else {
-                                                s = s.toString();
-                                                s = StringUtils.replace((String) s, "\"", "\\\"");
-                                                s = StringUtils.replace((String) s, "\\\\\"", "\\\\\\\"");
-                                                throw new ISPException("600", "check [" + id + "] input parameters fail: " + s);
-                                            }
-                                        }
-
-                                    }
-                                }catch(Exception ex){
-                                    throw ex;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            checkRule(rules, data, (XMLParameter) args[1],id);
             //log.error(((XMLObject) impl).getXML().getId() +" "+m+ " do check input...");
         }
         return null;
     }
 
+    void checkRule(List<Map> rules,Map data,XMLParameter env,String id) throws Exception {
+        if(null != rules) {
+            for(Map rule:rules) {
+                if (null !=rule && StringUtils.isNotBlank(rule.get("RULE"))) {
+                    if (null != data) {
+                        String mp = (String)rule.get("PARAMETER_MAPPING");
+                        XMLParameter e = env;
+                        if(StringUtils.isNotBlank(mp) && data instanceof XMLParameter){
+                            Map d = ((XMLParameter)data).getMapValueFromParameter(StringUtils.convert2MapJSONObject(mp),this);
+                            if(log.isDebugEnabled()){
+                                log.debug("check rule:\ndata:"+d);
+                            }
+                            if(null == e){
+                                e = getEmptyParameter();
+                            }
+                            if(null != d){
+                                e.putAll(d);
+                            }
+
+                        }
+
+                        Object rul = e.getExpressValueFromMap((String)rule.get("RULE"),this);
+                        if(rul instanceof String) {
+                            if(log.isDebugEnabled()){
+                                log.debug("check rule:\nrule:"+rul+"\ndata:"+data);
+                            }
+                            try {
+                                Object o = RuleUtil.doRule((String) rul, data);
+                                if (null != o && o instanceof Boolean && !(Boolean) o) {
+                                    Object s = env.getValueFromExpress(rule.get("NOT_CHECK_MESSAGE"), this);
+                                    if (null != s) {
+                                        if((s instanceof String && ((String) s).startsWith("{"))){
+                                            throw new ISPException(null,(String)s);
+                                        }else {
+                                            s = s.toString();
+                                            s = StringUtils.replace((String) s, "\"", "\\\"");
+                                            s = StringUtils.replace((String) s, "\\\\\"", "\\\\\\\"");
+                                            throw new ISPException("600", "check [" + id + "] input parameters fail: " + s);
+                                        }
+                                    }
+
+                                }
+                            }catch(Exception ex){
+                                throw ex;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     //根据服务名称获取对应的入参检查规则
     List<Map> getRuleByActionId(XMLParameter env,String s){
         try {
-            HashMap in = new HashMap();
-            //in.put("cache", "cache_srv_rule");
-            in.put("op", "get");
-            in.put("key", s);
-            List ret = (List)cache_srv_rule.doSomeThing(null, env, in, null, null);
-            if(null != ret){
-                return ret;
-            }else {
-                return null;
+            if(null != cache_srv_rule) {
+                HashMap in = new HashMap();
+                //in.put("cache", "cache_srv_rule");
+                in.put("op", "get");
+                in.put("key", s);
+                List ret = (List) cache_srv_rule.doSomeThing(null, env, in, null, null);
+                if (null != ret) {
+                    return ret;
+                } else {
+                    return null;
+                }
+            }
+        }catch (Exception e){
+            log.error("get rule by serviceId fail",e);
+        }
+        return null;
+    }
+
+    List<Map> getReturnRuleByActionId(XMLParameter env,String s){
+        try {
+            if(null != cache_srv_rule_return) {
+                HashMap in = new HashMap();
+                //in.put("cache", "cache_srv_rule");
+                in.put("op", "get");
+                in.put("key", s);
+                List ret = (List) cache_srv_rule_return.doSomeThing(null, env, in, null, null);
+                if (null != ret) {
+                    return ret;
+                } else {
+                    return null;
+                }
             }
         }catch (Exception e){
             log.error("get rule by serviceId fail",e);
@@ -165,8 +192,83 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
         return null;
     }
 
+    Map initDefineReturnRuleElement(Map m){
+        Map c = (Map)m.get("${constant}");
+        if(null != c){
+            HashMap ret = new HashMap();
+            Map s = (Map)c.get("serviceoutputcheckrules");
+            if(null != s){
+                Iterator it = s.keySet().iterator();
+                while(it.hasNext()){
+                    String k = (String)it.next();
+                    String v = (String)s.get(k);
+                    if(StringUtils.isNotBlank(k) && StringUtils.isNotBlank(v)){
+
+                        try {
+                            Object re = Class.forName(v).newInstance();
+                            ret.put(k,re);
+                        } catch (InstantiationException e) {
+                            log.error(e);
+                        } catch (IllegalAccessException e) {
+                            log.error(e);
+                        } catch (ClassNotFoundException e) {
+                            log.error(e);
+                        }
+
+                    }
+                }
+            }
+            if(ret.size()>0) return ret;
+        }
+        return null;
+    }
+    Map getReturnDataMap(Object[] args,Object ret){
+        if(args.length>1) {
+            if(args[1] instanceof Map) {
+                Map m = (Map) args[1];
+                if(null == defineRuleElement){
+                    defineRuleElement=initDefineReturnRuleElement(m);
+                }
+                if(null != defineRuleElement) {
+                    m.putAll(defineRuleElement);
+                }
+                /*if(log.isDebugEnabled()){
+                    Iterator its = m.keySet().iterator();
+                    while(its.hasNext()){
+                        Object k = its.next();
+                        log.debug("get return "+k);
+                        if(k.toString().startsWith("${return}")){
+                            log.debug("get return data:"+m.get(k));
+                        }
+                        if(k.toString().startsWith("${result}")){
+                            log.debug("get return data:"+m.get(k));
+                        }
+                    }
+                    //log.debug("get return "+ret);
+                }*/
+                if(null != ret && ret instanceof ResultCheck){
+                    ret = ((ResultCheck)ret).getRet();
+                }
+                m.put("${return}",ret);
+                return m;
+            }
+        }
+        return null;
+    }
+
     @Override
-    public Object afterAction(Object impl, String m, Object[] args, boolean isInvoke, boolean isSuccess, Throwable e, Object result) {
+    public Object afterAction(Object impl, String m, Object[] args, boolean isInvoke, boolean isSuccess, Throwable e, Object result) throws Exception {
+
+        if(null != impl ) {
+            String id =((XMLObject) impl).getXML().getId();
+            List<Map> rules = getReturnRuleByActionId((XMLParameter) args[1], id);
+            if(null != rules) {
+                log.debug("get return rule "+rules.size()+" by id:"+id+" result:"+result);
+                Map data = getReturnDataMap(args,result);
+                checkRule(rules, data, (XMLParameter) args[1], id);
+            }
+            //log.error(((XMLObject) impl).getXML().getId() +" "+m+ " do check input...");
+        }
         return null;
     }
 

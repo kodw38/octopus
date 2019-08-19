@@ -227,7 +227,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
     }
 
     protected boolean checkInputParameterByDesc(XMLParameter env,Map inputData) throws ISPException, IOException {
-        if (null != getDescStructure()) {
+        if (null != getDescStructure() && null != getDescStructure().get("input") && getDescStructure().get("input") instanceof Map) {
             Map dc = (Map)getDescStructure().get("input");
             if(null != dc){
                 return checkByDesc(env,dc,inputData);
@@ -272,7 +272,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                                 boolean b = checkByDesc(env,dv.getClass().isArray()?((Object[])dv)[0]:((Collection)dv).iterator().next(),o);
                                 if(!b) return b;
                             }
-                        } else if (v instanceof Collection && (dv.getClass().isArray() || dv instanceof Collection)) {
+                        } else if (v instanceof Collection && ((dv.getClass().isArray() && ((Object[])dv).length>0) || (dv instanceof Collection && ((Collection)dv).size()>0))) {
                             Iterator it = ((Collection)v).iterator();
                             while(it.hasNext()){
                                 Object v1 = it.next();
@@ -1582,6 +1582,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                             doAlarm("output",parameter,e);
                             throw ex;
                         }
+
 
                     }finally {
                         if(isTradeStart){

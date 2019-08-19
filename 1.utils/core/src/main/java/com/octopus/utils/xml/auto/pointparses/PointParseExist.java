@@ -29,6 +29,16 @@ public class PointParseExist implements IPointParse {
             if(ts[0].contains("${")){
 
                 Object o = ObjectUtils.getValueByPath(data,ts[0]);
+
+                if(log.isDebugEnabled()){
+                    log.debug("get exist data by key["+ts[0]+"] ,data ["+o+"]");
+                    if(data instanceof Map){
+                        Iterator its = ((Map)data).keySet().iterator();
+                        while(its.hasNext()){
+                            log.debug("get exist data key "+its.next() +" this thread:"+Thread.currentThread().getName());
+                        }
+                    }
+                }
                 if(null != o){
                     if(o.getClass().isArray()){
                         Object[] os = (Object[])o;

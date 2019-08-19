@@ -493,7 +493,7 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
             while(its.hasNext()){
                 String k = its.next();
                 if(k.equalsIgnoreCase("Set-Cookie")){
-                    String s = (String)addRequestHeaders.get("Set-Cookie");
+                    String s = getHeadValue(addRequestHeaders.get("Set-Cookie"));
                     if(null == ds.getRequestHeaders()){
                         ds.setRequestHeaders(new Hashtable<String, String>());
                     }
@@ -502,7 +502,7 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
                     else
                         ds.getRequestHeaders().put("Cookie",s);
                 }else {
-                    ds.getRequestHeaders().put(k, (String) addRequestHeaders.get(k));
+                    ds.getRequestHeaders().put(k, getHeadValue(addRequestHeaders.get(k)));
                 }
             }
         }
@@ -565,6 +565,19 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
 
         return ret;
 
+    }
+    String getHeadValue(Object o){
+        if(null != o) {
+            if (o instanceof String) {
+                return (String) o;
+            } else if (o instanceof List) {
+                return StringUtils.join((List)o,";");
+            }else{
+                return o.toString();
+            }
+        }else{
+            return "";
+        }
     }
 
     @Override

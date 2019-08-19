@@ -42,4 +42,14 @@ public class JVMUtil {
 		}
 		return mBeanManager;
     }
+
+    public static boolean removeCache(Map input){
+        String host = (String) input.get("host");
+        int rmiPort = Integer.parseInt((String)input.get("port"));
+        rmiPort = 0 == rmiPort?Integer.parseInt((String)input.get("defalutPort")):rmiPort;
+        JVMMBeanManager.removeCache(host, rmiPort);
+        return true;
+    }
+
+
 }
