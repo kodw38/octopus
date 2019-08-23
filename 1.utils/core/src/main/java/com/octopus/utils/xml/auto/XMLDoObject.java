@@ -228,7 +228,14 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
 
     protected boolean checkInputParameterByDesc(XMLParameter env,Map inputData) throws ISPException, IOException {
         if (null != getDescStructure() && null != getDescStructure().get("input") && getDescStructure().get("input") instanceof Map) {
-            Map dc = (Map)getDescStructure().get("input");
+            String id = (String)inputData.get("srvId");
+            Map dc=null;
+            if(StringUtils.isNotBlank(id) && null != getDescStructure(id)){
+                dc = (Map)getDescStructure(id).get("input");
+            }
+            if(dc ==null) {
+                dc = (Map) getDescStructure().get("input");
+            }
             if(null != dc){
                 return checkByDesc(env,dc,inputData);
             }
@@ -256,12 +263,12 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                 boolean bb = Desc.checkItemByDesc(null,env,this,inputData,(Map)parameterDesc);
                 if(!bb) return bb;
 
-                Iterator its = ((Map)inputData).keySet().iterator();
+                Iterator its = ((Map)parameterDesc).keySet().iterator();
                 while (its.hasNext()) {
                     Object k = its.next();
                     Object v = ((Map)inputData).get(k);
                     Object dv = ((Map)parameterDesc).get(k);
-                    if (null != dv && null != v) {
+                    if (null != dv ) {
                         if (dv instanceof Map && Desc.isDescriptionField((Map) dv)) {
                             //check
                             boolean b= Desc.checkItemByDesc(k.toString(),env,this,v,(Map)dv);

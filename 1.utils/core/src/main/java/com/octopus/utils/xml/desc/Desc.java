@@ -1794,7 +1794,7 @@ public class Desc extends XMLDoObject{
                             b = ((Context) v).checkFormat(rule, o);
                         }
                         if (!b) {
-                            throw new ISPException("ISP02001", "data [(value)] isinvalid type parameter name [(name)]", new String[]{o.toString(), name});
+                            throw new ISPException("ISP02001", "data [(value)] isinvalid type parameter name [(name)] by check [(rule)]", new String[]{o.toString(), name,rule});
                         }
 
 
@@ -1811,11 +1811,11 @@ public class Desc extends XMLDoObject{
                 else n = (int)l;
                 if(null != o ){
                     if(o.getClass().isArray() && ((Object[])o).length>n){
-                        throw new ISPException("ISP02001","data length is over [(length)]",new String[]{n+""});
+                        throw new ISPException("ISP02001","data length of [(name)] is over [(length)]",new String[]{name,n+""});
                     }else if(o instanceof Collection && ((Collection)o).size()>n){
-                        throw new ISPException("ISP02001","data length is over [(length)]",new String[]{n+""});
+                        throw new ISPException("ISP02001","data length of [(name)] is over [(length)]",new String[]{name,n+""});
                     }else if(o instanceof String && ((String)o).length()>n){
-                        throw new ISPException("ISP02001","data length is over [(length)]",new String[]{n+""});
+                        throw new ISPException("ISP02001","data length of [(name)] is over [(length)]",new String[]{name,n+""});
                     }
                 }
             }
