@@ -274,19 +274,19 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                             boolean b= Desc.checkItemByDesc(k.toString(),env,this,v,(Map)dv);
                             if(!b) return b;
                         }
-                        if (v.getClass().isArray()) {
+                        if (null != v && v.getClass().isArray()) {
                             for(Object o:(Object[])v){
                                 boolean b = checkByDesc(env,dv.getClass().isArray()?((Object[])dv)[0]:((Collection)dv).iterator().next(),o);
                                 if(!b) return b;
                             }
-                        } else if (v instanceof Collection && ((dv.getClass().isArray() && ((Object[])dv).length>0) || (dv instanceof Collection && ((Collection)dv).size()>0))) {
+                        } else if (null != v && v instanceof Collection && ((dv.getClass().isArray() && ((Object[])dv).length>0) || (dv instanceof Collection && ((Collection)dv).size()>0))) {
                             Iterator it = ((Collection)v).iterator();
                             while(it.hasNext()){
                                 Object v1 = it.next();
                                 boolean b = checkByDesc(env,dv.getClass().isArray()?((Object[])dv)[0]:((Collection)dv).iterator().next(),v1);
                                 if(!b) return b;
                             }
-                        } else if (v instanceof Map && dv instanceof Map) {
+                        } else if (null != v && v instanceof Map && dv instanceof Map) {
                             checkByDesc(env,(Map) dv, (Map) v);
                         }
                     }

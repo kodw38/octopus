@@ -1404,9 +1404,13 @@ public class Desc extends XMLDoObject{
                 }else if( ( null == v || (v instanceof String && StringUtils.isBlank((String)v)) ||(v instanceof Map && ((Map)v).size()==0) )
                         && null != ov && ov instanceof Map && isDescriptionField((Map)ov)){
                     n.put(k, ov);
-                }else if ( (null == v || null!=v && (v instanceof List && ((List)v).size()==0))
-                        && null != ov && ov instanceof List && null != ((List) ov).get(0) && ((List) ov).get(0) instanceof Map && isDescriptionField((Map)((List) ov).get(0)) ){
-                    n.put(k,ov);
+                }else if ( (null == v || null!=v )
+                        && null != ov && ov instanceof List && null != ((List) ov).get(0) && ((List) ov).get(0) instanceof Map ){//isDescriptionField((Map)((List) ov).get(0))
+                    if((v instanceof List && ((List)v).size()==0)) {
+                        n.put(k, ov);
+                    }else if(v instanceof List && ((List)v).size()==1 && ((List)v).get(0) instanceof Map){
+                        ObjectUtils.appendDeepMapNotReplaceKey((Map)ov,(Map)((List)v).get(0));
+                    }
                 }else if(null != v && v instanceof Map && null != ov && ov instanceof Map){
                     appendDescProperties((Map)v,(Map)ov);
                 }
