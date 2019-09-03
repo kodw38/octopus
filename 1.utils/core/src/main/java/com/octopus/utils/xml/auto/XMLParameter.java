@@ -68,6 +68,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"format(".toCharArray()
             ,"varcal(".toCharArray()
             ,"getvar(".toCharArray()
+            ,"upper(".toCharArray()
+            ,"lower(".toCharArray()
             ,"exist(".toCharArray()
             ,"times(".toCharArray()
             ,"case(".toCharArray()
@@ -76,22 +78,11 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"#(".toCharArray()
             ,"(".toCharArray()
     };
-    //return is a String
-    public static char[][] StringReturnNestTagsBegin = new char[][]{
-            "getallparameters(".toCharArray()
-            ,"base64_encode(".toCharArray()
-            ,"geterrortrace(".toCharArray()
-            ,"substrnotag(".toCharArray()
-            ,"indexof(".toCharArray()
-            ,"decrypt(".toCharArray()
-            ,"encrypt(".toCharArray()
-            ,"substr(".toCharArray()
-            ,"tojson(".toCharArray()
-            ,"getvar(".toCharArray()
-            ,"(".toCharArray()
-    };
+
     public static char[][] NestTagsEnd = new char[][]{
             ")".toCharArray()
+            ,")".toCharArray()
+            ,")".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
@@ -123,6 +114,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"}".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
+
     };
     public static IPointParse[] PointParses = {
              new PointParseGetAllParameters()
@@ -150,6 +142,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,new PointParseFormat()
             ,new PointParseVarCal()
             ,new PointParseVar()
+            ,new PointParseUpperCase()
+            ,new PointParseLowerCase()
             ,new PointParseExist()
             ,new PointParseTimes()
             ,new PointParseCase()
@@ -158,7 +152,22 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,new PointParseRule()
             ,new PointParseRange()
     };
-
+    //return is a String
+    public static char[][] StringReturnNestTagsBegin = new char[][]{
+            "getallparameters(".toCharArray()
+            ,"base64_encode(".toCharArray()
+            ,"geterrortrace(".toCharArray()
+            ,"substrnotag(".toCharArray()
+            ,"indexof(".toCharArray()
+            ,"decrypt(".toCharArray()
+            ,"encrypt(".toCharArray()
+            ,"substr(".toCharArray()
+            ,"tojson(".toCharArray()
+            ,"getvar(".toCharArray()
+            ,"upper(".toCharArray()
+            ,"lower(".toCharArray()
+            ,"(".toCharArray()
+    };
     static char[][] AllTagsBegin = new char[][]{
             "getallparameters(".toCharArray()
             ,"isnotnullbypath(".toCharArray()
@@ -185,6 +194,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"format(".toCharArray()
             ,"varcal(".toCharArray()
             ,"getvar(".toCharArray()
+            ,"upper(".toCharArray()
+            ,"lower(".toCharArray()
             ,"exist(".toCharArray()
             ,"times(".toCharArray()
             ,"case(".toCharArray()
@@ -219,6 +230,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"varcal(".toCharArray()
             ,"getvar(".toCharArray()
             ,"substr(".toCharArray()
+            ,"upper(".toCharArray()
+            ,"lower(".toCharArray()
             ,"exist(".toCharArray()
             ,"times(".toCharArray()
             ,"case(".toCharArray()
@@ -231,7 +244,6 @@ public class XMLParameter extends ParameterMap implements Serializable {
 
     static HashMap NestMap = new HashMap();
     static {
-
         NestMap.put("getallparameters(",")");//获取环境所有参数json字符串
         NestMap.put("isnotnullbypath(",")");//根据路径获取到的末尾值不能为空
         NestMap.put("base64_encode(",")");//base64字符编码
@@ -257,6 +269,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
         NestMap.put("format(",")");//base64字符编码
         NestMap.put("varcal(",")");//base64字符编码
         NestMap.put("getvar(",")");//base64字符编码
+        NestMap.put("upper(",")");
+        NestMap.put("lower(",")");
         NestMap.put("exist(",")");//base64字符编码
         NestMap.put("times(",")");//base64字符编码
         NestMap.put("case(",")");//字符运算

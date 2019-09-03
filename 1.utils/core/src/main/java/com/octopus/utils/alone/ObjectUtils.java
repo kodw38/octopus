@@ -555,7 +555,6 @@ public class ObjectUtils {
                 if(null != o){
                     String p = ((String)v).substring(((String)v).lastIndexOf("}")+2);
                     v = ObjectUtils.getValueByPath(o, p);
-
                 }
             }
         }else if(((String) v).startsWith("${") || ((String) v).startsWith("^${")){

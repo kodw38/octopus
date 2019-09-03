@@ -231,58 +231,60 @@ public class SystemAction extends XMLDoObject {
     Map<String,List<Map>> getSrvInfoRelIns(Map<String,List<Map>> getSrvs) throws Exception{
         try {
             //service inovke info in zk, all service init will sync the info
-            HashMap in = new HashMap();
-            in.put("op", "getChildrenData");
-            in.put("path", statpath);
-            //all service stat data
-            Map<String, String> servicesStatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-            if(log.isDebugEnabled()){
-                log.debug("all services of stat data\n"+servicesStatus);
-            }
-            if(null != servicesStatus) {
-                List<Map> activeIns = getInsList();//获取活动的实例名称
-                Map<String,Map> insNames = new HashMap();
-                if (null != activeIns) {
-                    for (Map n : activeIns) {
-                        if(log.isInfoEnabled()){
-                            log.info("get active instance :"+n);
-                        }
-                        if (StringUtils.isNotBlank(n.get("insId"))) {
-                            insNames.put((String) n.get("insId"), n);
-                            n.put("INS_ID",n.get("insId"));
-                        }
-                    }
+            if(null != srvhandler) {
+                HashMap in = new HashMap();
+                in.put("op", "getChildrenData");
+                in.put("path", statpath);
+                //all service stat data
+                Map<String, String> servicesStatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
+                if (log.isDebugEnabled()) {
+                    log.debug("all services of stat data\n" + servicesStatus);
                 }
-
-                Map<String, List<Map>> ret = new ConcurrentHashMap();
-                Iterator<String> its = servicesStatus.keySet().iterator();
-                Bridge thisroot = (Bridge)getObjectById("bridge");
-                while(its.hasNext()){
-                    String k = its.next();//.INS-NJ_115.ProvisioningDomainV1.0Op.
-                    String kk = k.substring(0,k.length()-1);
-                    //String na = kk.substring(kk.lastIndexOf(".")+1,kk.length());//0Op
-                    String name = kk.substring(kk.indexOf(".",2)+1,kk.length());//0Op
-                    String v= servicesStatus.get(k);
-                    Map m = StringUtils.convert2MapJSONObject(v);
-                    if(null != m) {
-                        if (insNames.containsKey(m.get("INS_ID")) && StringUtils.isTrue((String)m.get("isable"))
-                                && StringUtils.isNotBlank(m.get("PID"))
-                                ) {
-                            if (!ret.containsKey(name)) ret.put(name, new ArrayList());
-                            ret.get(name).add(insNames.get(m.get("INS_ID")));
-
-                            if(!getSrvs.containsKey(name)) getSrvs.put(name,new ArrayList());
-                            getSrvs.get(name).add(m);
+                if (null != servicesStatus) {
+                    List<Map> activeIns = getInsList();//获取活动的实例名称
+                    Map<String, Map> insNames = new HashMap();
+                    if (null != activeIns) {
+                        for (Map n : activeIns) {
+                            if (log.isInfoEnabled()) {
+                                log.info("get active instance :" + n);
+                            }
+                            if (StringUtils.isNotBlank(n.get("insId"))) {
+                                insNames.put((String) n.get("insId"), n);
+                                n.put("INS_ID", n.get("insId"));
+                            }
                         }
                     }
 
+                    Map<String, List<Map>> ret = new ConcurrentHashMap();
+                    Iterator<String> its = servicesStatus.keySet().iterator();
+                    Bridge thisroot = (Bridge) getObjectById("bridge");
+                    while (its.hasNext()) {
+                        String k = its.next();//.INS-NJ_115.ProvisioningDomainV1.0Op.
+                        String kk = k.substring(0, k.length() - 1);
+                        //String na = kk.substring(kk.lastIndexOf(".")+1,kk.length());//0Op
+                        String name = kk.substring(kk.indexOf(".", 2) + 1, kk.length());//0Op
+                        String v = servicesStatus.get(k);
+                        Map m = StringUtils.convert2MapJSONObject(v);
+                        if (null != m) {
+                            if (insNames.containsKey(m.get("INS_ID")) && StringUtils.isTrue((String) m.get("isable"))
+                                    && StringUtils.isNotBlank(m.get("PID"))
+                            ) {
+                                if (!ret.containsKey(name)) ret.put(name, new ArrayList());
+                                ret.get(name).add(insNames.get(m.get("INS_ID")));
+
+                                if (!getSrvs.containsKey(name)) getSrvs.put(name, new ArrayList());
+                                getSrvs.get(name).add(m);
+                            }
+                        }
+
+                    }
+                    if (log.isDebugEnabled()) {
+                        log.debug("load service in instances\n" + ret);
+                    }
+                    return ret;
+                } else {
+                    log.info("load zero stat service from zk path:" + statpath);
                 }
-                if(log.isDebugEnabled()){
-                    log.debug("load service in instances\n"+ret);
-                }
-                return ret;
-            }else{
-                log.info("load zero stat service from zk path:"+statpath);
             }
 
         }catch (Exception e){

@@ -512,6 +512,33 @@ public class FileUtils {
         in.close();
         out.close();
     }
+    public static void saveFile(String filename,ByteArrayOutputStream data,boolean isOverwrite)throws Exception{
+        File f = new File(filename);
+        if(!f.exists()){
+            FileUtils.makeFilePath(filename);
+            f = new File(filename);
+        }else{
+            if(isOverwrite) {
+                f.delete();
+                f = new File(filename);
+            }else{
+                //if name and size same as exist, it will be cancel
+                if(f.length()==data.size()){
+                    return ;
+                }
+                if(filename.indexOf(".")>0){
+                    String end = filename.substring(filename.lastIndexOf(".")+1,filename.length());
+                    String name = filename.substring(0,filename.lastIndexOf("."));
+                    f = new File(name + "_" + System.currentTimeMillis()+"."+end);
+                }else {
+                    f = new File(filename + "_" + System.currentTimeMillis());
+                }
+            }
+        }
+        FileOutputStream out = new FileOutputStream(f);
+        out.write(data.toByteArray());
+        out.close();
+    }
     public static void saveTextFile(String fileName,String text)throws Exception{
         saveStringBufferFile(new StringBuffer(text),fileName,false);
     }

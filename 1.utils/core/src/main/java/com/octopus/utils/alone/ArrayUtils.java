@@ -4881,6 +4881,15 @@ public class ArrayUtils {
         }
         return false;
     }
+    public static boolean isLikeArrayInString(String s,String[] likeName){
+        if(null == likeName)return true;
+        if(null == s)return false;
+        for(String n:likeName){
+            if(s.indexOf(n)>=0)
+                return true;
+        }
+        return false;
+    }
     public static boolean isInStringArray(Collection ss, String s){
         Iterator<String> its = ss.iterator();
         while(its.hasNext()){

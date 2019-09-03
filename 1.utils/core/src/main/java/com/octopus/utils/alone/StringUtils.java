@@ -8064,4 +8064,46 @@ public class StringUtils {
         return sb.toString();
     }
 
+    /**
+     * if urlFileName end with filename , will return filename, otherwise return timemillis
+     * @param urlFileName
+     * @return
+     */
+    public static String getFileNameFromUrl(String urlFileName){
+        if(isNotBlank(urlFileName)){
+            if(urlFileName.indexOf(".")>0){
+                if(urlFileName.contains("\\")){
+                    urlFileName = urlFileName.replaceAll("\\\\","/");
+                }
+                if(urlFileName.contains("%")){
+                    urlFileName = urlFileName.replaceAll("%","/");
+                }
+
+                urlFileName= urlFileName.substring(urlFileName.lastIndexOf("/")+1);
+                if(urlFileName.contains("?")){
+                    return urlFileName.substring(0,urlFileName.indexOf("?"));
+                }
+                return urlFileName;
+            }else{
+                return System.currentTimeMillis()+"";
+            }
+        }else{
+            return System.currentTimeMillis()+"";
+        }
+
+    }
+    public static String getFileParentUrl(String urlFileName){
+        if(isNotBlank(urlFileName)){
+            if(urlFileName.indexOf(".")>0){
+                if(urlFileName.contains("\\")){
+                    urlFileName = urlFileName.replaceAll("\\\\","/");
+                }
+                return urlFileName.substring(0,urlFileName.lastIndexOf("/"));
+            }else{
+                return "";
+            }
+        }else{
+            return "";
+        }
+    }
 }
