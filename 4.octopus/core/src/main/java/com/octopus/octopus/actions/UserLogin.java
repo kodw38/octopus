@@ -13,6 +13,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 import java.util.Properties;
 
@@ -25,14 +26,22 @@ public class UserLogin extends XMLDoObject {
     transient static Log log = LogFactory.getLog(UserLogin.class);
     Properties users;
     XMLDoObject userauth;
-    XMLDoObject configuserauth;
+    String configuserauth=null;
     public UserLogin(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
         Properties p = new Properties();
         p.load(this.getClass().getClassLoader().getResourceAsStream("user.properties"));
         users=p;
+
     }
 
+
+    XMLDoObject getConfigUserAuth(){
+        if(StringUtils.isNotBlank(configuserauth)){
+            return  (XMLDoObject) getObjectById(configuserauth);
+        }
+        return null;
+    }
 
     @Override
     public Object doSomeThing(String xmlid,XMLParameter env, Map input, Map output,Map config) throws Exception {
@@ -77,7 +86,7 @@ public class UserLogin extends XMLDoObject {
                 log.info("not set configuserauth");
             }
             if(null != configuserauth){
-                boolean is=  checkUser(input,configuserauth);
+                boolean is=  checkUser(input,getConfigUserAuth());
                 if(is) return is;
             }
             if(userauth==null && null == configuserauth){
@@ -123,11 +132,15 @@ public class UserLogin extends XMLDoObject {
                     map.putAll(input);
                     map.put("op","getUserInfo");
                     map.put("UserName",userName);
+                    map.put("UserPwd",pwd);
                     RequestParameters par = new RequestParameters();
+                    par.setRequestHeaders((Hashtable) env.get("${requestHeaders}"));
+                    map.put("OUT_SYSTEM_ID",par.getRequestHeaders().get("sysLoginID"));
+                    map.put("SessionId",par.getRequestHeaders().get("sessionID"));
                     par.addParameter("^${input}",map);
                     par.addParameter("${session}",env.get("${session}"));
-                    if(null != configuserauth)
-                        configuserauth.doThing(par,null);
+                    if(null != getConfigUserAuth())
+                        getConfigUserAuth().doThing(par,null);
                     else
                         userauth.doThing(par,null);
                     Object r = par.getResult();
@@ -169,7 +182,7 @@ public class UserLogin extends XMLDoObject {
                 return map;
             }
             if(null != configuserauth){
-                Object o = getSrvs(configuserauth,input,userName);
+                Object o = getSrvs(getConfigUserAuth(),input,userName);
                 if(null != o){
                     return o;
                 }
@@ -227,11 +240,7 @@ public class UserLogin extends XMLDoObject {
             if (StringUtils.isNotBlank(cfg)) {
                 Map m = StringUtils.convert2MapJSONObject(cfg);
                 if (null != m && m.containsKey("userauth")) {
-                    XMLDoObject o = (XMLDoObject) getObjectById((String) m.get("userauth"));
-                    if (null != o) {
-                        configuserauth = o;
-                        log.info("init set userauth "+m.get("userauth"));
-                    }
+                    configuserauth = (String) m.get("userauth");
                 }
             }
         }catch (Exception e){

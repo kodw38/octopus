@@ -490,6 +490,7 @@ public abstract class XMLObject implements Serializable,Comparable{
                         singleXmlObjectContainer.put(xml.getId(), this);
                     }
                     objectIds.add(xml.getId());
+                    log.info("create XMLObject ok "+xml.getId()+"\n"+xml);
                 }
 
                 /*String version = xml.getProperties().getProperty("version");
@@ -848,6 +849,10 @@ public abstract class XMLObject implements Serializable,Comparable{
                     object.removeDescCache((String) object.getXML().getId());
                 }
                 updateRefer(xml,object);
+                if(log.isDebugEnabled()) {
+                    log.debug("created XMLObject " + xml.getId());
+                }
+
             }
 
             return object;
@@ -977,6 +982,7 @@ public abstract class XMLObject implements Serializable,Comparable{
             desc.put("name",name);
             Desc.saveDesc(desc);
             Desc.removeDesc("temp_"+name);*/
+            log.info("upload XMLObject "+name+" successfully");
                 return true;
             }
         }
