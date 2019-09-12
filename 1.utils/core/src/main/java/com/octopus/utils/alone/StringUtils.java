@@ -3812,6 +3812,15 @@ public class StringUtils {
     public static String replaceEach(String text,List searchList,List replacementList){
         return replaceEach(text,(String[])searchList.toArray(new String[0]),(String[])replacementList.toArray(new String[0]));
     }
+    public static String replaceAllWithReg(String txt,String reg,String target){
+        String ret = txt;
+        Matcher m = Pattern.compile(reg).matcher(ret);
+        while(m.find()) {
+            ret = m.replaceAll(target);
+            m = Pattern.compile(reg).matcher(ret);
+        }
+        return ret;
+    }
 
     /**
      * <p>

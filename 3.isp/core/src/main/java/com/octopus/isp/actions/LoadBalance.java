@@ -116,7 +116,8 @@ public class LoadBalance extends XMLDoObject {
                                             || ExceptionUtil.getRootCase(e) instanceof ConnectException
                                             || ExceptionUtil.getRootCase(e) instanceof SocketTimeoutException))
                                     || (null != o && o instanceof Map && null != ((Map) o).get("is_error")
-                                    && StringUtils.isTrue((String) ((Map) o).get("is_error")) && ((String) ((Map) o).get("errorcode")).equals("S-404"))) {
+                                    && StringUtils.isTrue((String) ((Map) o).get("is_error"))
+                                    && null != ((Map) o).get("errorcode") && ((String) ((Map) o).get("errorcode")).equals("S-404"))) {
                                 //如果出现网络异常，设置可链接属性为不可链接
                                 ret.put("isConnected", false);
                                 log.error("remove loadBalance instance " + ret);

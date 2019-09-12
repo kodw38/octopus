@@ -1,9 +1,11 @@
 package com.octopus.tools.client.http.impl;
 
 import com.octopus.tools.client.http.HttpDS;
-import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.file.FileUtils;
+import com.octopus.tools.client.http.impl.splitter.SiteFileFetch;
+import com.octopus.tools.client.http.impl.splitter.SiteInfoBean;
+import com.octopus.utils.thread.ThreadPool;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
@@ -12,14 +14,16 @@ import com.octopus.utils.xml.auto.XMLParameter;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
 
 public class GetSourceFromWebsite extends XMLDoObject {
     public GetSourceFromWebsite(XMLMakeup xml, XMLObject parent, Object[] containers) throws Exception {
         super(xml, parent, containers);
+        start();
     }
 
     @Override
@@ -40,7 +44,8 @@ public class GetSourceFromWebsite extends XMLDoObject {
             List<String> suffix = (List)input.get("suffix");
             Integer minSizeLimit = (Integer) input.get("minSizeLimit");
             Integer timeout = (Integer) input.get("timeout");
-               doGetSrouce(urls,savePath,suffix, minSizeLimit,timeout);
+            Boolean isSame = (Boolean) input.get("isSameHost");
+               doGetSrouce(urls,savePath,suffix, minSizeLimit,timeout,isSame,null);
         }
         return null;
     }
@@ -60,33 +65,54 @@ public class GetSourceFromWebsite extends XMLDoObject {
         return false;
     }
 
-    static void doGetSrouce(List<String> us,String savePath,List<String> suffix,int sourceMinSizeLimit,int timeout){
+    static void doGetSrouce(List<String> us,String savePath,List<String> suffix,int sourceMinSizeLimit,int timeout,boolean isSameHost,Map headers){
         if(null != us){
             for(String url:us){
                 try {
-                    HttpDS ds = HttpURLConnectionUtils.sendRequest(url, "GET", null, null, timeout);
+                    HttpDS ds = HttpURLConnectionUtils.sendRequest(url, "GET", headers, null, timeout);
                     if (null != ds && null != ds.getResponseHeaders()) {
                         if (HttpURLConnectionUtils.isHtml(url, ds.getResponseHeaders().get("Content-Type"))) {
                             String s = new String(((ByteArrayOutputStream) ds.getResponseOutputStream()).toByteArray());
                             List<String> images = StringUtils.getTagsNoMark(s, "image=\"", "\"");
                             if (null != images && images.size() > 0) {
-                                doGetSrouce(getUrls(url, images), savePath, suffix, sourceMinSizeLimit, timeout);
+                                if(null == headers){headers = new HashMap();}
+                                headers.put("Referer",url);
+                                doGetSrouce(getUrls(url, images,isSameHost), savePath, suffix, sourceMinSizeLimit, timeout,isSameHost,headers);
                             }
                             List<String> srcs = StringUtils.getTagsNoMark(s, "src=\"", "\"");
                             if (null != srcs && srcs.size() > 0) {
-                                doGetSrouce(getUrls(url, srcs), savePath, suffix, sourceMinSizeLimit, timeout);
+                                if(null == headers){headers = new HashMap();}
+                                headers.put("Referer",url);
+                                doGetSrouce(getUrls(url, srcs,isSameHost), savePath, suffix, sourceMinSizeLimit, timeout,isSameHost,headers);
                             }
                             List<String> hrefs = StringUtils.getTagsNoMark(s, "href=\"", "\"");
                             if (null != hrefs && hrefs.size() > 0) {
-                                doGetSrouce(getUrls(url, hrefs), savePath, suffix, sourceMinSizeLimit, timeout);
+                                if(null == headers){headers = new HashMap();}
+                                headers.put("Referer",url);
+                                doGetSrouce(getUrls(url, hrefs,isSameHost), savePath, suffix, sourceMinSizeLimit, timeout,isSameHost,headers);
                             }
-
 
                         } else {
                             if (null != suffix && StringUtils.endsWithAny(StringUtils.getFileNameFromUrl(url), suffix.toArray(new String[0]))
-                                    && ((ByteArrayOutputStream) ds.getResponseOutputStream()).size() > sourceMinSizeLimit) {
+                                    && null != ds.getResponseHeaders().get("Content-Length") && Integer.parseInt(ds.getResponseHeaders().get("Content-Length")) > sourceMinSizeLimit) {
                                 try {
-                                    FileUtils.saveFile(savePath + "/" + StringUtils.getFileNameFromUrl(url), (ByteArrayOutputStream) ds.getResponseOutputStream(), false);
+                                    if(((ByteArrayOutputStream)ds.getResponseOutputStream()).size()>=Integer.parseInt(ds.getResponseHeaders().get("Content-Length"))) {
+                                        FileUtils.saveFile(savePath + "/" + StringUtils.getFileNameFromUrl(url), (ByteArrayOutputStream) ds.getResponseOutputStream(), false);
+                                    }else{
+                                        File f = new File(savePath + "/" + StringUtils.getFileNameFromUrl(url));
+                                        if(!f.exists()){
+                                            inputQueue(url,savePath , StringUtils.getFileNameFromUrl(url));
+                                        }else{
+                                            if(f.length()!=Integer.parseInt(ds.getResponseHeaders().get("Content-Length"))){
+                                                String filename = StringUtils.getFileNameFromUrl(url);
+                                                String end = filename.substring(filename.lastIndexOf(".")+1,filename.length());
+                                                String name = filename.substring(0,filename.lastIndexOf("."));
+                                                filename = name + "_" + System.currentTimeMillis()+"."+end;
+                                                inputQueue(url,savePath , filename);
+                                            }
+                                        }
+
+                                    }
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
@@ -99,10 +125,54 @@ public class GetSourceFromWebsite extends XMLDoObject {
             }
         }
     }
+    static ArrayBlockingQueue queue = new ArrayBlockingQueue(1000000);
+    static Executor ep = Executors.newFixedThreadPool(10);
+    static void inputQueue(String url,String savePath,String fileName){
+        boolean b = queue.add(url+"|"+savePath+"|"+fileName);
+        if(!b){
+            try {
+                Thread.sleep(60000);
+                inputQueue(url, savePath, fileName);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+    public static void start(){
+        ThreadPool.getInstance().getExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                while(true){
+                    try {
+                        String s = (String)queue.take();
 
-    static List<String> getUrls(String base,List<String> us){
+                        String[] s3 = s.split("\\|");
+                        SiteInfoBean bean = new SiteInfoBean(s3[0]
+                                , s3[1]
+                                , s3[2]
+                                , 5);
+                        SiteFileFetch fileFetch = new SiteFileFetch(bean);
+                        ep.execute(fileFetch);
+                    }catch (Exception e){
+
+                    }
+                }
+            }
+        });
+
+    }
+
+
+    static List<String> getUrls(String base,List<String> us,boolean isSame){
+        if(null == base || base.length()<8) return null;
         if(null != us) {
             List l = new ArrayList();
+            String host=null;
+            if(base.indexOf("/",8)>0) {
+                host = base.substring(base.indexOf("//") + 2, base.indexOf("/", 8));
+            }else{
+                host = base.substring(base.indexOf("//") + 2);
+            }
             for(String u:us){
                 if(u.startsWith("//")) {
                     l.add(base.substring(0,base.indexOf("//"))+u);
@@ -112,7 +182,9 @@ public class GetSourceFromWebsite extends XMLDoObject {
                         l.add(b + u);
                     }
                 }else if(u.startsWith("http")){
-                    l.add(u);
+                    if(!isSame || (isSame && u.contains(host))) {
+                        l.add(u);
+                    }
                 }else{
                     l.add(StringUtils.getFileParentUrl(base)+"/"+u);
                 }
@@ -136,7 +208,7 @@ public class GetSourceFromWebsite extends XMLDoObject {
         suffix.add(".png");
         suffix.add(".gif");
         int minSizeLimit=100000;
-        doGetSrouce(us,savePath,suffix,minSizeLimit,6000000);
+        doGetSrouce(us,savePath,suffix,minSizeLimit,6000000,true,null);
         System.out.println("running is finished");
         /*ry {
             File f = new File("C:\\Users\\Public\\Pictures\\Sample Pictures\\Jellyfish.jpg");

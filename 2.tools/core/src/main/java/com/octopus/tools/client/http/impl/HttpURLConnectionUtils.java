@@ -38,8 +38,24 @@ public class HttpURLConnectionUtils {
             return false;
         }
     }
+    public static String removeRelative(String url){
+
+        if(url.indexOf("../")>0){
+            url = StringUtils.replaceAllWithReg(url,"/[^/]+/\\.\\./","/");
+        }
+        if(url.indexOf("./")>0){
+            url = StringUtils.replace(url,"./","");
+        }
+        if(url.endsWith("/.")){
+            url = StringUtils.replace(url,"/.","/");
+        }
+        return url;
+
+    }
     static LinkedList cacherul = new LinkedList();
     public static HttpDS sendRequest(String url, String method, Map headers, Map data,int timeout){
+        url = removeRelative(url);
+        if(url.length()<10) return null;
         if(cacherul.contains(url)) return null;
         cacherul.add(url);
         if(cacherul.size()>100000){
@@ -109,20 +125,21 @@ public class HttpURLConnectionUtils {
                 }
                 ds.setResponseHeaders(ht);
                 if (response_code == HttpURLConnection.HTTP_OK) {
-                    InputStream in = conn.getInputStream();
-                    if (null != ds.getResponseHeaders() && null != ds.getResponseHeaders().get("Content-Type") &&
-                            isHtml(url,ds.getResponseHeaders().get("Content-Type"))) {
-                        //                InputStreamReader reader = new InputStreamReader(in,charSet);
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(in, charset));
-                        //byte [] b  = new byte[1024];
-                        String line = null;
-                        while ((line = reader.readLine()) != null) {
-                            //if (log.isDebugEnabled())
-                            //    log.debug(line);
-                            //System.out.println(new String(line.getBytes()));
-                            out.write(line.getBytes());
-                        }
-                    } else {
+                    try {
+                        InputStream in = conn.getInputStream();
+                        if (null != ds.getResponseHeaders() && null != ds.getResponseHeaders().get("Content-Type") &&
+                                isHtml(url, ds.getResponseHeaders().get("Content-Type"))) {
+                            //                InputStreamReader reader = new InputStreamReader(in,charSet);
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(in, charset));
+                            //byte [] b  = new byte[1024];
+                            String line = null;
+                            while ((line = reader.readLine()) != null) {
+                                //if (log.isDebugEnabled())
+                                //    log.debug(line);
+                                //System.out.println(new String(line.getBytes()));
+                                out.write(line.getBytes());
+                            }
+                        } else {
                         /*byte[] bs = new byte[1024];
                         while(in.read(bs)>0){
                             out.write(bs);
@@ -130,16 +147,19 @@ public class HttpURLConnectionUtils {
                         /*byte[] b = new byte[in.available()];
                         in.read(b);
                         out.write(b);*/
-                        byte[] buffer = new byte[1024];
-                        int length;
-                        while ((length = in.read(buffer)) > 0) {
-                            out.write(buffer, 0, length);
+                            byte[] buffer = new byte[1024];
+                            int length;
+                            while ((length = in.read(buffer)) > 0) {
+                                out.write(buffer, 0, length);
+                            }
                         }
+                    }catch (Exception ex){
+                        log.error("get inputStream error");
                     }
                 }
 
             } catch (Exception e) {
-                log.error(url, e);
+                //log.error(url, e);
                 if (!(e instanceof SocketException || e instanceof SocketTimeoutException)) {
                     log.error(url, e);
                 }
