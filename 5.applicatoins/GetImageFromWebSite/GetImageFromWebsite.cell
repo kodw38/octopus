@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<bridge clazz="com.octopus.isp.bridge.impl.Bridge">
+    <instanceid>INS-SELF_APPS</instanceid>
+    <defs>
+        <def xmlid="Flows"  clazz="com.octopus.utils.flow.impl.FlowMgr"/>
+        <def xmlid="Flow"  clazz="com.octopus.utils.flow.impl.Flow"/>
+        <def xmlid="Node"  clazz="com.octopus.utils.bftask.impl.BFTask"/>
+        <def xmlid="InvokeHandler"  clazz="com.octopus.utils.xml.handle.XMLObjectHandler"/>
+        <def xmlid="ParameterFieldGet"  clazz="com.octopus.isp.utils.ObjectFieldGet"/>
+        <!-- cell-->
+        <def xmlid="Cell"  clazz="com.octopus.isp.cell.impl.Cell"/>
+        <def xmlid="Action"  clazz="com.octopus.isp.cell.actions.DefaultCellAction"/>
+        <def xmlid="ISPExecutor"  clazz="com.octopus.isp.executors.ISPExecutor"/>
+        <def xmlid="Executor"  clazz="com.octopus.isp.executors.ISPExecutor"/>
+        <def xmlid="RuleExecutor"  clazz="com.octopus.isp.executors.RuleBFExecutor"/>
+        <def xmlid="TransactionExecutor"  clazz="com.octopus.isp.executors.TransactionExecutor"/>
+        <def xmlid="StepExecutor"  clazz="com.octopus.isp.executors.StepExecutor"/>
+        <def xmlid="DataExecutor"  clazz="com.octopus.isp.executors.DataExecutor"/>
+        <def xmlid="FileLog" clazz="com.octopus.tools.filelog.LoggerMgr"/>
+        <def xmlid="Logic" clazz="com.octopus.utils.xml.auto.logic.XMLLogic">
+            <remote ref="ClusterInvoker"/>
+        </def>
+        <!-- sync table <def xmlid="MysqlSlaver" clazz="com.octopus.tools.synchro.canal.SimMysqlSlaver"/>
+        <def xmlid="SlaverHandler" clazz="com.octopus.tools.synchro.canal.SynchroMysqlQueryKeys2RedisServer"/>-->
+    </defs>
+    <actions desc="https://cnsexy.net/">
+        <action key="getImages" init="{}" clazz="com.octopus.tools.client.http.impl.GetSourceFromWebsite"
+                input="{urls:[{url:'https://cn.av101.biz/',filter:['cn.av101']}],savePath:'c:/logs/im',suffix:['.jpg','.png','.gif'],minSizeLimit:100000,timeout:10000}"/>
+
+    </actions>
+</bridge>
