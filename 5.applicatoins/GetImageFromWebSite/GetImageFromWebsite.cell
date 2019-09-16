@@ -25,7 +25,7 @@
     </defs>
     <actions desc="https://cnsexy.net/">
         <action key="getImages" init="{}" clazz="com.octopus.tools.client.http.impl.GetSourceFromWebsite"
-                input="{urls:[{url:'https://cn.av101.biz/',filter:['cn.av101']}],savePath:'c:/logs/im',suffix:['.jpg','.png','.gif'],minSizeLimit:100000,timeout:10000}"/>
+                input="{urls:[{url:'https://cn.av101.biz',filter:['cn.av101','hoverfree']}],savePath:'c:/logs/im',suffix:['.jpg','.png','.gif'],minSizeLimit:100000,timeout:10000}"/>
 
     </actions>
 </bridge>
