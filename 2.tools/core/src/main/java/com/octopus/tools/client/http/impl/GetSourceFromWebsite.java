@@ -223,9 +223,10 @@ public class GetSourceFromWebsite extends XMLDoObject {
         //us.add("https://cnsexy.net/%e6%9e%81%e5%93%81%e7%88%86%e4%b9%b3%e5%95%86%e5%8a%a1%e6%a8%a1%e7%89%b9%e3%80%8e%e8%8b%8f%e5%84%bf%e3%80%8f%e6%bf%80%e6%83%85%e4%ba%92%e5%8a%a8%e7%b2%89%e5%ab%a9%e7%be%8e%e7%a9%b4%e6%97%a0%e5%a5%97/");
         //us.add("https://cnsexy.net/wp-content/uploads/2018/10/CNSEXY.NET_006_2014-11-20-14-40-44.jpg?gid=247");
         HashMap m = new HashMap();
-        m.put("url","https://cn.av101.biz");
+        m.put("url","https://avhd101.com/download?v=Kmz8vpKmXpj");
         List li = new ArrayList();
         li.add("av101");
+        li.add("avhd101");
         li.add("hoverfree");
         m.put("filter",li);
         us.add(m);

@@ -20,6 +20,7 @@ public class ISPException extends Exception{
         super("["+code+"]:"+message);
         this.code=code;
         this.msg=message;
+        this.realMsg=message;
     }
     public String toString(){
         return getMessage();
@@ -29,6 +30,9 @@ public class ISPException extends Exception{
         msg_args=(Map)getTransferMsg(message,args)[1];
         this.code=code;
         this.msg=message;
+        try {
+            this.realMsg = (String)XMLParameter.getExpressValueFromMap(msg, msg_args, null);
+        }catch (Exception e){}
     }
     public String getRealMsg(){
         try {
@@ -43,9 +47,7 @@ public class ISPException extends Exception{
             return "";
         }
     }
-    public String getMessage(){
-        return getRealMsg();
-    }
+
     public void setRealMsg(String s){
         realMsg=s;
     }
@@ -76,7 +78,7 @@ public class ISPException extends Exception{
         return msg_args;
     }
     public ISPException(String code,String message,Throwable e){
-        super("["+code+"]:"+message);
+        super("["+code+"]:"+message!=null?message:e.getMessage());
         this.code=code;
         this.msg=message;
         this.e=e;

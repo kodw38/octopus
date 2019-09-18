@@ -42,7 +42,9 @@ public class Contexts extends XMLObject {
         //todo find a context by user requestData
         XMLMakeup xs = (XMLMakeup)ArrayUtils.getFirst(getXML().getChild("context"));
         //to generator a Context
-        return (Context)XMLParameter.newInstance(xs,Context.class,requestData.getRequestData(),true,this);
+        Context c = (Context)XMLParameter.newInstance(xs,Context.class,requestData.getRequestData(),true,this);
+        c.setRootXMLMakeup(xs);
+        return c;
 
     }
 

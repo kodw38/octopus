@@ -9,7 +9,9 @@ import com.octopus.utils.xml.auto.XMLParameter;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * User: Administrator
@@ -20,6 +22,7 @@ public class Context extends XMLParameter {
     II18N i18n;
     SimpleDateFormat systemtime=null;
     Locale locale=null;
+    XMLMakeup root;
     public Locale getLocale(){
         if(null == locale){
             if(null != getParameter("session.user.language"))
@@ -29,6 +32,9 @@ public class Context extends XMLParameter {
             return locale;
         else
             return Locale.CHINESE;
+    }
+    public void setRootXMLMakeup(XMLMakeup xml){
+        root = xml;
     }
 
     public String getSystemDate(long time){
@@ -64,7 +70,23 @@ public class Context extends XMLParameter {
             }
             String format = (String)getParameter(type);
             if(null != format) {
-                return StringUtils.regExpress(value.toString(), format);
+                boolean b =  StringUtils.regExpress(value.toString(), format);
+                if(!b && null!= root){
+                    XMLMakeup xml = root.getFirstChildById(type);
+                    if(null !=xml) {
+                        String error = xml.getProperties().getProperty("error");
+                        if (StringUtils.isNotBlank(error)) {
+                            Map m = StringUtils.convert2MapJSONObject(error);
+                            if (null != m && m.keySet().size()>1) {
+                                String[] it = (String[])m.keySet().toArray(new String[0]);
+                                String code = (String) m.get(it[0]);
+                                String msg = (String) m.get(it[1]);
+                                throw new ISPException(code, msg);
+                            }
+                        }
+                    }
+                }
+                return b;
             }
         }
         return true;

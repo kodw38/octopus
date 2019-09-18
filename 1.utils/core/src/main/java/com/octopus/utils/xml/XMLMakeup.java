@@ -162,6 +162,18 @@ public class XMLMakeup implements Serializable,Comparable{
         }
         return null;
     }
+    public XMLMakeup getFirstChildById(String Id){
+        if(null != this.children && StringUtils.isNotBlank(Id)){
+            XMLMakeup temp;
+            for(int i=0;i<this.getChildren().size();i++){
+                temp = (XMLMakeup)this.getChildren().get(i);
+                if(null != temp && Id.equalsIgnoreCase(temp.getId())){
+                    return temp;
+                }
+            }
+        }
+        return null;
+    }
     public List<Map> getChildrenPropertiesByTag(String title){
         if(null != this.children){
             XMLMakeup temp;

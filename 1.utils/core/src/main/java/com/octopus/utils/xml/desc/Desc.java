@@ -1739,6 +1739,9 @@ public class Desc extends XMLDoObject{
 
     public static boolean checkItemByDesc(String name,XMLParameter env,XMLObject obj,Object o,Map desc)throws ISPException{
         if(null != desc){
+            if(log.isDebugEnabled()){
+                log.debug("name:"+name+" value:"+o+" desc:"+desc);
+            }
             if(null != desc.get("@type") && null != o && !"".equals(o)){
                 String type = (String)desc.get("@type");
                 if(POJOUtil.isNumberClass(type) && !NumberUtils.isNumber(o.toString())){
@@ -1775,7 +1778,7 @@ public class Desc extends XMLDoObject{
                         String rule = (String)desc.get("@check");
 
                         boolean b = true;
-                        if (null != o && o instanceof Map && XMLParameter.isHasRetainChars(rule) || rule.startsWith("(")) {
+                        if (null != o && o instanceof Map && (XMLParameter.isHasRetainChars(rule) || rule.startsWith("(") )) {
                             try {
                                 XMLParameter pars = obj.getEmptyParameter();
                                 pars.putAll((Map) o);

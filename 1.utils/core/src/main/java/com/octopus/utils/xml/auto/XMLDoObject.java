@@ -237,6 +237,9 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                 dc = (Map) getDescStructure().get("input");
             }
             if(null != dc){
+                if(log.isDebugEnabled()){
+                    log.debug("check input parameters:"+inputData);
+                }
                 return checkByDesc(env,dc,inputData);
             }
         }
