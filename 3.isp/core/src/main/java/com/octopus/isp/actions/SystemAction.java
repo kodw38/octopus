@@ -9,6 +9,7 @@ import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.bftask.BFParameters;
 import com.octopus.utils.cachebatch.DateTimeUtil;
 import com.octopus.utils.cls.proxy.GeneratorClass;
+import com.octopus.utils.exception.ExceptionUtil;
 import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.file.FileUtils;
 import com.octopus.utils.net.NetUtils;
@@ -48,6 +49,7 @@ public class SystemAction extends XMLDoObject {
     XMLDoObject command;
     XMLDoObject resource;
     XMLDoObject auth;
+    XMLDoObject remote;
     String servicepath; //{op_type.package.name:service desc map}
     String statpath;
     String statuspath;
@@ -153,7 +155,7 @@ public class SystemAction extends XMLDoObject {
                         log.error("",e);
                     }
                 }
-            },0,60000);
+            },0,300000);
         }catch (Exception x){
             log.error("",x);
         }
@@ -254,7 +256,7 @@ public class SystemAction extends XMLDoObject {
                             }
                         }
                     }
-
+                    HashMap tempLocalCache = new HashMap();
                     Map<String, List<Map>> ret = new ConcurrentHashMap();
                     Iterator<String> its = servicesStatus.keySet().iterator();
                     Bridge thisroot = (Bridge) getObjectById("bridge");
@@ -274,9 +276,16 @@ public class SystemAction extends XMLDoObject {
 
                                 if (!getSrvs.containsKey(name)) getSrvs.put(name, new ArrayList());
                                 getSrvs.get(name).add(m);
+
+                                updateLocalCacheOfRemoteDesc(tempLocalCache,name,(String)m.get("INS_ID"),"ADD");
+
                             }
                         }
 
+                    }
+                    synchronized (localCacheOfRemoteDesc){
+                        localCacheOfRemoteDesc.clear();
+                        localCacheOfRemoteDesc.putAll(tempLocalCache);
                     }
                     if (log.isDebugEnabled()) {
                         log.debug("load service in instances\n" + ret);
@@ -961,8 +970,11 @@ public class SystemAction extends XMLDoObject {
                             String kk = k.substring(0,k.length()-1);
                             //String na = kk.substring(kk.lastIndexOf(".")+1,kk.length());//0Op
                             String na = kk.substring(kk.indexOf(".",2)+1,kk.length());//0Op
-
-                            if((StringUtils.isBlank(name) || ismatch(name,na,(Map)null))) {
+                            String insid = null;
+                            if(k.length()>1 && k.indexOf(".",1)>0) {
+                                insid = k.substring(1, k.indexOf(".", 1));
+                            }
+                            if((StringUtils.isBlank(name) || ismatch(name,na,(Map)getLocalCacheOfRemoteDesc(na,insid)))) {
                                 if (!tem.containsKey(na)) tem.put(na, new HashMap());
                                 tem.get(na).put(k, servicesStat.get(k));
                                 if(log.isDebugEnabled()){
@@ -979,8 +991,10 @@ public class SystemAction extends XMLDoObject {
                             log.debug("query srv not zk prepare stat :"+id+"\n"+tem.get(id));
                         }
                         List<Map> tt = getStatByCenter(null,id,insids, tem.get(id), null);
+                        if(log.isDebugEnabled())
                         log.debug("get stat by center "+id+" "+tt);
                         Map m = getServiceInfoAndStatus(id, null, tt,srvstatus);
+                        if(log.isDebugEnabled())
                         log.debug("get service info and status "+id+" "+m);
                         if (null != m) {
                             m.put("IS_PUBLISH","N");
@@ -1121,6 +1135,8 @@ public class SystemAction extends XMLDoObject {
     }
     boolean ismatch(String searchKey,String name,Map desc){
         try {
+            if(log.isDebugEnabled())
+            log.debug("find service by "+searchKey+" name:"+name+" desc:"+desc);
             if (StringUtils.isNotBlank(name) && name.contains(searchKey)) return true;
             if(null != desc) {
                 String n = ObjectUtils.convertMap2String((Map)desc);
@@ -2421,9 +2437,13 @@ return false;
                     doInitial();
                 }else if("getDesc".equals(op)){
                     String srvName = (String)input.get("name");
+                    Map ret=null;
                     if(StringUtils.isNotBlank(srvName)){
-                        return getDescStructure(srvName);
+                        ret= getDescStructure(srvName);
                     }
+                    if(log.isDebugEnabled())
+                    log.debug("get desc "+srvName+" desc:"+ret);
+                    return ret;
                 }else if("getActionPackage".equals(op)){
                     String srvName = (String)input.get("name");
                     if(StringUtils.isNotBlank(srvName)){
@@ -3167,21 +3187,23 @@ return false;
         return insid+"_"+"_"+name;
     }
     String getCacheInsAddress(Map insinfo,String name){
-        String insid = (String)insinfo.get("insId");
-        if(log.isDebugEnabled()){
-            log.debug("get instance info by "+insid+" "+insinfo);
-        }
         if(null != insinfo) {
-            String ip = (String) insinfo.get("ip");
-            String webport = (String) insinfo.get("port");
+            String insid = (String) insinfo.get("insId");
+            if (log.isDebugEnabled()) {
+                log.debug("get instance info by " + insid + " " + insinfo);
+            }
+            if (null != insinfo) {
+                String ip = (String) insinfo.get("ip");
+                String webport = (String) insinfo.get("port");
 
-            if (StringUtils.isNotBlank(ip)) {
-                String ad =  "http://" + ip + ":" + webport + "/" + "service?actions=" + name;
-                addressmap.put(getAddressMapKey(insid,name),ad);
-                if(log.isDebugEnabled()) {
-                    log.debug(insid + " address " + ad);
+                if (StringUtils.isNotBlank(ip)) {
+                    String ad = "http://" + ip + ":" + webport + "/" + "service?actions=" + name;
+                    addressmap.put(getAddressMapKey(insid, name), ad);
+                    if (log.isDebugEnabled()) {
+                        log.debug(insid + " address " + ad);
+                    }
+                    return ad;
                 }
-                return ad;
             }
         }
         return null;
@@ -3228,6 +3250,74 @@ return false;
         map.put("path",traceFlagPath);
         srvhandler.doSomeThing(null, null, map, null, null);
         return true;
+    }
+    static HashMap localCacheOfRemoteDesc = new HashMap();
+    Map getLocalCacheOfRemoteDesc(String serviceName,String instanceId){
+        if(StringUtils.isNotBlank(serviceName) && StringUtils.isNotBlank(instanceId)) {
+            return (Map)localCacheOfRemoteDesc.get(instanceId+"."+serviceName);
+        }
+        return null;
+    }
+    void updateLocalCacheOfRemoteDesc(HashMap cache,String name,String instanceId,String op){
+        if(getSelfInstanceId().contains("CONSOLE") && StringUtils.isNotBlank(instanceId) && StringUtils.isNotBlank(name)) {
+            if ("DEL".equals(op)) {
+                cache.remove(instanceId + "." + name);
+            } else if ("ADD".equals(op)) {
+                boolean is = false;
+                Map desc = getRemoteDesc(name, instanceId);
+                if(null != desc) {
+                    cache.put(instanceId + "." + name, desc);
+                    is = true;
+                }
+                if(log.isDebugEnabled())
+                log.debug("add LocalCache :"+name+" ins:"+instanceId+" status:"+is);
+            } else if ("UPD".equals(op)) {
+                Map desc = getRemoteDesc(name, instanceId);
+                if(null != desc)
+                cache.put(instanceId + "." + name, desc);
+            }
+        }
+    }
+    Map getRemoteDesc(String name,String insId){
+        if(null != remote){
+            HashMap in = new HashMap();
+            in.put("name",name);
+            Object o = doRemoteAction(insId,"getDesc",in);
+            if(null != o){
+                if(o instanceof Map)
+                return (Map)o;
+                if(o instanceof String){
+                    Map t = StringUtils.convert2MapJSONObject((String)o);
+                    if(null != t){
+                        return t;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    Object doRemoteAction(String insId,String srvName,Map input){
+        try {
+            BFParameters p = new BFParameters(false);
+            p.addParameter("${targetNames}", new String[]{srvName});
+            p.addParameter("${input_data}", input);
+            p.addParameter("${insid}", insId);
+            Hashtable hb = new Hashtable();
+            hb.put("targetinsid",insId);
+            p.addParameter("${requestHeaders}",hb);
+            remote.doThing(p, null);
+            Object o = p.getResult();
+            if (null != o) {
+                if (o instanceof ResultCheck) {
+                    o = ((ResultCheck) o).getRet();
+                }
+                return o;
+            }
+        }catch (Exception e){
+            log.error("invoke remote error", ExceptionUtil.getRootCase(e));
+        }
+        return null;
     }
 
     @Override

@@ -467,12 +467,13 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
                     }
                 }
             }else if("setInsStatusRunning".equals(input.get("op"))){
-                if(log.isDebugEnabled()) {
-                    log.debug("setInsStatusRunning ....");
-                }
+
                 String id = (String)input.get("insId");
                 if("console".equalsIgnoreCase(id)){
                     return null;
+                }
+                if(log.isInfoEnabled()) {
+                    log.info("setInsStatusRunning "+id+"....");
                 }
                 if(StringUtils.isNotBlank(id)){
                     HashMap map = new HashMap();

@@ -51,7 +51,7 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
                 res= ret.toString();
                 //return JSONArray.fromObject(par).toString();
             }else if(par instanceof Exception){
-                log.error("",(Exception)par);
+//                log.error("",(Exception)par);
                 //log.error("return exception:",(Exception)par);
                 Throwable r = ExceptionUtil.getRootCase((Exception)par);
                 if(null != r) {

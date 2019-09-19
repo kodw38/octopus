@@ -191,7 +191,7 @@ public class Logger {
     }
     public static void error(Class c,XMLParameter pars,String id,String msg,Throwable e){
         if(log.isErrorEnabled()) {
-            log.error(getString(pars, id, msg,c.getName(),null,e), e);
+            log.error(getString(pars, id, msg,c.getName(),null,e), ExceptionUtil.getRootCase(e));
         }
     }
     public static void debug(Class c,XMLParameter pars,String id,String msg,Map input,Throwable e){
