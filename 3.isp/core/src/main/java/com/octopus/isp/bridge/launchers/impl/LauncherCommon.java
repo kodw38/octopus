@@ -546,6 +546,34 @@ public class LauncherCommon {
         return "";
     }
 
+    public static void setActionName2Thread(String rquestQueryString){
+        if(StringUtils.isNotBlank(rquestQueryString)) {
+            String actionname=null;
+            int n = rquestQueryString.indexOf("actions=");
+            if(n>=0){
+                if(rquestQueryString.indexOf("&",n)>0){
+                    actionname = rquestQueryString.substring(n+8,rquestQueryString.indexOf("&",n));
+                }else{
+                    actionname = rquestQueryString.substring(n+8);
+                }
+            }
+            if(null != actionname) {
+                String name = Thread.currentThread().getName();
+                if (name.indexOf("->") > 0) {
+                    name = name.substring(0, name.indexOf("->"));
+                }
+                Thread.currentThread().setName(name + "->" + actionname);
+            }
+        }
+    }
+    public static void removeActionNameFromThread(){
+        String name = Thread.currentThread().getName();
+        if (name.indexOf("->") > 0) {
+            name = name.substring(0, name.indexOf("->"));
+        }
+        Thread.currentThread().setName(name);
+    }
+
     private static HashMap getQueryStringMap(String queryStr) {
         try {
             if (null != queryStr) {

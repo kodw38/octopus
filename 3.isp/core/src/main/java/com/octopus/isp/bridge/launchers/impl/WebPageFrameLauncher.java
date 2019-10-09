@@ -807,6 +807,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
 
             long l = System.currentTimeMillis();
             try{
+                LauncherCommon.setActionName2Thread(request.getQueryString());
                 Object ret = launcher.invoke(new Object[]{servletRequest,servletResponse});
                 if(log.isDebugEnabled()) {
                     log.debug(ret);
@@ -837,6 +838,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 }
                 HttpUtils.redirectError((XMLObject) launcher, request, response, "pc", e);
             }finally {
+                LauncherCommon.removeActionNameFromThread();
                 if(log.isInfoEnabled()) {
                     log.info("http tootle:"+request.getRequestURI()+(request.getQueryString()==null?"":"?"+URLDecoder.decode(request.getQueryString()))+"   " + (System.currentTimeMillis() - l)+"ms");
                 }
