@@ -78,6 +78,7 @@ public class SSHClient {
             //获取输入流和输出流
             InputStream instream = channel.getInputStream();
             OutputStream outstream = channel.getOutputStream();
+            log.info("executing shell in "+username+"@"+host+":"+port+", command:"+cmd);
             //发送需要执行的SHELL命令，需要用\n结尾，表示回车
             String shellCommand = cmd+" \necho **cmdend**\n";
             outstream.write(shellCommand.getBytes());
@@ -102,8 +103,14 @@ public class SSHClient {
                 if (nLen < 0) {
                     throw new Exception("network error.");
                 }
+                String s = new String(data, 0, nLen,"iso8859-1");
+                if(log.isDebugEnabled()){
+                    if(StringUtils.isNotBlank(s)) {
+                        log.debug("get return msg:" + s);
+                    }
+                }
                 //转换输出结果并打印出来
-                temp.append(new String(data, 0, nLen,"iso8859-1"));
+                temp.append(s);
 
                 Thread.sleep(100);
             }
@@ -112,6 +119,7 @@ public class SSHClient {
             instream.close();
 
             channel.disconnect();
+            log.info("finished shell in "+username+"@"+host+":"+port+", command:"+cmd);
             if(temp.length()>0)
                 return temp;
             else
