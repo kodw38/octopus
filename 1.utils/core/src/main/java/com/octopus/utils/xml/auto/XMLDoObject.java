@@ -1104,6 +1104,11 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                             if(null != timeoutCountMap && null != timeoutCountMap.get(srv)) {
                                 timeoutCountMap.remove(srv);
                             }
+                            if(!task.isSuccess() && null != task.getException()){
+                                parameter.setError(true);
+                                parameter.setException(task.getException());
+                                throw (Exception) task.getException();
+                            }
                         }
                     }catch(Exception e){
                         //发生超时异常时,后端业务处理还没有结束,只能在该服务抛出超时异常,不知里面的业务处理情况,设置SuspendXmlId后，里面业务即使发生异常也不会记录redolog
@@ -1656,8 +1661,11 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                 removeTimeoutRedo(parameter, xml);
             }
         }catch(Exception ex){
+
             //log.error(xml.getId(),ex);
             if(null != parameter){
+                parameter.setException(ex);
+                parameter.setError(true);
                 //clearTempData(parameter);
                 parameter.setResult(new ResultCheck(false,ex,ResultCheck.INPUT_CHECK_ERROR));
             }

@@ -10,7 +10,7 @@ import java.util.Map;
  * Created by robai on 2018/1/22.
  */
 public class PointParseGetAllParameters implements IPointParse {
-    static String[] keys = new String[]{"${input_data}","${targetNames}","${requestDate}","${clientInfo}","^iserror","^Exception","${isredo}","${return}","${env}"};
+    static String[] keys = new String[]{"${input_data}","${targetNames}","${session}","${requestId}","${requestDate}","${clientInfo}","^iserror","^Exception","${workflow_id}","${workflow_task_id}","${isworkflow}","${isredo}","${return}","${env}"};
     @Override
     public String parse(String str, Map data,XMLObject obj) {
         if(null != data) {

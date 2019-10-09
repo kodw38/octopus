@@ -90,7 +90,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         String sql = getSqlAndParameters(file,queryFields,fieldValues,outs,start,end,map,tb);
         Connection conn=null;
         try{
-            conn = getConnection(null);
+            conn = getConnection(null,null);
             conn.setAutoCommit(true);
             if(log.isDebugEnabled()) {
                 log.debug("sql:" + sql + "\n" + map);
@@ -116,7 +116,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         try{
             StringBuffer sb = new StringBuffer(sql);
             sql = getPagingSQL(sb, start, end, map);
-            conn = getConnection(null);
+            conn = getConnection(null,null);
             conn.setAutoCommit(true);
             if(log.isDebugEnabled()) {
                 log.debug("sql:" + sql + "\n" + map);
@@ -139,7 +139,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         sql = getCountSql(sql);
         Connection conn=null;
         try{
-            conn = getConnection(null);
+            conn = getConnection(null,null);
             conn.setAutoCommit(true);
             /*String[] keys = this.analyseSql(sql);
             Object[] pars = this.setSqlObject(map, keys);
@@ -174,7 +174,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         String sql = getSqlAndParameters(file,queryFields,fieldValues,outs,start,end,map,tb);
         Connection conn=null;
         try{
-            conn = getConnection(null);
+            conn = getConnection(null,null);
             conn.setAutoCommit(true);
             /*String[] keys = this.analyseSql(sql);
             Object[] pars = this.setSqlObject(map, keys);
@@ -218,7 +218,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 }
                 n++;
             }
-            conn= getConnection(tradeId);
+            conn= getConnection(tradeId,taskId);
             conn.setAutoCommit(false);
             String pk = getTablePk(conn,file);
             long pkv = -1;
@@ -261,7 +261,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 }
             }else{
                 //env.addTradeConsole(taskId,conn);
-                addTradeConsole(tradeId,conn);
+                addTradeConsole(tradeId,taskId,conn);
             }
         }
     }
@@ -287,7 +287,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         StringBuffer sb=null;
         try{
             if(fieldValues==null|| fieldValues.size()==0)return false;
-            conn= getConnection(tradeId);
+            conn= getConnection(tradeId,taskId);
             conn.setAutoCommit(false);
             String pk = getTablePk(conn,file);
             if (StringUtils.isNotBlank(pk)) {
@@ -396,7 +396,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 }
             }else{
                 //env.addTradeConsole(taskId,conn);
-                addTradeConsole(tradeId,conn);
+                addTradeConsole(tradeId,taskId,conn);
             }
         }
     }
@@ -453,7 +453,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
     public boolean delete(XMLParameter env,String tradeId,String taskId,String file, List<Condition> fieldValues, com.octopus.utils.ds.TableBean tb)throws Exception{
         Connection conn = null;
         try{
-            conn = getConnection(tradeId);
+            conn = getConnection(tradeId,taskId);
             conn.setAutoCommit(false);
             StringBuffer sb = new StringBuffer("delete from ");
             sb.append(file);
@@ -479,7 +479,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 if(null != conn)conn.close();
             }else{
                 //env.addTradeConsole(taskId,conn);
-                addTradeConsole(tradeId,conn);
+                addTradeConsole(tradeId,taskId,conn);
             }
         }
     }
@@ -489,7 +489,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         Connection conn = null;
         String sql=null;
         try{
-            conn = getConnection(tradeId);
+            conn = getConnection(tradeId,taskId);
             conn.setAutoCommit(false);
             StringBuffer sb = new StringBuffer("update ");
             sb.append(file).append(" set ");
@@ -526,7 +526,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 if(null != conn)conn.close();
             }else{
                 //env.addTradeConsole(taskId,conn);
-                addTradeConsole(tradeId,conn);
+                addTradeConsole(tradeId,taskId,conn);
             }
         }
     }
@@ -559,9 +559,9 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         }
     }
 
-    public Connection getConnection(String tradeid) throws SQLException {
-        if(null != tradObjectList.get(tradeid)){
-            return tradObjectList.get(tradeid);
+    public Connection getConnection(String tradeid,String taskId) throws SQLException {
+        if(null != tradObjectList.get(tradeid+"->"+taskId)){
+            return tradObjectList.get(tradeid+"->"+taskId);
         }else {
 
             if(null != dataSource) {
@@ -638,7 +638,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         Connection conn = null;
         ResultSet res = null;
         try{
-            conn= getConnection(tradeId);
+            conn= getConnection(tradeId,taskId);
             conn.setAutoCommit(false);
             Statement st = conn.createStatement();
             if(sql.contains(";")){
@@ -668,7 +668,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 if(null != conn)conn.close();
             }else{
                 //env.addTradeConsole(taskId,conn);
-                addTradeConsole(tradeId,conn);
+                addTradeConsole(tradeId,taskId,conn);
             }
         }
     }
@@ -677,7 +677,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         Connection conn = null;
         ResultSet res = null;
         try{
-            conn= getConnection(null);
+            conn= getConnection(null,null);
             conn.setAutoCommit(true);
             sql=getPagingSQL(new StringBuffer(sql),startIndex,endIndex,parameters);
             res = getResult(conn,sql,parameters);
@@ -713,7 +713,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         ResultSet res = null;
         PreparedStatement st=null;
         try{
-            conn= getConnection(null);
+            conn= getConnection(null,null);
             conn.setAutoCommit(true);
             List<String> keys = this.analyseSql(sql);
             Object[] pars = this.setSqlObject(parameters, keys);
@@ -1115,7 +1115,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
     public boolean exist(String tableName) throws Exception {
         Connection conn = null;
         try{
-            conn= getConnection(null);
+            conn= getConnection(null,null);
             ResultSet rs = conn.getMetaData().getTables(null,null,tableName,null);
             boolean is=false;
             if(rs.next()){
@@ -1138,7 +1138,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         try{
             List<String> li = new LinkedList<String>();
             StringBuffer sql = new StringBuffer();
-            conn= getConnection(null);
+            conn= getConnection(null,null);
             if(dataSource.getDriverClassName().contains("mysql")){
                 sql.append("create table "+tableName+" (");
                 boolean isaddedField =false;
@@ -1210,7 +1210,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
     boolean truncateTable(XMLParameter env,String tradeId,String taskId,String table )throws SQLException {
         Connection conn = null;
         try{
-            conn= getConnection(tradeId);
+            conn= getConnection(tradeId,taskId);
             conn.setAutoCommit(false);
             boolean ret= conn.createStatement().execute("truncate table "+table);
             if(StringUtils.isBlank(tradeId)|| StringUtils.isBlank(taskId)){
@@ -1226,17 +1226,17 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             if(null != conn && (StringUtils.isBlank(tradeId)||StringUtils.isBlank(taskId))) {
                 if (null != conn) conn.close();
             }else{
-                return addTradeConsole(tradeId,conn);
+                return addTradeConsole(tradeId,taskId,conn);
             }
         }
     }
 
-    boolean addTradeConsole(String tradeId,Connection conn){
+    boolean addTradeConsole(String tradeId,String taskId,Connection conn){
         if(StringUtils.isNotBlank(tradeId) && null != conn) {
-            Connection c = tradObjectList.get(tradeId);
+            Connection c = tradObjectList.get(tradeId+"->"+taskId);
             if (null == c) {
                 //list = new ArrayList();
-                tradObjectList.put(tradeId,conn);
+                tradObjectList.put(tradeId+"->"+taskId,conn);
             }
             //list.add(conn);
         }
@@ -1277,46 +1277,54 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
     }
 
     public boolean commit(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret)throws Exception{
-        if(null!=env && StringUtils.isNotBlank(env.getTradeId())) {
-            Connection os = tradObjectList.get(env.getTradeId());
-            if (null != os) {
-                //for (Object o : os) {
+        try {
+            if (null != env && StringUtils.isNotBlank(env.getTradeId())) {
+                Connection os = tradObjectList.get(env.getTradeId() + "->" + xmlid);
+                if (null != os) {
+                    //for (Object o : os) {
                     if (os instanceof Connection && !((Connection) os).isClosed()) {
                         try {
                             ((Connection) os).commit();
 
-                        }finally {
+                        } finally {
                             ((Connection) os).close();
                         }
                     }
-                //}
-                //os.clear();
-            }
+                    //}
+                    //os.clear();
+                }
 
-            return true;
-        }else{
-            return false;
+                return true;
+            } else {
+                return false;
+            }
+        }finally {
+            tradObjectList.remove(env.getTradeId() + "->" + xmlid);
         }
     }
     @Override
     public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
-        if(null!=env && StringUtils.isNotBlank(env.getTradeId())) {
-            Connection os = tradObjectList.get(env.getTradeId());
-            if (null != os) {
-                //for (Object o : os) {
+        try {
+            if (null != env && StringUtils.isNotBlank(env.getTradeId())) {
+                Connection os = tradObjectList.get(env.getTradeId() + "->" + xmlid);
+                if (null != os) {
+                    //for (Object o : os) {
                     if (os instanceof Connection && !((Connection) os).isClosed()) {
                         try {
                             ((Connection) os).rollback();
-                        }finally {
+                        } finally {
                             ((Connection) os).close();
                         }
                     }
-                //}
-                //os.clear();
+                    //}
+                    //os.clear();
+                }
+                return true;  //To change body of implemented methods use File | Settings | File Templates.
+            } else {
+                return false;
             }
-            return true;  //To change body of implemented methods use File | Settings | File Templates.
-        }else{
-            return false;
+        }finally{
+            tradObjectList.remove(env.getTradeId() + "->" + xmlid);
         }
     }
 }

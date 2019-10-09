@@ -5,11 +5,13 @@ import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.bftask.BFParameters;
+import com.octopus.utils.exception.ExceptionUtil;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
+import org.apache.commons.lang.exception.ExceptionUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -73,7 +75,25 @@ public class SuspendTheRequest extends XMLDoObject {
         String envdata = ObjectUtils.convertKeyWithoutThreadNameMap2String(env);
         //save request data in this node
         log.info("staff node id:"+id);
-
+        String error=null;
+        if(null != env.getResult() && env.getResult() instanceof ResultCheck && !((ResultCheck)(env.getResult())).isSuccess() ){
+            if(((ResultCheck)(env.getResult())).getRet() instanceof Exception) {
+                error = ExceptionUtils.getFullStackTrace((Exception) ((ResultCheck) (env.getResult())).getRet());
+                if(null != error) {
+                    if(error.length()>2000) {
+                        error = error.substring(0, 2000);
+                    }
+                }
+            }
+        }
+        if(null == error && env.isError() && null != env.getException()){
+            error = ExceptionUtils.getFullStackTrace((Exception) env.getException());
+            if(null != error) {
+                if(error.length()>2000) {
+                    error = error.substring(0, 2000);
+                }
+            }
+        }
         //env.put("startSuspend", ArrayUtils.toJoinString(env.getTargetNames()) + "|" + x.getId() + "|" + pars. + xmlid);
         String flowbody = x.toString();
         /*String inputdata = ObjectUtils.convertMap2String(input);
@@ -87,6 +107,8 @@ public class SuspendTheRequest extends XMLDoObject {
         map.put("requestData",envdata);
         map.put("interruptSV",flowbody);
         map.put("svName",reqSv);
+        map.put("nodeid",xmlid);
+        map.put("error",error);
         map.put("type",type);
         map.put("state",state);
         map.put("user",env.getLoginUserName());

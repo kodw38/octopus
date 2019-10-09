@@ -79,8 +79,12 @@ public class SystemAction extends XMLDoObject {
             simreturndir = (String) getEmptyParameter().getValueFromExpress(xml.getProperties().getProperty("simreturndir"),this);
         }
 
+        addSystemLoadInitAfterAction(this,"init",null,null);
     }
     public void doInitial(){
+
+    }
+    public void init(){
         try {
             if (StringUtils.isNotBlank(traceFlagPath)) {
                 HashMap map = new HashMap();
@@ -155,7 +159,7 @@ public class SystemAction extends XMLDoObject {
                         log.error("",e);
                     }
                 }
-            },0,300000);
+            },30000,300000);
         }catch (Exception x){
             log.error("",x);
         }
@@ -2318,10 +2322,13 @@ return false;
                     }
                 }else if("addServiceByFlowDesc".equals(op)){
                     Map m = (Map)input.get("flowdesc");
-                    Map desc = Desc.convertFlowStructure2DescMap(m);
-                    if(null != m){
-                        addUpdateSerivce(desc,env);
+                    String type = (String)input.get("flowType");
+
+                    Map desc = Desc.convertFlowStructure2DescMap(m,type);
+                    if (null != m) {
+                        addUpdateSerivce(desc, env);
                     }
+
                     return true;
                 }else if("isFlowSV".equals(op)){
                     String m = (String)input.get("name");

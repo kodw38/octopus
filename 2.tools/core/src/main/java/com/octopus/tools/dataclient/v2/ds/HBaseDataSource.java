@@ -25,14 +25,18 @@ import java.util.*;
 public class HBaseDataSource extends XMLDoObject implements IDataSource {
     Configuration configuration=null;
     Connection connection=null;
+    TableContainer tablecontainer;
+    HashMap<String , List<Map>> tradeDataList = new HashMap();
     public HBaseDataSource(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
-        Properties p = xml.getPropertiesByChildNameValue();
-        configuration = new Configuration();
-        Iterator its = p.keySet().iterator();
-        while(its.hasNext()){
-            Object o = its.next();
-            configuration.set((String)o,p.getProperty((String)o));
+        if(null != xml) {
+            Properties p = xml.getPropertiesByChildNameValue();
+            configuration = new Configuration();
+            Iterator its = p.keySet().iterator();
+            while (its.hasNext()) {
+                Object o = its.next();
+                configuration.set((String) o, p.getProperty((String) o));
+            }
         }
 
     }
@@ -52,57 +56,80 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
 
     @Override
     public List<Map<String, Object>> query(String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
-        return null;
+        throw new Exception("not support query method");
     }
 
     @Override
     public int getCount(String file, String[] queryFields, List<Condition> fieldValues, com.octopus.utils.ds.TableBean tb) throws Exception {
-        return 0;
+        throw new Exception("not support getCount method");
     }
 
     @Override
     public List<Map<String, String>> queryAsString(String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
-        return null;
+        throw new Exception("not support queryAsString method");
     }
 
     @Override
     public List<Map<String, Object>> query(String sql, Map map, int start, int end) throws Exception {
-        return null;
+        throw new Exception("not support query method");
     }
 
     @Override
     public boolean addRecord(XMLParameter env, String tradeId, String taskId, String file, Map<String, Object> fieldValues) throws Exception {
-        return false;
+        if(null != tablecontainer && null != fieldValues){
+            String kr = tablecontainer.getPkField(file);
+            String rowKey = (String)fieldValues.get(kr);
+            Table table=null;
+            try {
+                table = connection.getTable(TableName.valueOf(file));
+                Put put = new Put(Bytes.toBytes(rowKey));
+                Iterator its = fieldValues.keySet().iterator();
+                while(its.hasNext()) {
+                    String c = (String)its.next();
+                    String o = (String)fieldValues.get(c);
+                    put.addColumn(Bytes.toBytes(c), Bytes.toBytes(c), Bytes.toBytes(o));
+                }
+                table.put(put);
+                return true;
+            }finally {
+                if(null != table)
+                    table.close();
+            }
+
+        }else{
+            return false;
+        }
+
     }
 
     @Override
     public boolean addRecords(XMLParameter env, String tradeId, String taskId, String file, List<Map<String, Object>> fieldValues) throws Exception {
-        return false;
+        throw new Exception("not support addRecords method");
     }
 
     @Override
     public boolean insertRecord(XMLParameter env, String tradeId, String taskId, String file, Map<String, Object> fieldValues, int insertPosition) throws Exception {
-        return false;
+        throw new Exception("not support insertRecord method");
     }
 
     @Override
     public boolean insertRecords(XMLParameter env, String tradeId, String taskId, String file, List<Map<String, Object>> fieldValues, int insertPosition) throws Exception {
-        return false;
+        throw new Exception("not support insertRecords method");
     }
 
     @Override
     public boolean delete(XMLParameter env, String tradeId, String taskId, String file, List<Condition> fieldValues, com.octopus.utils.ds.TableBean tb) throws Exception {
-        return false;
+        throw new Exception("not support delete method");
     }
 
     @Override
     public boolean update(XMLParameter env, String tradeId, String taskId, String file, List<Condition> fieldValues, Map<String, Object> updateData, com.octopus.utils.ds.TableBean tb) throws Exception {
-        return false;
+        return addRecord(env,tradeId,taskId,file,updateData);
     }
 
     @Override
-    public IDataSource getDataSource(String name) {
-        return null;
+    public IDataSource getDataSource(String name) throws Exception{
+        throw new Exception("not support getDataSource method");
     }
 
     @Override
@@ -184,7 +211,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
             }else if("delete".equals(op)){
                 List<HbaseConditionEntity> dc = getConditions((Map)conds);
                 List<HbaseDataEntity> ret = queryDataByConditions(null,table,dc,fields);
-                deleteDataList(ret);
+                deleteDataList(env,xmlid,ret);
             }else if("add".equals(op)){
                 if(datas instanceof Map) {
                     TableContainer tablecontainer = (TableContainer)input.get("^tablecontainer");
@@ -205,20 +232,20 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                     }
                     if(!exist(table,id)) {
                         Map md = getHBaseMap((Map) datas);
-                        return addDataForTable(table, id, md);
+                        return addDataForTable(env,xmlid,table, id, md);
                     }else{
                         throw new Exception("the pk "+id+" existed in "+table);
                     }
                 }else if(datas instanceof List){
                     List<HbaseDataEntity> list = getListData((List)datas);
-                    insertDataList(list);
+                    insertDataList(env,xmlid,list);
                 }else{
                     throw new Exception(this.getClass().getName()+" not support "+datas.getClass().getName());
                 }
             }else if("update".equals(op)){
                 List<HbaseConditionEntity> dc = getConditions((Map)conds);
                 List<HbaseDataEntity> ret = queryDataByConditions(null,table,dc,fields);
-                updateDataList(ret, (Map) datas);
+                updateDataList(env,xmlid,ret, (Map) datas);
             }else if("upadd".equals(op)){
 
             }else if("query".equals(op)){
@@ -234,7 +261,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
         return null;
     }
 
-    List<HbaseConditionEntity> getConditions(Map map){
+    static List<HbaseConditionEntity> getConditions(Map map){
         if(null != map && map.size()>0) {
             List ret = new ArrayList();
             Iterator its = map.keySet().iterator();
@@ -305,11 +332,43 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
 
     @Override
     public boolean commit(String xmlid, XMLParameter env, Map input, Map output, Map config, Object ret) throws Exception {
-        return false;
+        String tradid = env.getTradeId();
+        String id = tradid+"->"+xmlid;
+        if(StringUtils.isNotBlank(id)) {
+            tradeDataList.remove(id);
+        }
+        return true;
     }
 
     @Override
     public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config, Object ret, Exception e) throws Exception {
+        if(null != env){
+            String tradid = env.getTradeId();
+            String id = tradid+"->"+xmlid;
+            if(StringUtils.isNotBlank(id)){
+                List<Map> thisTradeDatalist = tradeDataList.get(id);
+                if(null != thisTradeDatalist){
+                    for(Map d:thisTradeDatalist){
+                        String op  = (String)d.get("op");
+                        Map data  = (Map)d.get("data");
+                        String table   = (String)d.get("table");
+                        if(StringUtils.isNotBlank(op)){
+                            if("delete".equals(op)){
+                                addRecord(env,null,null,table,data);
+                            }else if("update".equals(op)){
+                                update(env,null,null,table,null,data,null);
+                            }else if("add".equals(op)){
+                                String pk = tablecontainer.getPkField(table);
+                                String rowKey = (String)data.get(pk);
+                                delete(table,rowKey);
+                            }
+                        }
+                    }
+                }
+                tradeDataList.remove(id);
+            }
+            return true;
+        }
         return false;
     }
 
@@ -375,13 +434,14 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
      * @param columnValues
      * @return
      */
-    public int addDataForTable(String name, String rowkey,
+    public int addDataForTable(XMLParameter env,String taskid,String name, String rowkey,
                                       Map<String, Map<String, String>> columnValues) throws Exception{
         Table htable=null;
         try {
             Put put = new Put(Bytes.toBytes(rowkey));
             TableName tableName = TableName.valueOf(name);
             htable = connection.getTable(tableName);
+            HashMap tm = new HashMap();
             HColumnDescriptor[] columnFamilies = htable.getTableDescriptor().getColumnFamilies();// 获取所有的列名
             for (HColumnDescriptor hColumnDescriptor : columnFamilies) {
                 String familyName = hColumnDescriptor.getNameAsString();
@@ -391,8 +451,23 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                         put.addColumn(Bytes.toBytes(familyName), Bytes
                                 .toBytes(columnName), Bytes
                                 .toBytes(columnNameValueMap.get(columnName)));
+                        tm.put(columnName,columnNameValueMap.get(columnName));
                     }
                 }
+            }
+            if(StringUtils.isNotBlank(env.getTradeId())){
+                List l = new ArrayList();
+                HashMap m = new HashMap();
+                m.put("op","add");
+                m.put("data",tm);
+                m.put("table",name);
+                l.add(m);
+                if(null == tradeDataList.get(env.getTradeId()+"->"+taskid)) {
+                    tradeDataList.put(env.getTradeId() + "->" + taskid, l);
+                }else{
+                    ((List)tradeDataList.get(env.getTradeId()+"->"+taskid)).addAll(l);
+                }
+
             }
             htable.put(put);
             return put.size();
@@ -411,15 +486,16 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
      *
      * @param list
      */
-    public void insertDataList(List<HbaseDataEntity> list) throws Exception{
+    public void insertDataList(XMLParameter env,String taskid,List<HbaseDataEntity> list) throws Exception{
         List<Put> puts = new ArrayList<Put>();
         Table table = null;
         Put put;
         try {
+            List li = new ArrayList();
             for (HbaseDataEntity entity : list) {
                 TableName tableName = TableName.valueOf(entity.getTableName());
                 table = connection.getTable(tableName);
-
+                HashMap t = new HashMap();
                 put = new Put(entity.getMobileKey().getBytes());// 一个PUT代表一行数据，再NEW一个PUT表示第二行数据,每行一个唯一的ROWKEY
                 for (String columnfamily : entity.getColumns().keySet()) {
                     for (String column : entity.getColumns().get(columnfamily)
@@ -429,9 +505,22 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                                 column.getBytes(),
                                 entity.getColumns().get(columnfamily)
                                         .get(column).getBytes());
+                        t.put(column,entity.getColumns().get(columnfamily).get(column));
                     }
                 }
+                HashMap m = new HashMap();
+                m.put("data",t);
+                m.put("op","add");
+                m.put("table",tableName);
+                li.add(m);
                 puts.add(put);
+            }
+            if(StringUtils.isNotBlank(env.getTradeId())){
+                if(null == tradeDataList.get(env.getTradeId()+"->"+taskid)) {
+                    tradeDataList.put(env.getTradeId() + "->" + taskid, li);
+                }else{
+                    ((List)tradeDataList.get(env.getTradeId()+"->"+taskid)).addAll(li);
+                }
             }
             table.put(puts);
         } catch (Exception e) {
@@ -475,28 +564,45 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
         }
     }
 
-    public void updateDataList(List<HbaseDataEntity> list,Map data)throws Exception{
+    public void updateDataList(XMLParameter env,String taskId,List<HbaseDataEntity> list,Map data)throws Exception{
         Table table = null;
         List<Put> puts = new ArrayList<Put>();
         try {
+            List ls = new ArrayList();
             for (HbaseDataEntity entity : list) {
 
                 TableName tableName = TableName.valueOf(entity.getTableName());
                 table = connection.getTable(tableName);
 
                 Put put = new Put(Bytes.toBytes(entity.getMobileKey()));
+                Map d = new HashMap();
                 for (String columnfamily : entity.getColumns().keySet()) {
                     for (String column : entity.getColumns().get(columnfamily).keySet()) {
                         if(data.containsKey(column)) {
                             put.addColumn(columnfamily.getBytes(), column.getBytes(), Bytes.toBytes((String) data.get(column)));
+                            log.debug("update set value="+data.get(column)+" where columnfamily="+columnfamily+" and column="+column);
+                            d.put(column,data.get(column));
                         }
                     }
                 }
                 if(put.size()>0) {
+                    HashMap m = new HashMap();
+                    m.put("data",d);
+                    m.put("op","update");
+                    m.put("table",entity.getTableName());
+                    ls.add(m);
                     puts.add(put);
                 }
             }
+
             if(puts.size()>0) {
+                if(StringUtils.isNotBlank(env.getTradeId())){
+                    if(null == tradeDataList.get(env.getTradeId()+"->"+taskId)) {
+                        tradeDataList.put(env.getTradeId() + "->" + taskId, ls);
+                    }else{
+                        ((List)tradeDataList.get(env.getTradeId()+"->"+taskId)).addAll(ls);
+                    }
+                }
                 table.put(puts);
 
             }
@@ -514,9 +620,10 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
      *
      * @param list
      */
-    public void deleteDataList(List<HbaseDataEntity> list)throws Exception{
+    public void deleteDataList(XMLParameter env,String taskid,List<HbaseDataEntity> list)throws Exception{
         Table table = null;
         List<Delete> deletes = new ArrayList<Delete>();
+        List predata =null;
         try {
             for (HbaseDataEntity entity : list) {
 
@@ -530,10 +637,30 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                     }
                 }*/
                 deletes.add(delete);
+                if(StringUtils.isNotBlank(env.getTradeId())){
+                    Map m = getDataByMobileKey(table,entity.getMobileKey());
+                    if(null == predata) predata=new ArrayList();
+                    HashMap d = new HashMap();
+                    d.put("data",d);
+                    d.put("table",entity.getTableName());
+                    d.put("op","delete");
+                    predata.add(d);
+
+                }
+
+            }
+            if(StringUtils.isNotBlank(env.getTradeId())) {
+                if(null == tradeDataList.get(env.getTradeId() + "->" + taskid)) {
+                    tradeDataList.put(env.getTradeId() + "->" + taskid, predata);
+                }else{
+                    ((List)tradeDataList.get(env.getTradeId() + "->" + taskid)).addAll(predata);
+                }
             }
             if(null != deletes && deletes.size()>0) {
                 table.delete(deletes);
+
             }
+
 
         } catch (Exception e) {
             log.error("",e);
@@ -544,7 +671,22 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
             }
         }
     }
+    Map getDataByMobileKey(Table tb ,String key) throws IOException {
+        Filter fi = new RowFilter(CompareFilter.CompareOp.EQUAL,new BinaryComparator(key.getBytes()));
+        Scan s = new Scan();
+        s.setFilter(fi);
+        Map<String,String> familyMap = new HashMap();
+        ResultScanner resultScanner = tb.getScanner(s);
+        for (Result result : resultScanner) {
+            for (Cell cell : result.rawCells()) {
+                familyMap.put(new String(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()),new String(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+            }
+            if(familyMap.size()>0)
+            return familyMap;
 
+        }
+        return null;
+    }
     /**
      * 删除指定的列
      *
@@ -930,7 +1072,6 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                     filter.setFilterIfMissing(true);
 
                     if (hbaseCondition.getOperator() != null) {
-
                         if (operator == null) {
                             operator = hbaseCondition.getOperator();
                             filterList = new FilterList(hbaseCondition.getOperator());
@@ -1499,7 +1640,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
          */
 
             // 7、复合条件查询
-            HBaseDataSource dc = new HBaseDataSource(null, null,null);
+            /*HBaseDataSource dc = new HBaseDataSource(null, null,null);
             String tableName = "caoShuaiTest01";
             List<HbaseConditionEntity> hbaseConditions = new ArrayList<HbaseConditionEntity>();
             hbaseConditions.add(new HbaseConditionEntity(Bytes.toBytes("info"),
@@ -1522,7 +1663,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                     Bytes.toBytes("english"), Bytes.toBytes("70"), null,
                     CompareFilter.CompareOp.valueOf("EQUAL")));
 
-            List<HbaseDataEntity> datas = dc.queryDataByConditionsAndPage(null, tableName, hbaseConditions, 2, null);
+            List<HbaseDataEntity> datas = dc.queryDataByConditionsAndPage(null, tableName, hbaseConditions, 2, null);*/
             //List<HbaseDataEntity> datas = QueryDataByConditions(null, tableName, hbaseConditions); //联合条件查询 String tableName = "caoShuaiTest01";
         /*  List<String> parameters = new ArrayList<String>();
           parameters.add("info,age,EQUAL,23");
@@ -1557,6 +1698,49 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                 break;
             }
         }*/
+
+            Configuration conf = HBaseConfiguration.create();
+            conf.set("hbase.zookeeper.quorum","10.11.20.115:9101");
+            conf.set("hbase.zookeeper.property.clientPort","9101");
+            conf.set("hbase.master","10.11.20.115:16010");
+            HTable table = new HTable(conf, "ISP_SV_INTERRUPT");
+            System.out.println("scanning full table:");
+            Scan scan = new Scan();
+            scan.setFilter(new FirstKeyOnlyFilter());
+            ResultScanner scanner = table.getScanner(scan);
+            for (Result rr : scanner) {
+                System.out.println(new String(rr.getRow()));
+
+            }
+
+            /*Configuration configuration = new Configuration();
+            configuration.set("hbase.zookeeper.quorum","10.11.20.115:9101");
+            configuration.set("hbase.zookeeper.property.clientPort","9101");
+            configuration.set("hbase.master","10.11.20.115:16010");
+            Connection connection = ConnectionFactory.createConnection(configuration);*/
+            try {
+                /*HBaseDataSource d = new HBaseDataSource(null,null,null);
+                Map conds= new HashMap();
+                d.connection=connection;
+                List<HbaseConditionEntity> dc = getConditions((Map) conds);
+                List fields = new ArrayList();
+                fields.add("REQ_ID");
+                List<HbaseDataEntity> ret = d.queryDataByConditions(null, "ISP_SV_INTERRUPT", dc,fields);
+                List<Map> rs = d.getResult(ret);
+                if(null != rs){
+                    for(Map r:rs){
+                        System.out.println(r);
+                    }
+                }*/
+
+                //Delete delete = new Delete(Bytes.toBytes("11WFTEST283_40"));
+                //table.delete(delete);
+                System.out.println("successs");
+            }finally {
+                /*if(null != table){
+                    table.close();
+                }*/
+            }
         }catch (Exception e){
             e.printStackTrace();
         }

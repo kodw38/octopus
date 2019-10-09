@@ -42,7 +42,7 @@ public interface IDataSource {
 
     public boolean update(XMLParameter env,String tradeId,String taskId,String file,List<Condition> fieldValues,Map<String,Object> updateData,TableBean tb)throws Exception;
 
-    public IDataSource getDataSource(String name);
+    public IDataSource getDataSource(String name) throws Exception;
 
     public boolean exist(String tableName) throws Exception;
 

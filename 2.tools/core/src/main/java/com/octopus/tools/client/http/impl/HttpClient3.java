@@ -434,7 +434,9 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
         boolean isSendCookie=false;
         HttpDS ds = null;
         if(null != input){
-            ds =(HttpDS)input.get("ds");
+            if(null != input.get("ds") && input.get("ds") instanceof HttpDS) {
+                ds = (HttpDS) input.get("ds");
+            }
             method = (String)input.get("method");
             url = (String)input.get("url");
             log.debug("remote url 1:"+url+" "+env.getParameter("${input_data}"));

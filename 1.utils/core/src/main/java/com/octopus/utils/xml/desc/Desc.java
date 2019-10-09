@@ -947,13 +947,14 @@ public class Desc extends XMLDoObject{
         },
      * @return
      */
-    public static Map convertFlowStructure2DescMap(Map flowStruct){
+    public static Map convertFlowStructure2DescMap(Map flowStruct,String flowType){
         if(null != flowStruct){
             Map desc = new HashMap();
             desc.put("name",flowStruct.get("title"));
             desc.put("package",flowStruct.get("package"));
             desc.put("opType",flowStruct.get("opType"));
             desc.put("createby","flow");
+            desc.put("redo","true");
             StringBuffer body = new StringBuffer();
             String hd = "<action key=\"\" ";
             Map mm = (Map)flowStruct.get("nodes");

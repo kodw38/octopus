@@ -169,7 +169,7 @@ public class DefaultSequence extends XMLObject implements ISequence {
         Connection conn=null;
         try {
             com.octopus.tools.dataclient.v2.ds.DBDataSource db = (com.octopus.tools.dataclient.v2.ds.DBDataSource) obj;
-            conn = db.getConnection(null);
+            conn = db.getConnection(null,null);
             conn.setAutoCommit(false);
             long increment = 0;
             long last_number = 0;

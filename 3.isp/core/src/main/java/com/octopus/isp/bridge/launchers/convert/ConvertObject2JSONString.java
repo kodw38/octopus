@@ -91,7 +91,7 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
                 }
             }else if(Map.class.isAssignableFrom(par.getClass())){
                 if((StringUtils.isTrue((String)((Map)par).get("is_error")) && ((Map)par).containsKey("errorcode") && ((Map)par).containsKey("msg"))){
-                    res = getErrorMsg(env,(String)((Map)par).get("errorcode"),(String)((Map)par).get("msg"));
+                    res = getErrorMsg(env,((Map)par).get("errorcode").toString(),((Map)par).get("msg").toString());
                     if(StringUtils.isBlank(res)){
                         res = ObjectUtils.convertMap2String((Map) par);
                     }

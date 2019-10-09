@@ -353,6 +353,16 @@ public class TableContainer extends XMLDoObject {
            }
        }
     }
+    public String getPkField(String table){
+        TableBean tb = allTables.get(table);
+        if(null != tb) {
+            FieldBean fb = tb.getPkField();
+            if(null != fb) {
+                return fb.getFieldCode();
+            }
+        }
+        return null;
+    }
     public String getTableNameByFields(String[] fields)throws Exception{
         Iterator<String> its= allTables.keySet().iterator();
         boolean ismatch=true;

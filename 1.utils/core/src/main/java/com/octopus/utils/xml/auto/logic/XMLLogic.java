@@ -80,7 +80,6 @@ public class XMLLogic extends XMLDoObject{
                                     log.debug("this input "+env.get(k));
                                 }
                             }
-
                         }
                     }else {
                         env.put(k, input);
@@ -854,15 +853,29 @@ public class XMLLogic extends XMLDoObject{
                         String ids = env.getSuspend();
                         if(StringUtils.isNotBlank(ids)) {
                             String[] idarray = ids.split("\\|");//reqSv+"|"+xmlid+"|"+nodeid+"|"+reqid;
-                            if(StringUtils.isNotBlank(idarray[1])) {
-                                String[] keys = idarray[1].split(",");
-                                XMLMakeup sx = findSuspendNode(getXML(), keys[0],keys[1],idarray[2]);
-                                if(null != sx) {
-                                    env.setSuspendDo(true);
-                                    doActiveAction(env, sx);
-                                }else{
-                                    throw new Exception("not find the redo node ["+ids+"]");
+                            if(idarray.length>3) {
+                                if (StringUtils.isNotBlank(idarray[1])) {
+                                    String[] keys = idarray[1].split(",");
+                                    XMLMakeup sx = findSuspendNode(getXML(), keys[0], keys[1], idarray[2]);
+                                    if (null != sx) {
+                                        env.setSuspendDo(true);
+                                        doActiveAction(env, sx);
+                                    } else {
+                                        if(keys[0].equals(keys[1])){
+                                            //redo it from first node
+                                            env.setSuspendDo(true);
+                                            log.debug("start to do action"+getXML().getId()+" from first Node.");
+                                            doActiveAction(env, getXML());
+                                        }else {
+                                            throw new Exception("not find the redo node [" + ids + "]");
+                                        }
+                                    }
                                 }
+                            }else if(idarray.length==1){
+                                //start from fist node
+                                env.setSuspendDo(true);
+                                log.debug("start to do action"+getXML().getId()+" from first Node.");
+                                doActiveAction(env, getXML());
                             }
                         }
                     }
