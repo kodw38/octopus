@@ -954,7 +954,9 @@ public class Desc extends XMLDoObject{
             desc.put("package",flowStruct.get("package"));
             desc.put("opType",flowStruct.get("opType"));
             desc.put("createby","flow");
-            desc.put("redo","true");
+            if(StringUtils.isNotBlank(flowType) && "WorkFlow".equals(flowType)) {
+                desc.put("redo", "true");
+            }
             StringBuffer body = new StringBuffer();
             String hd = "<action key=\"\" ";
             Map mm = (Map)flowStruct.get("nodes");
