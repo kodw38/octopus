@@ -1002,27 +1002,41 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         //        output = parameter.getMapValueFromParameter(output);
         //    }
         //}
-
+        Map envCOnfig=null,referConfig=null,orgConfig=null;
         if (null != xml && parameter.containsKey("^${config#" + xml.getId() + "}")) {
-            config = (Map) parameter.getParameter("^${config#" + xml.getId() + "}");
+            envCOnfig = (Map) parameter.getParameter("^${config#" + xml.getId() + "}");
         }
         if (!parameter.containsParameter("^${config}")){
             //long l = System.currentTimeMillis();
             //优先取调用时的配置
             if (null!=xml && xml.getProperties().containsKey("config")) {
-                config = StringUtils.convert2MapJSONObject(xml.getProperties().getProperty("config"));
-                config = parameter.getMapValueFromParameter(config, this);
-            }else if(getXML().getProperties().containsKey("config")){
+                referConfig = StringUtils.convert2MapJSONObject(xml.getProperties().getProperty("config"));
+                referConfig = parameter.getMapValueFromParameter(referConfig, this);
+            }
+            if(getXML().getProperties().containsKey("config")){
                 if(null==definedConfigMap){
                     definedConfigMap=StringUtils.convert2MapJSONObject(getXML().getProperties().getProperty("config"));
                     definedConfigMap=parameter.getMapValueFromParameter(definedConfigMap, this);
                 }
                 //如果没有取定义时的配置
-                config = definedConfigMap;
+                //config = definedConfigMap;
             }
             //System.out.println("config "+new Date().getTime()+" "+(System.currentTimeMillis()-l));
         } else {
-            config = (Map) parameter.getParameter("^${config}");
+            orgConfig = (Map) parameter.getParameter("^${config}");
+        }
+        config= new HashMap();
+        if(null != envCOnfig){
+            ObjectUtils.appendDeepMapNotReplaceKey(envCOnfig,config);
+        }
+        if(null != referConfig){
+            ObjectUtils.appendDeepMapNotReplaceKey(referConfig,config);
+        }
+        if(null != orgConfig){
+            ObjectUtils.appendDeepMapNotReplaceKey(orgConfig,config);
+        }
+        if(null != definedConfigMap){
+            ObjectUtils.appendDeepMapNotReplaceKey(definedConfigMap,config);
         }
         //如果config为空，尝试从说明文档中加载
         //if(null == config){
@@ -1504,9 +1518,8 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         }*/
         //服务逻辑使用服务定义的xml，外面传进来的xml只是描述调用时参数
         String id = null ==parxml?getXML().getId():parxml.getId();
-        XMLMakeup xml=getXML();
-        if(null == xml)
-            xml = getXML();
+        XMLMakeup xml= null ==parxml?getXML():parxml;
+
         /*if(!xml.toString().equals(getXML().toString())){
             System.out.println();
         }*/
@@ -1687,7 +1700,8 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                 }
                 XMLDoObject suspendTheRequest = (XMLDoObject)getObjectById((String)((Map)parameter.getParameter("${env}")).get("saveRedoService"));
                 //parameter.setSuspendXMlId(xml.getId());
-                parameter.setSuspendXMlId(xmlid+","+xml.getId());//这里设置的是实用的别名，方便主服务查找
+                parameter.setSuspendXMlId(xmlid+","+getXML().getId());//这里设置的是实用的别名，方便主服务查找
+                log.error("happend error node:"+xml);
                 suspendTheRequest.doThing(parameter, xml);
             }
             throw ex;
@@ -1782,7 +1796,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
     boolean isTimeoutActionBackground(XMLParameter par,XMLMakeup xml){
         if(par.getStatus()==XMLParameter.HAPPEN_TIMEOUT
                 && Thread.currentThread().getName().equals(par.getGlobalParameter("^{Timeout_BG_Thread_Name}"))
-                && (xml.getId()+","+xml.getId()).equals(par.getSuspendXMlId())
+                && (xml.getId()+","+getXML().getId()).equals(par.getSuspendXMlId())
                 ){
             return true;
         }
@@ -1797,7 +1811,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         return false;
     }
     //timeout 后台程序处理完毕，更新redo
-    void removeTimeoutRedo(XMLParameter parameter,XMLMakeup xml)throws Exception{
+    protected void removeTimeoutRedo(XMLParameter parameter,XMLMakeup xml)throws Exception{
         XMLDoObject suspendTheRequest = (XMLDoObject)getObjectById((String)((Map)parameter.getParameter("${env}")).get("saveRedoService"));
         parameter.setStatus(XMLParameter.TIMEOUT_DELETE);
         suspendTheRequest.doThing(parameter,xml);

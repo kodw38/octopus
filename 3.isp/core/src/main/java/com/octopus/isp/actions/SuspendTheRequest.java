@@ -11,8 +11,10 @@ import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
+import com.octopus.utils.xml.auto.pointparses.PointParseGetAllParameters;
 import org.apache.commons.lang.exception.ExceptionUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,10 +73,12 @@ public class SuspendTheRequest extends XMLDoObject {
         String state="1";//1.入录，2.处理异常依旧，3.处理完成
 
         String id = reqSv+"|"+xmlid+"|"+nodeid+"|"+type+"|"+reqid+"|"+env.getLoginUserName()+"|";
-        //env.setInterruptPoint(reqSv+"|"+xmlid+"|"+seq+"|"+reqid);
-        String envdata = ObjectUtils.convertKeyWithoutThreadNameMap2String(env);
-        //save request data in this node
         log.info("staff node id:"+id);
+        //env.setInterruptPoint(reqSv+"|"+xmlid+"|"+seq+"|"+reqid);
+        List tmpList = new ArrayList();
+        String envdata = ObjectUtils.convertKeyWithoutThreadNameMap2String(env, PointParseGetAllParameters.COPY_FIELDS);
+        //save request data in this node
+
         String error=null;
         if(null != env.getResult() && env.getResult() instanceof ResultCheck && !((ResultCheck)(env.getResult())).isSuccess() ){
             if(((ResultCheck)(env.getResult())).getRet() instanceof Exception) {

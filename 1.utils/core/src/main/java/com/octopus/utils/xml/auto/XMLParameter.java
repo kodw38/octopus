@@ -657,6 +657,9 @@ public class XMLParameter extends ParameterMap implements Serializable {
     public String getSuspendXMlId(){
         return (String)getGlobalParameter("^${SuspendXMLID}");
     }
+    public void removeSuspendXMlId(){
+        removeParameter("^${SuspendXMLID}");
+    }
     //设置重做日志中的请求id，表明该请求是重做请求，在xmllogic中通过该标志已经做过了逻辑不需要再做
     public void setSuspend(String id){
         addParameter("^${SuspendActiveID}",id);

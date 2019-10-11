@@ -1010,8 +1010,9 @@ public class Desc extends XMLDoObject{
                         }
                     }
                     StringBuffer a = new StringBuffer("<do ");
-                    if("task".equals(type)){
-                        a.append("key=\"").append(key).append("\"").append(" action=\"suspendTheRequest\"");
+                    if("task".equals(type)||"task round".equals(type)){
+                        //a.append("key=\"").append(key).append("\"").append(" action=\"suspendTheRequest\"");
+                        a.append("key=\"").append(key).append("\"").append(" action=\"interrupt\"");
                     }else if("start round".equals(type)){
 
                     }else if("end".equals(type)){

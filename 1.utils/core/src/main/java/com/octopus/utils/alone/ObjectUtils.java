@@ -1748,7 +1748,6 @@ public class ObjectUtils {
                         o = o.toString().substring(0, n);
                     }
                 }
-                List li = new ArrayList();
                 appendObject2StringBuffer(sb,o,v);
                 if(isfirst)
                     isfirst=false;
@@ -1837,7 +1836,10 @@ public class ObjectUtils {
     static String valuev(Object v)  {
         if(null == v)return "\"\"";
         if(v instanceof String){
-            if(((String)v).startsWith("[") || ((String)v).startsWith("{")) {
+            if((
+                    ((String)v).startsWith("[") && ((String)v).endsWith("]") && null != StringUtils.convert2ListJSONObject((String)v) && StringUtils.convert2ListJSONObject((String)v).size()>0
+            )
+                    || ( ((String)v).startsWith("{") && ((String)v).endsWith("}") && null != StringUtils.convert2MapJSONObject((String)v))) {
                 return jsonReaminDeal((String) v);
             }else {
                 String s= StringUtils.subQuotStringWithCheckJavaTransChar(v.toString());

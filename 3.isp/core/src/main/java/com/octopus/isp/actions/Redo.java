@@ -46,7 +46,7 @@ public class Redo extends XMLDoObject {
             }
 
             if(log.isDebugEnabled()){
-                log.debug("redo env data\n"+d);
+                log.debug("action:"+action+"\nid:"+id+"\nredo env data\n"+d);
             }
 
             XMLMakeup xml = null;

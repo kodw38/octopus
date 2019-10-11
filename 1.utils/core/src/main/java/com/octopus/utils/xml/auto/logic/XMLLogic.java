@@ -861,13 +861,13 @@ public class XMLLogic extends XMLDoObject{
                                         env.setSuspendDo(true);
                                         doActiveAction(env, sx);
                                     } else {
-                                        if(keys[0].equals(keys[1])){
+                                        if(keys[0].equals(keys[1]) && getXML().getId().equals(keys[0])){
                                             //redo it from first node
                                             env.setSuspendDo(true);
                                             log.debug("start to do action"+getXML().getId()+" from first Node.");
                                             doActiveAction(env, getXML());
                                         }else {
-                                            throw new Exception("not find the redo node [" + ids + "]");
+                                            throw new Exception("not find the redo node [" + ids + "]\n"+"key:"+keys[0]+" action:"+ keys[1]+" nodeid:"+ idarray[2]+"\n"+getXML());
                                         }
                                     }
                                 }
@@ -915,7 +915,7 @@ public class XMLLogic extends XMLDoObject{
     }
 
     boolean isThisNode(XMLMakeup root,String key,String srvkey,String nodeid){
-        if(nodeid.equals("null")) nodeid=null;
+        if(StringUtils.isBlank(nodeid)|| nodeid.equals("null")) nodeid=null;
         if(
                 ((StringUtils.isBlank(nodeid) && !root.getProperties().containsKey("nodeid"))
                         ||(StringUtils.isNotBlank(nodeid) && nodeid.equals(root.getProperties().getProperty("nodeid"))))
@@ -964,9 +964,12 @@ public class XMLLogic extends XMLDoObject{
     void doActiveAction(XMLParameter p,XMLMakeup x) throws Exception {
         if(null != x) {
             doElement(p,x);
-
+            removeTimeoutRedo(p,x);
             //上次断点执行成功，移除断点标志
+            p.removeSuspendXMlId();
             p.removeSuspend();
+            //todo 移除Hbase中的上个断点日志
+
             //继续执行孩子逻辑
             for (XMLMakeup cx : x.getChildren()) {
                 doElement(p, cx);
