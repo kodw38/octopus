@@ -651,7 +651,12 @@ public class XMLLogic extends XMLDoObject{
     void doPrint(XMLParameter env,XMLMakeup xml){
         String msg = xml.getProperties().getProperty("msg");
         if(StringUtils.isNotBlank(msg)){
-            print(env,msg,null,xml.getId());
+            Object logicid = env.getParameter("^${thisKey#"+this.hashCode()+"}");
+            String id  = xml.getId();
+            if(null != logicid){
+                id +=" " +logicid;
+            }
+            print(env,msg,null,id);
         }else if(xml.getProperties().containsKey("trace")){
             XMLObject o =this;
             while(null !=o && o instanceof XMLObject ){
@@ -786,6 +791,7 @@ public class XMLLogic extends XMLDoObject{
             String id=getId(env);
             boolean isChild=false;
             try{
+                env.addParameter("^${thisKey#"+temk+"}",xmlid);
                 istrade = startTrade(getXML().getId(),getXML(),env,null,null,null);
 
                 if(null != input && null == env.getParameter("^${input#"+temk+"}"))
@@ -909,6 +915,7 @@ public class XMLLogic extends XMLDoObject{
                 env.removeParameter("^${input#"+temk+"}");
                 env.removeParameter("^${output#"+temk+"}");
                 env.removeParameter("^${config#"+temk+"}");
+                env.removeParameter("^${thisKey#"+temk+"}");
                 /*env.removeParameter("${result#"+temk+"}");*/
             }
         }

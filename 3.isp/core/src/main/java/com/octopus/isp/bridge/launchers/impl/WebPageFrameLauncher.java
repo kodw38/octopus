@@ -681,6 +681,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 webapp.setContextPath(contextPath);
 
                 webapp.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+                //webapp.setInitParameter("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false"); //resource can avliable dynamic
                 //webapp.setResourceBase(webContextPath);
                 //定位项目中class文件的位置
                 webapp.setClassLoader(Thread.currentThread().getContextClassLoader());
@@ -760,8 +761,9 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 context.setContextPath(contextPath);
             }
             context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+            //context.setInitParameter("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false"); //resource can avliable dynamic
             context.setClassLoader(Thread.currentThread().getContextClassLoader());
-            
+
             try {
                 if (StringUtils.isNotBlank(resourcePath)) {
                     context.setResourceBase(resourcePath);
