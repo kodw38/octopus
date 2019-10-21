@@ -72,7 +72,14 @@ public class Session extends HashMap<String,Object>{
         }
     }
     public String getUserName(){
-        return (String)get(SessionData.LoginUserNameKey);
+        if(null != SessionData.loginFields){
+            for(Map m:SessionData.loginFields){
+                if(this.containsKey(m.get("name"))){
+                    return (String)get(m.get("name"));
+                }
+            }
+        }
+        return null;
     }
 
 }

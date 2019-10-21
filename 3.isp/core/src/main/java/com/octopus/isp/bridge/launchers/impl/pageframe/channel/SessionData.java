@@ -30,14 +30,23 @@ public class SessionData extends XMLDoObject {
     transient static Log log = LogFactory.getLog(SessionData.class);
     Map<String,List<Map<String,Object>>> map = new HashMap<String, List<Map<String,Object>>>();
     Map<String,List<Properties>> sessionDataByXmlObject = new HashMap<String, List<Properties>>();
-    public static String LoginUserNameKey,LoginUserPwdKey,ApiUserNameKey,ApiUserPwdKey,ApiSessionTimeoutKey;
+    public static List<Map> loginFields = new ArrayList<>();
     public SessionData(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
-        LoginUserNameKey = xml.getFirstCurChildText("property","name","LoginUserNameKey");
-        LoginUserPwdKey = xml.getFirstCurChildText("property","name","LoginUserPwdKey");
-        ApiUserNameKey = xml.getFirstCurChildText("property","name","ApiUserNameKey");
-        ApiUserPwdKey = xml.getFirstCurChildText("property","name","ApiUserPwdKey");
-        ApiSessionTimeoutKey = xml.getFirstCurChildText("property","name","ApiSessionTimeoutKey");
+        XMLMakeup loginx = xml.getFirstChildById("loginfields");
+        if(null != loginx){
+            List<XMLMakeup> ls = loginx.getChildren();
+            if(null != ls){
+                for(XMLMakeup l:ls){
+                    loginFields.add(l.getProperties());
+                }
+            }
+        }
+        //LoginUserNameKey = xml.getFirstCurChildText("property","name","LoginUserNameKey");
+        //LoginUserPwdKey = xml.getFirstCurChildText("property","name","LoginUserPwdKey");
+        //ApiUserNameKey = xml.getFirstCurChildText("property","name","ApiUserNameKey");
+        //ApiUserPwdKey = xml.getFirstCurChildText("property","name","ApiUserPwdKey");
+        //ApiSessionTimeoutKey = xml.getFirstCurChildText("property","name","ApiSessionTimeoutKey");
 
         XMLMakeup[] sessionconfigs = xml.getRoot().getChild("sessions");
         if(null != sessionconfigs && sessionconfigs.length>0){
@@ -78,6 +87,16 @@ public class SessionData extends XMLDoObject {
         }
     }
 
+    Map getLoginField(Map input){
+        if(null != input){
+            for(Map m :loginFields){
+                if(input.containsKey(m.get("name")) && input.containsKey(m.get("password")))
+                    return m;
+            }
+        }
+        return null;
+    }
+
     @Override
     public Object doSomeThing(String xmlid,XMLParameter env, Map input, Map output, Map config) throws Exception {
         RequestParameters par = (RequestParameters)env;
@@ -101,6 +120,7 @@ public class SessionData extends XMLDoObject {
 
             SessionManager sm = (SessionManager)getObjectById("SessionManager");
             if(null != sm){
+                Map loginField=null;
                 Boolean t = (Boolean)env.get("${return}");
                 if(log.isDebugEnabled()){
                     log.debug("login result:"+t);
@@ -113,41 +133,42 @@ public class SessionData extends XMLDoObject {
                             cl = to.getXML().getProperties().getProperty("opType");
                         }
                     }
+                    log.debug("Service ["+a+"] opType is:"+cl);
                     if(StringUtils.isNotBlank(cl) && cl.equals(ISPDictionary.SERVICE_CLASS_LOGIN)){
                         ResultCheck b = (ResultCheck)env.getResult();
                         if((null != b && null != b.getRet() && b.isSuccess())||(null != t && t)){
                             Object o = par.getRequestData();
                             if(o instanceof Map){
                                 Map in = (Map)o;
-                                String userName = (String)in.get(LoginUserNameKey);
-                                String userPwd = (String)in.get(LoginUserPwdKey);
-                                Object expire1 = in.get("expire");
-                                String expire=null;
-                                if(null !=expire1 && expire1 instanceof String) {
-                                    expire = (String)expire1;
-                                }else if(null != expire1 && expire1 instanceof Integer){
-                                    expire=String.valueOf((Integer)expire1);
-                                }else{
-                                    expire=(String)in.get(ApiSessionTimeoutKey);
-                                }
-                                if(StringUtils.isBlank(userName) && StringUtils.isBlank(userPwd)){
-                                    userName=(String)in.get(ApiUserNameKey);
-                                    userPwd=(String)in.get(ApiUserPwdKey);
-                                    expire=(String)in.get(ApiSessionTimeoutKey);
-                                }
-                                if(StringUtils.isNotBlank(userName) && StringUtils.isNotBlank(userPwd)){
-                                    Session session = sm.createSession(userName,userPwd,expire,sessionid);
-                                    HashMap dd  = new HashMap();
-                                    dd.put(LoginUserNameKey,userName) ;
-                                    dd.put(LoginUserPwdKey,userPwd);
-
-                                    sm.addSessionAttributes(session.getSessionId(),dd);
-                                    par.setSession(session);
-                                    if(log.isDebugEnabled()){
-                                        log.debug("create session :"+session);
+                                loginField = getLoginField(in);
+                                if(null !=loginField) {
+                                    String userName = (String) in.get(loginField.get("name"));
+                                    String userPwd = (String) in.get(loginField.get("password"));
+                                    Object expire1 = in.get("expire");
+                                    String expire = null;
+                                    if (null != expire1 && expire1 instanceof String) {
+                                        expire = (String) expire1;
+                                    } else if (null != expire1 && expire1 instanceof Integer) {
+                                        expire = String.valueOf((Integer) expire1);
+                                    } else {
+                                        expire = (String) in.get(loginField.get("expire"));
                                     }
-                                    HttpUtils hu = (HttpUtils)getObjectById("HttpUtils");
-                                    hu.setSession2Cookie(par,session.getSessionId());
+
+                                    log.debug("will create session by userName:" + userName + " pwd is exist :" + StringUtils.isNotBlank(userPwd) + "\n " + in);
+                                    if (StringUtils.isNotBlank(userName) && StringUtils.isNotBlank(userPwd)) {
+                                        Session session = sm.createSession(userName, userPwd, expire, sessionid);
+                                        HashMap dd = new HashMap();
+                                        dd.put(loginField.get("name"), userName);
+                                        dd.put(loginField.get("password"), userPwd);
+
+                                        sm.addSessionAttributes(session.getSessionId(), dd);
+                                        par.setSession(session);
+                                        if (log.isDebugEnabled()) {
+                                            log.debug("create session :" + session);
+                                        }
+                                        HttpUtils hu = (HttpUtils) getObjectById("HttpUtils");
+                                        hu.setSession2Cookie(par, session.getSessionId());
+                                    }
                                 }
                             }
                         }
@@ -181,8 +202,10 @@ public class SessionData extends XMLDoObject {
                                 XMLDoObject ao = (XMLDoObject)getObjectById(l.getProperty("ACTION_NAME"));
                                 if(null != ao){
                                     Map in = new HashMap();
-                                    in.put("login_name",LoginUserNameKey);
-                                    in.put("login_pwd",LoginUserPwdKey);
+                                    if(null != loginField) {
+                                        in.put("login_name", loginField.get("name"));
+                                        in.put("login_pwd", loginField.get("password"));
+                                    }
                                     if(null != ret ) {
                                         if(ret instanceof Boolean) {
                                             in.put("login_result", ret);
