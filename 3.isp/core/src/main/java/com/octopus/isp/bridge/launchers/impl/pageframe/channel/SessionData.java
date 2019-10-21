@@ -137,14 +137,21 @@ public class SessionData extends XMLDoObject {
                     if(StringUtils.isNotBlank(cl) && cl.equals(ISPDictionary.SERVICE_CLASS_LOGIN)){
                         ResultCheck b = (ResultCheck)env.getResult();
                         if((null != b && null != b.getRet() && b.isSuccess())||(null != t && t)){
-                            Object o = par.getRequestData();
-                            if(o instanceof Map){
-                                Map in = (Map)o;
-                                loginField = getLoginField(in);
+                            loginField = getLoginField(input);
+                            Map in = input;
+                            if(null == loginField) {
+                                Object o = par.getRequestData();
+                                if(null != o && o instanceof Map){
+                                    in = (Map)o;
+                                    loginField = getLoginField(in);
+                                }
+                            }
+                            if(null != in && null != loginField){
+
                                 if(null !=loginField) {
                                     String userName = (String) in.get(loginField.get("name"));
                                     String userPwd = (String) in.get(loginField.get("password"));
-                                    Object expire1 = in.get("expire");
+                                    Object expire1 = in.get(loginField.get("expire"));
                                     String expire = null;
                                     if (null != expire1 && expire1 instanceof String) {
                                         expire = (String) expire1;
