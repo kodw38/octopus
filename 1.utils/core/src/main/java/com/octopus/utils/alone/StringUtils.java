@@ -7169,11 +7169,14 @@ public class StringUtils {
         }else if(StringUtils.isNumeric(v)) {
             if(v.contains("."))
                 return Double.parseDouble(v);
-            else if(v.length()<=10) {
-                return Integer.parseInt(v);
-            }else {
-                return Long.parseLong(v);
+            else{
+                Long l =  Long.parseLong(v);
+                if(l<Integer.MAX_VALUE){
+                    return Integer.parseInt(v);
+                }
+                return l;
             }
+
         }else if(v.equals("true")||v.equals("false")){
             return Boolean.valueOf((String)v);
         }else if(v.equals("null")){
