@@ -1,5 +1,6 @@
 package com.octopus.tools.dataclient.dataquery.redis;
 
+import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
@@ -159,7 +160,7 @@ public class RedisClient extends XMLDoObject{
                 }else if("lpush".equals(op)){
 
                     jedis.lpush(key,v.toString());
-                    Integer remain = (Integer)input.get("remain");
+                    Integer remain = ObjectUtils.getInteger(input.get("remain"));
                     if(null != remain && remain>0){
                         long n = jedis.llen(key);
                         if(n>remain){

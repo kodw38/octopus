@@ -1434,6 +1434,14 @@ public class ObjectUtils {
         else
             return (Integer)o;
     }
+    public static Integer getInteger(Object o){
+        if(null ==o || "".equals(o)) return null;
+        if(o instanceof String)
+            return Integer.valueOf((String)o);
+        else  {
+            return (Integer) o;
+        }
+    }
 
     public static Object getTypeDefaultValue(Object value,String typeClass){
         if(StringUtils.isBlank(typeClass))return value;

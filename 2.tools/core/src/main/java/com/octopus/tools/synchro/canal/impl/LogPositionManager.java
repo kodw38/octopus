@@ -104,7 +104,14 @@ public class LogPositionManager extends AbstractCanalLifeCycle implements CanalL
                                     pos.setPosition((Long) ls.get(0).get("POSITION_NUM"));
                                 }
                                 LogIdentity iden = new LogIdentity();
-                                iden.setSlaveId((long)(((String)ls.get(0).get("SLAVE_ID")).hashCode()));
+                                if(ls.get(0).get("SLAVE_ID") instanceof String) {
+                                    iden.setSlaveId(Long.parseLong((String) ls.get(0).get("SLAVE_ID")));
+                                }else if(ls.get(0).get("SLAVE_ID") instanceof Integer){
+                                    iden.setSlaveId(Long.valueOf((Integer)ls.get(0).get("SLAVE_ID")));
+                                }else if(ls.get(0).get("SLAVE_ID") instanceof Long){
+                                    iden.setSlaveId((Long)ls.get(0).get("SLAVE_ID"));
+                                }
+                                //iden.setSlaveId((long)(((String)ls.get(0).get("SLAVE_ID")).hashCode()));
                                 Object pp = ls.get(0).get("HOST_PORT");
                                 int port=0;
                                 if(pp instanceof Integer){

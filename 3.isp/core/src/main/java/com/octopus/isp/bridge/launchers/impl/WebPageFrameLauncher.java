@@ -124,7 +124,6 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
 
         HttpServletRequest request = (HttpServletRequest)((Object[])obj)[0];
         HttpServletResponse response = (HttpServletResponse)((Object[])obj)[1];
-
         RequestParameters pars = new RequestParameters();
         try {
             //set header from request
