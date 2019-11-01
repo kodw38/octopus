@@ -34,25 +34,45 @@ public class SingleThreadExeProperty implements IObjectInvokeProperty {
             in.put("db", "system");
             Jedis j = (Jedis) r.doSomeThing(null, null, in, null, null);
             if(null != j) {
-                String tempKey = xml.getId();
+                String lockKey = xml.getId();
+                if(null != proValue && proValue.containsKey("lockKey") && null != proValue.get("lockKey") && proValue.get("lockKey") instanceof String){
+                    lockKey=(String) proValue.get("lockKey")+"."+xml.getId();
+                }
+                boolean isOneTimeInSameLockKey=false;
+                if(null != proValue && proValue.containsKey("isOneTimeInSameLockKey") && null != proValue.get("isOneTimeInSameLockKey") && proValue.get("isOneTimeInSameLockKey") instanceof Boolean){
+                    isOneTimeInSameLockKey=(Boolean) proValue.get("isOneTimeInSameLockKey");
+                }
                 String id = SNUtils.getUUID();
+                boolean isOwner=false;
+                int waitTimeout = timeout;
+                if(null != proValue && proValue.containsKey("waitTimeout") && null != proValue.get("waitTimeout") && proValue.get("waitTimeout") instanceof Integer){
+                    waitTimeout=(Integer) proValue.get("waitTimeout");
+                }
+                log.info("globalsingle begin doing action lockKey:"+lockKey+",isOneTimeInSameLockKey:"+isOneTimeInSameLockKey+",waitTimeout:"+waitTimeout);
                 try {
-                    if(j.llen(tempKey)==0){
-                        j.rpush(tempKey, id);
-                        j.expire(tempKey,timeout/1000);
+                    if(j.llen(lockKey)==0){
+                        j.rpush(lockKey, id);
+                        isOwner=true;
+                        j.expire(lockKey,waitTimeout/1000);
                     }else {
-                        j.rpush(tempKey, id);
+                        j.rpush(lockKey, id);
                     }
                     long t = System.currentTimeMillis();
                     while(true){
-                        if (System.currentTimeMillis() - t > timeout) {
-                            doAction(obj,xml,parameter,input,output,config);
+                        if (System.currentTimeMillis() - t > waitTimeout) {
+                            if(!isOneTimeInSameLockKey) {
+                                log.info("globalsingle start doing action "+xml.getId());
+                                doAction(obj, xml, parameter, input, output, config);
+                            }
                             throw new Exception("wait timeout");
                         }
                         Thread.sleep(1);
-                        String curid = j.lindex(tempKey,0);
+                        String curid = j.lindex(lockKey,0);
                         if(curid.equals(id)){
-                            doAction(obj,xml,parameter,input,output,config);
+                            if(isOwner||!isOneTimeInSameLockKey) {
+                                log.info("globalsingle start doing action "+xml.getId());
+                                doAction(obj, xml, parameter, input, output, config);
+                            }
                             break;
                         }
                     }
@@ -107,7 +127,8 @@ public class SingleThreadExeProperty implements IObjectInvokeProperty {
                         return isExist;
                     }*/
                 } finally {
-                    j.lrem(tempKey,0,id);
+                    log.info("globalsingle end doing action "+xml.getId());
+                    j.lrem(lockKey,0,id);
                     in.put("op","return");
                     in.put("obj",j);
                     r.doSomeThing(null,null,in,null,null);
