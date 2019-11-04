@@ -1,5 +1,6 @@
 package com.octopus.tools.utils;
 
+import com.octopus.isp.ds.RequestParameters;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.file.FileUtils;
 import com.octopus.utils.xml.XMLMakeup;
@@ -9,6 +10,7 @@ import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -38,6 +40,13 @@ public class FileUpload extends XMLDoObject {
                 if(StringUtils.isBlank(op)){
                     op = (String)config.get("op");
                 }
+                String sameNameType = (String)input.get("sameNameType");
+                if(StringUtils.isBlank(sameNameType)){
+                    op = (String)config.get("sameNameType");
+                }
+                if(StringUtils.isBlank(sameNameType)){
+                    sameNameType="overwrite";
+                }
                 if(null != map && StringUtils.isNotBlank(path)){
                     if(StringUtils.isNotBlank(name) && map.size()==1){
                         Iterator its = map.keySet().iterator();
@@ -48,16 +57,21 @@ public class FileUpload extends XMLDoObject {
                         }
                     }
                     if("upload".equals(op)){
-                        FileUtils.saveFiles(map,path,true);
+                        List fn = FileUtils.saveFiles(map,path,sameNameType);
                         if(null !=input.get("rtn") && "downloadPath".equals(input.get("rtn"))){
                             if(map.size()==1){
                                 String sp =  "{\"error\":0,\"url\":\"download?file="+path+"/"+map.keySet().iterator().next()+"\"}";
                                 return sp;
-                            }else {
+                            }else if(env instanceof RequestParameters && "GET".equals(((RequestParameters)env).getRequestProperties().get("Method"))){
                                 return "<script>alert('upload success');window.history.back();</script>";  //To change body of implemented methods use File | Settings | File Templates.
                             }
-                        }else {
+                        }else if("GET".equals(((RequestParameters)env).getRequestProperties().get("Method"))){
                             return "<script>alert('upload success');window.history.back();</script>";  //To change body of implemented methods use File | Settings | File Templates.
+                        }
+                        if(null != fn && fn.size()==1){
+                            return fn.get(0);
+                        }else{
+                            return fn;
                         }
                     }else if("download".equals(config.get("op"))){
 

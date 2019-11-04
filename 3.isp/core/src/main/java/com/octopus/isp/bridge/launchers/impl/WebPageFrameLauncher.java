@@ -817,14 +817,16 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                     String rsp = ret.toString();
                     if(rsp.startsWith("{") || rsp.startsWith("["))
                         response.setContentType("application/json;charset=UTF-8");
-                    else if(ret instanceof String && ((String)ret).startsWith("<script")){
+                    else if("".equals(ret)||ret instanceof String && ((String)ret).startsWith("<script")){
                         response.setContentType("text/html;charset=UTF-8");
                     }else
                         response.setContentType("application/text;charset=UTF-8");
                     byte[] bs = ret.toString().getBytes("UTF-8");
+
                     response.setContentLength(bs.length);
                     response.getOutputStream().write(bs);
                     response.flushBuffer();
+
                 }else if(!response.isCommitted()){
                     //System.out.println("--websocket--");
                     request.getSession().setAttribute("WEB-Launcher",launcher);

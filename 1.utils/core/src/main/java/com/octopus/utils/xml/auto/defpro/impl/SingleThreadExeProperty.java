@@ -1,6 +1,9 @@
 package com.octopus.utils.xml.auto.defpro.impl;
 
+import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.SNUtils;
+import com.octopus.utils.net.NetUtils;
+import com.octopus.utils.si.jvm.JVMUtil;
 import com.octopus.utils.thread.ExecutorUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.auto.XMLDoObject;
@@ -24,7 +27,7 @@ public class SingleThreadExeProperty implements IObjectInvokeProperty {
     static long setFlag=900000000;
     static long MAX_NUMBER=20;
     static int timeout=30000;
-
+    static String[] enumOneTime=new String[]{"global","thread"};
     @Override
     public Object exeProperty(Map proValue, XMLDoObject obj, XMLMakeup xml, XMLParameter parameter, Map input, Map output, Map config) {
         try {
@@ -38,9 +41,12 @@ public class SingleThreadExeProperty implements IObjectInvokeProperty {
                 if(null != proValue && proValue.containsKey("lockKey") && null != proValue.get("lockKey") && proValue.get("lockKey") instanceof String){
                     lockKey=(String) proValue.get("lockKey")+"."+xml.getId();
                 }
-                boolean isOneTimeInSameLockKey=false;
-                if(null != proValue && proValue.containsKey("isOneTimeInSameLockKey") && null != proValue.get("isOneTimeInSameLockKey") && proValue.get("isOneTimeInSameLockKey") instanceof Boolean){
-                    isOneTimeInSameLockKey=(Boolean) proValue.get("isOneTimeInSameLockKey");
+                String oneTimeInSameLockKey=null;
+                if(null != proValue && proValue.containsKey("oneTimeInSameLockKey") && null != proValue.get("oneTimeInSameLockKey") && proValue.get("oneTimeInSameLockKey") instanceof String){
+                    oneTimeInSameLockKey=(String) proValue.get("oneTimeInSameLockKey");
+                    if(!ArrayUtils.isInStringArray(enumOneTime,oneTimeInSameLockKey)){
+                        throw new Exception("oneTimeInSameLockKey property must in "+enumOneTime+", global means only do "+xml.getId()+" one time,thread means do "+xml.getId()+" one time in concurrency");
+                    }
                 }
                 String id = SNUtils.getUUID();
                 boolean isOwner=false;
@@ -48,30 +54,35 @@ public class SingleThreadExeProperty implements IObjectInvokeProperty {
                 if(null != proValue && proValue.containsKey("waitTimeout") && null != proValue.get("waitTimeout") && proValue.get("waitTimeout") instanceof Integer){
                     waitTimeout=(Integer) proValue.get("waitTimeout");
                 }
-                log.info("globalsingle begin doing action lockKey:"+lockKey+",isOneTimeInSameLockKey:"+isOneTimeInSameLockKey+",waitTimeout:"+waitTimeout);
+                log.info("globalsingle begin doing action lockKey:"+lockKey+",oneTimeInSameLockKey:"+oneTimeInSameLockKey+",waitTimeout:"+waitTimeout);
                 try {
-                    if(j.llen(lockKey)==0){
-                        j.rpush(lockKey, id);
+                    long n = j.rpush(lockKey, id);
+                    if(n==1){
                         isOwner=true;
+                        if(null!=oneTimeInSameLockKey && "global".equals(oneTimeInSameLockKey)){
+                            j.set("GLOBAL_"+lockKey, NetUtils.getip()+","+ JVMUtil.getPid()+","+xml.getId());
+                        }
                         j.expire(lockKey,waitTimeout/1000);
-                    }else {
-                        j.rpush(lockKey, id);
                     }
                     long t = System.currentTimeMillis();
                     while(true){
                         if (System.currentTimeMillis() - t > waitTimeout) {
-                            if(!isOneTimeInSameLockKey) {
-                                log.info("globalsingle start doing action "+xml.getId());
-                                doAction(obj, xml, parameter, input, output, config);
+                            if(oneTimeInSameLockKey==null) {
+                                if(!(null!=oneTimeInSameLockKey && "global".equals(oneTimeInSameLockKey) && j.exists("GLOBAL_"+lockKey))){
+                                    log.info("globalsingle start doing action "+xml.getId());
+                                    doAction(obj, xml, parameter, input, output, config);
+                                }
                             }
                             throw new Exception("wait timeout");
                         }
                         Thread.sleep(1);
                         String curid = j.lindex(lockKey,0);
                         if(curid.equals(id)){
-                            if(isOwner||!isOneTimeInSameLockKey) {
-                                log.info("globalsingle start doing action "+xml.getId());
-                                doAction(obj, xml, parameter, input, output, config);
+                            if(isOwner||null==oneTimeInSameLockKey) {
+                                if(!(null!=oneTimeInSameLockKey && "global".equals(oneTimeInSameLockKey) && j.exists("GLOBAL_"+lockKey))) {
+                                    log.info("globalsingle start doing action " + xml.getId());
+                                    doAction(obj, xml, parameter, input, output, config);
+                                }
                             }
                             break;
                         }

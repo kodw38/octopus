@@ -1,6 +1,8 @@
 package com.octopus.utils.file;
 
 import com.octopus.utils.alone.ArrayUtils;
+import com.octopus.utils.alone.NumberUtils;
+import com.octopus.utils.alone.SNUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.file.impl.excel.ExcelReader;
 import com.octopus.utils.zip.ReplaceZipItem;
@@ -11,6 +13,7 @@ import org.apache.commons.logging.LogFactory;
 
 import javax.swing.*;
 import java.io.*;
+import java.net.URLDecoder;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -496,12 +499,7 @@ public class FileUtils {
 
     }
 
-    public static void saveFile(String filename,InputStream in)throws Exception{    	
-    	File f = new File(filename);
-    	if(!f.exists()){
-    		FileUtils.makeFilePath(filename);
-    		f = new File(filename);
-    	}
+    public static void saveFile(File f,InputStream in)throws Exception{
         FileOutputStream out = new FileOutputStream(f);
         int len = in.available();
         byte[] inb = new byte[len];
@@ -511,6 +509,32 @@ public class FileUtils {
         }
         in.close();
         out.close();
+    }
+    public static void saveFile(String f,InputStream in)throws Exception{
+        saveFile(f,in,"overwrite");
+    }
+    public static String saveFile(String filename,InputStream in,String sameNameType)throws Exception{
+    	File f = new File(filename);
+    	if(!f.exists() || (null != sameNameType&& "overwrite".equals(sameNameType))){
+    		FileUtils.makeFilePath(filename);
+    		f = new File(filename);
+    		saveFile(f,in);
+    		return filename;
+    	}else{
+            if(null != sameNameType&& "rename".equals(sameNameType)){
+                String n = getRename(filename);
+                f = new File(n);
+                saveFile(f,in);
+                return n;
+            }
+            throw new Exception("the file "+filename+" is exist, can not to save.");
+        }
+    }
+    private static String getRename(String filename){
+        String end = filename.substring(filename.lastIndexOf(".")+1,filename.length());
+        String name = filename.substring(0,filename.lastIndexOf("."));
+        name = name + "_" + System.currentTimeMillis()+"."+end;
+       return name;
     }
     public static void saveFile(String filename,ByteArrayOutputStream data,boolean isOverwrite)throws Exception{
         File f = new File(filename);
@@ -527,9 +551,8 @@ public class FileUtils {
                     return ;
                 }
                 if(filename.indexOf(".")>0){
-                    String end = filename.substring(filename.lastIndexOf(".")+1,filename.length());
-                    String name = filename.substring(0,filename.lastIndexOf("."));
-                    f = new File(name + "_" + System.currentTimeMillis()+"."+end);
+                    String name = getRename(filename);
+                    f = new File(name);
                 }else {
                     f = new File(filename + "_" + System.currentTimeMillis());
                 }
@@ -540,6 +563,8 @@ public class FileUtils {
         out.close();
     }
     public static void saveTextFile(String fileName,String text)throws Exception{
+        fileName = URLDecoder.decode(fileName);
+        text = URLDecoder.decode(text);
         saveStringBufferFile(new StringBuffer(text),fileName,false);
     }
     public static void saveFiles(Map<String,InputStream> files,String tarage,boolean isover) throws Exception {
@@ -548,17 +573,33 @@ public class FileUtils {
             while(its.hasNext()){
                 String n = (String)its.next();
                 InputStream in = files.get(n);
-                saveFile(tarage+"/"+n,in);
+                saveFile(tarage+"/"+n,in,"overwrite");
             }
         }
     }
-    public static void saveStringBufferFile(StringBuffer sb, String filePath, boolean isAlert) throws IOException {
+    public static List saveFiles(Map<String,InputStream> files,String tarage,String sameNameType) throws Exception {
+        if(null != files){
+            List li = new ArrayList();
+            Iterator its = files.keySet().iterator();
+            while(its.hasNext()){
+                String n = (String)its.next();
+                InputStream in = files.get(n);
+                String s = saveFile(tarage+"/"+n,in,sameNameType);
+                li.add(s);
+            }
+            return li;
+        }else {
+            return null;
+        }
+    }
+    public static void saveStringBufferFile(StringBuffer sb, String filePath, boolean isAlert) throws Exception {
         saveFile(sb,filePath,true,isAlert);
     }
     /**
      * �����ַ��ļ�
      */
-    public static void saveFile(StringBuffer sb, String filePath,boolean isover, boolean isAlert) throws IOException {
+    public static void saveFile(StringBuffer sb, String filePath,boolean isover, boolean isAlert) throws Exception {
+
         File f = new File(filePath);
         if(!isover && f.exists())
             return;
@@ -579,6 +620,9 @@ public class FileUtils {
                 String path = FileUtils.getFilePath(f.getAbsolutePath()) + File.separator + name + "." + FileUtils.getExtension(filePath);
                 f = new File(path);
             }
+        }
+        if(!f.exists()){
+            makeFilePath(filePath);
         }
 
         FileOutputStream file = new FileOutputStream(f);
@@ -1510,10 +1554,10 @@ public class FileUtils {
         if (null != f && f.isDirectory()) {
             fs = f.listFiles();
             for (int i = 0; i < fs.length; i++) {
-                if (fs[i].isDirectory()) {                    
-                	getAllDirectoryFiles(fs[i], fileName, list);
-                }else{
-                	if (null != fileName) {
+                if (fs[i].isDirectory()) {
+                    getAllDirectoryFiles(fs[i], fileName, list);
+                } else {
+                    if (null != fileName) {
                         if (getFileSimpleName(fs[i].getName()).equals(fileName)) {
                             list.add(fs[i]);
                         }
@@ -2444,5 +2488,66 @@ public class FileUtils {
         throw new RuntimeException("not support ftp save now.");
     }
 
+    public static List<Map> getDirectoryStructure(String file,List suffix,List excludeNames){
+        List ret = new LinkedList();
+        file=file.replaceAll("\\\\","/");
+        if(file.endsWith("/")){
+            file = file.substring(0,file.length()-1);
+        }
+        getDirectoryStructureFiles(file,1,new File(file),suffix,ret,excludeNames);
+        return ret;
+    }
+    /**
+     * get match all files by suffix, one record with {id,pId,name,path,type[file,dir],suffix}
+     * @param
+     * @param suffix
+     * @param childParentList
+     */
+    protected static void getDirectoryStructureFiles(String rootpath,long parentId,File f, List suffix, List childParentList,List excludeNames) {
+        File[] fs;
+        if (null != f && f.isDirectory()) {
+            fs = f.listFiles();
+            for (int i = 0; i < fs.length; i++) {
+                if(ArrayUtils.isInStringArray(excludeNames,fs[i].getName())){
+                    continue;
+                }
+                long id = new Double(parentId * Math.pow(10 ,(String.valueOf(fs.length).length()))+i).longValue();
+                if (fs[i].isDirectory()) {
+                    HashMap m = new HashMap();
+                    m.put("id",id);
+                    m.put("pId",parentId);
+                    m.put("name",fs[i].getName());
+                    m.put("path",f.getPath().replaceAll("\\\\","/").substring(rootpath.length()));
+                    m.put("type","dir");
+                    m.put("suffix","");
+                    childParentList.add(m);
+                    getDirectoryStructureFiles(rootpath,id,fs[i], suffix, childParentList,excludeNames);
+                }else{
+                    if (null!= suffix && suffix.size()>0 ) {
+                        if(ArrayUtils.isInStringArray(suffix,fs[i].getName().substring(fs[i].getName().lastIndexOf(".")+1))) {
+                            HashMap m = new HashMap();
+                            m.put("id",id);
+                            m.put("pId",parentId);
+                            m.put("name",FileUtils.getFileSimpleName(fs[i].getName()));
+                            m.put("path",fs[i].getPath().replaceAll("\\\\","/").substring(rootpath.length()));
+                            m.put("type","file");
+                            m.put("suffix",fs[i].getName().substring(fs[i].getName().lastIndexOf(".")+1));
+                            childParentList.add(m);
+                        }
+                    } else {
+                        HashMap m = new HashMap();
+                        m.put("id",id);
+                        m.put("pId",parentId);
+                        m.put("name",FileUtils.getFileSimpleName(fs[i].getName()));
+                        m.put("path",fs[i].getPath().replaceAll("\\\\","/").substring(rootpath.length()));
+                        m.put("type","file");
+                        m.put("suffix",fs[i].getName().substring(fs[i].getName().lastIndexOf(".")+1));
+                        childParentList.add(m);
+                    }
+                }
+
+            }
+        }
+    }
 
 }
