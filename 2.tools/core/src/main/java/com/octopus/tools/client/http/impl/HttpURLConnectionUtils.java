@@ -53,13 +53,16 @@ public class HttpURLConnectionUtils {
 
     }
     static LinkedList cacherul = new LinkedList();
-    public static HttpDS sendRequest(String url, String method, Map headers, Map data,int timeout){
+    public static HttpDS sendRequest(String url, String method, Map headers, Map data,int timeout,boolean isReget){
         url = removeRelative(url);
         if(url.length()<10) return null;
-        if(cacherul.contains(url)) return null;
-        cacherul.add(url);
-        if(cacherul.size()>100000){
-            //cacherul = Collections.co(cacherul,100000);
+        if(!isReget) {
+            if (cacherul.contains(url)) return null;
+            cacherul.add(url);
+
+            if (cacherul.size() > 100000) {
+                //cacherul = Collections.co(cacherul,100000);
+            }
         }
         HttpURLConnection conn=null;
         try {
@@ -106,10 +109,15 @@ public class HttpURLConnectionUtils {
                     else
                         sb.append(k).append("=").append((String) ((Map) data).get(k));
                 }
-                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream(), "UTF-8"));
-                out.write(sb.toString());
-                out.flush();
-                out.close();
+                if(null != sb) {
+                    String s = sb.toString();
+                    if(StringUtils.isNotBlank(s)) {
+                        BufferedWriter out = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream(), "UTF-8"));
+                        out.write(sb.toString());
+                        out.flush();
+                        out.close();
+                    }
+                }
             }
 
             HttpDS ds = new HttpDS();
@@ -126,6 +134,7 @@ public class HttpURLConnectionUtils {
                 ds.setResponseHeaders(ht);
                 if (response_code == HttpURLConnection.HTTP_OK) {
                     try {
+                        ds.setStatusCode(response_code);
                         InputStream in = conn.getInputStream();
                         if (null != ds.getResponseHeaders() && null != ds.getResponseHeaders().get("Content-Type") &&
                                 isHtml(url, ds.getResponseHeaders().get("Content-Type"))) {
@@ -156,6 +165,8 @@ public class HttpURLConnectionUtils {
                     }catch (Exception ex){
                         log.error("get inputStream error");
                     }
+                }else{
+
                 }
 
             } catch (Exception e) {

@@ -110,6 +110,9 @@ public class LauncherCommon {
         pars.setRequestURI(request.getRequestURI());
         pars.setRequestResourceName(getResourceName(request.getRequestURI()));
         pars.setQueryStringMap(getQueryStringMap(pars.getQueryString()));
+        if(log.isDebugEnabled()) {
+            log.debug("--srvname:" + pars.getQueryStringMap() + "\n" + pars.getQueryString());
+        }
     }
 
     public static void setActions(RequestParameters pars,Properties properties,XMLObject obj) throws Exception {
@@ -120,15 +123,23 @@ public class LauncherCommon {
             String name = getHessianRequestData(pars,(HttpServletRequest)pars.get("${request}"),(HttpServletResponse)pars.get("${response}"),input,obj);
             if(null != name){
                 pars.setTargetNames(new String[]{name});
+                if(log.isDebugEnabled()) {
+                    log.debug("--srvname:" + name);
+                }
                 if(null != input) {
                     pars.setRequestData(input);
                 }
             }
         }else {
-            if (null != pars.getQueryStringMap() && pars.getQueryStringMap().containsKey("actions")) {
-                srvname = (StringUtils.trim((String) pars.getQueryStringMap().get("actions")));
-                String[] actions = srvname.split(",");
+            if(log.isDebugEnabled()) {
+                log.debug("--srvname:" + pars.getQueryStringMap());
+            }
+            srvname = getTargetName(pars.getQueryString());
+            if (StringUtils.isNotBlank(srvname)) {
+                String[] actions = srvname.trim().split(",");
                 pars.setTargetNames(actions);
+                if(log.isDebugEnabled())
+                log.debug("--srvname:"+srvname);
             }
         }
     }
@@ -336,6 +347,8 @@ public class LauncherCommon {
             String srvid = parseRestfulRul(uri,properties.getProperty("restful_startwith"),pars.getEnv(),param);
             if(StringUtil.isNotBlank(srvid)){
                 pars.setTargetNames(new String[]{(String) srvid});
+                if(log.isDebugEnabled())
+                log.debug("--srvname:"+srvid);
                 if(null != param && param.size()>0){
                     if(null == pars.getRequestData()){
                         pars.setRequestData(param);
@@ -347,6 +360,8 @@ public class LauncherCommon {
                 String name = uri.substring(uri.lastIndexOf("/") + 1);
                 if (StringUtils.isNotBlank(name) && !name.contains(".")) {
                     pars.setTargetNames(new String[]{name});
+                    if(log.isDebugEnabled())
+                    log.debug("--srvname:"+name);
                 }
             }
             /*List<String> ms = StringUtils.getTagsNoMark(uri,"{","}");
@@ -545,11 +560,10 @@ public class LauncherCommon {
         }
         return "";
     }
-
-    public static void setActionName2Thread(String rquestQueryString){
+    static String getTargetName(String rquestQueryString){
         if(StringUtils.isNotBlank(rquestQueryString)) {
             String actionname=null;
-            int n = rquestQueryString.indexOf("actions=");
+            int n = rquestQueryString.lastIndexOf("actions=");
             if(n>=0){
                 if(rquestQueryString.indexOf("&",n)>0){
                     actionname = rquestQueryString.substring(n+8,rquestQueryString.indexOf("&",n));
@@ -557,6 +571,14 @@ public class LauncherCommon {
                     actionname = rquestQueryString.substring(n+8);
                 }
             }
+            return actionname;
+        }
+        return null;
+    }
+
+    public static void setActionName2Thread(String rquestQueryString){
+        if(StringUtils.isNotBlank(rquestQueryString)) {
+            String actionname = getTargetName(rquestQueryString);
             if(null != actionname) {
                 String name = Thread.currentThread().getName();
                 if (name.indexOf("->") > 0) {
@@ -584,6 +606,7 @@ public class LauncherCommon {
                     if (StringUtils.isNotBlank(ps[i])) {
                         String[] kv = ps[i].split("\\=");
                         if (kv.length == 2) {
+                            if("actions".equals(kv[0]))continue;
                             if (StringUtils.isNotBlank(kv[0]) && StringUtils.isNotBlank(kv[1]) && !map.containsKey(kv[0])) {
                                 if (queryStr.indexOf("actions=") >= 0 && null != (kv[1]) && (kv[1]).startsWith("{") && (kv[1]).endsWith("}")) {
                                     map.put(kv[0], StringUtils.convert2MapJSONObject(kv[1]));

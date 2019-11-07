@@ -126,6 +126,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
         HttpServletResponse response = (HttpServletResponse)((Object[])obj)[1];
         RequestParameters pars = new RequestParameters();
         try {
+
             //set header from request
             LauncherCommon.getHeaders(request, pars.getRequestHeaders(), pars,properties,cache_headers);
 
@@ -151,7 +152,10 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             if(null != pars.getTargetNames() && pars.getTargetNames().length>0){
                 srvname=pars.getTargetNames()[0];
             }
-
+            if(log.isDebugEnabled()){
+                log.debug("rquest query String is:"+request.getQueryString());
+                log.debug("targetName is:"+srvname);
+            }
             //set request id
             if (!pars.getRequestHeaders().contains(pars.KEY_REQUESTID)) {
                 String user = (String) request.getHeader("user");

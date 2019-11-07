@@ -10,6 +10,7 @@ import com.octopus.utils.zip.ZipUtil;
 import net.sf.json.regexp.RegexpUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import sun.misc.BASE64Encoder;
 
 import javax.swing.*;
 import java.io.*;
@@ -561,6 +562,17 @@ public class FileUtils {
         FileOutputStream out = new FileOutputStream(f);
         out.write(data.toByteArray());
         out.close();
+    }
+    public static String file2Base64Encode(ByteArrayOutputStream stream) {
+        return base64Encode(stream.toByteArray());
+    }
+
+    public static String base64Encode(byte[] b){
+        if(null != b){
+            BASE64Encoder base64Encoder = new BASE64Encoder();
+            return base64Encoder.encode(b);
+        }
+        return null;
     }
     public static void saveTextFile(String fileName,String text)throws Exception{
         fileName = URLDecoder.decode(fileName);

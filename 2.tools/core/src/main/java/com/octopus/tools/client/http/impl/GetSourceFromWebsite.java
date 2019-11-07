@@ -71,7 +71,7 @@ public class GetSourceFromWebsite extends XMLDoObject {
                 try {
                     String url = (String)ul.get("url");
                     List fi = (List)ul.get("filter");
-                    HttpDS ds = HttpURLConnectionUtils.sendRequest(url, "GET", headers, null, timeout);
+                    HttpDS ds = HttpURLConnectionUtils.sendRequest(url, "GET", headers, null, timeout,true);
                     if (null != ds && null != ds.getResponseHeaders()) {
                         if (HttpURLConnectionUtils.isHtml(url, ds.getResponseHeaders().get("Content-Type"))) {
                             String s = new String(((ByteArrayOutputStream) ds.getResponseOutputStream()).toByteArray());

@@ -1190,7 +1190,7 @@ public class Desc extends XMLDoObject{
             }
         }
     }
-    static String save(String path,String pkg,String name,StringBuffer text) throws IOException {
+    static String save(String path,String pkg,String name,StringBuffer text) throws Exception {
         String p = path;
         if(StringUtils.isNotBlank(pkg) && !"null".equalsIgnoreCase(pkg)){
             if(pkg.contains(".")){

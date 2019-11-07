@@ -48,6 +48,11 @@ public class HttpClient1 extends XMLDoObject implements IHttpClient {
         try{
             String url = (String)input.get("url");
             String method = (String)input.get("method");
+            Object reget = input.get("reget");
+            boolean b = true;
+            if(null != reget && reget instanceof Boolean){
+                b = (Boolean) reget;
+            }
             Object headers = input.get("addRequestHeaders");
             Object data = input.get("data");
             if(null != url){
@@ -57,7 +62,7 @@ public class HttpClient1 extends XMLDoObject implements IHttpClient {
                     header=(Map)headers;
                 if(null != data && data instanceof Map)
                     d = (Map)data;
-                return HttpURLConnectionUtils.sendRequest(url,method,header,d,60000);
+                return HttpURLConnectionUtils.sendRequest(url,method,header,d,60000,b);
 
             }
             return null;

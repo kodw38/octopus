@@ -112,7 +112,9 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
                         if(par.length()>0){
                             par.append("&");
                         }
-                        par.append(k).append("=").append(parameters.getProperties().get(k));
+                        if(parameters.getProperties().get(k) instanceof String) {
+                            par.append(k).append("=").append(parameters.getProperties().get(k));
+                        }
                     }
                 }
                 if(par.length()>0) {

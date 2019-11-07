@@ -22,6 +22,7 @@ import org.apache.zookeeper.Watcher;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * User: wfgao_000
@@ -34,8 +35,23 @@ public class ZkClientListen extends XMLLogic {
     ZkClient zkClient;
     List<String> currentList = new ArrayList();
     static Map<String,List<InvokeTaskByObjName>> envHandles = new HashMap();
+    static AtomicInteger watchCount= new AtomicInteger(0);
+
     public ZkClientListen(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    while(true) {
+                        Thread.sleep(600000);
+                        log.error("====watch count :" + watchCount.intValue());
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     void appendChildEvent(String type,String path){
@@ -174,6 +190,9 @@ public class ZkClientListen extends XMLLogic {
         }
     }
     class DataChangeListener implements IZkDataListener{
+        public DataChangeListener(){
+            watchCount.addAndGet(1);
+        }
         public void handleDataDeleted(String dataPath) throws Exception {
             if (null != dataPath) {
                 if(envHandles.size()>0){
@@ -229,6 +248,7 @@ public class ZkClientListen extends XMLLogic {
     private void addPathListener(String dataPath){
         log.info("append zk path listener:"+dataPath );
         //create delete node happened, add , reduce event
+        watchCount.addAndGet(1);
         zkClient.subscribeChildChanges(dataPath, new IZkChildListener() {
             //用于监听zookeeper中servers节点的子节点列表变化
             public void handleChildChange(String parentPath, List<String> currentChilds) throws Exception {
@@ -271,6 +291,9 @@ public class ZkClientListen extends XMLLogic {
         });
     }
     class PathListener implements IZkChildListener{
+        public PathListener(){
+            watchCount.addAndGet(1);
+        }
         @Override
         public void handleChildChange(String parentPath, List<String> currentChilds) throws Exception {
             //更新服务器列表

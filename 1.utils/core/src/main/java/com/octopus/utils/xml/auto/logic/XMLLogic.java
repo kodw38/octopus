@@ -137,7 +137,9 @@ public class XMLLogic extends XMLDoObject{
         inmap.remove("exe_id");
         inmap.remove("exe_xml");
         inmap.remove("exe_error");
-        log.error("remote XMLParameter\n"+p);
+        if(log.isDebugEnabled()) {
+            log.debug("remote XMLParameter\n" + p);
+        }
         obj.doThing(p, x);
         par.setResult(p.getResult());
     }
