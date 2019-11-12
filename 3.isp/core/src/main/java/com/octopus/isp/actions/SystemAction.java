@@ -1595,6 +1595,7 @@ return false;
                 if (null != srvstat) {
                     updateService(desc);
                     Object o = srvstat.doSomeThing(null, null, map, null, null);
+
                     if(!(null != o && o instanceof Boolean && (Boolean)o)) {
                         map.put("op", "initStatInfo");
                         map.put("name", desc.get("name"));

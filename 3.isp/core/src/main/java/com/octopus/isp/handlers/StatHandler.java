@@ -408,12 +408,14 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
                 in.put("path", logpathparent + "/."  + insid +"." + id + ".");
                 try {
                     Object o = loghandler.doSomeThing(null, null, in, null, null);
+                    log.error("==isExist  :"+o);
                     if(null != o && o instanceof String && StringUtils.isNotBlank(o)){
                         return Boolean.TRUE;
                     }else{
                         return Boolean.FALSE;
                     }
                 }catch (Exception e){
+                    log.error("isStatExist error",e);
                     return Boolean.FALSE;
                 }
             }else if("addResponseDataSize".equals(input.get("op"))
