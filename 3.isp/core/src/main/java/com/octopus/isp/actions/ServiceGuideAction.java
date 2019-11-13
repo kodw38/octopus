@@ -46,6 +46,22 @@ public class ServiceGuideAction extends XMLDoObject {
             if("getEmptyBody".equals(op)){
                 return getEmptyBody();
             }else if("getElements".equals(op)){
+                String name = (String) input.get("name");
+                if(StringUtils.isNotBlank(name)){
+                    if("for".equals(name)){
+
+                    }else if("if".equals(name)){
+
+                    }else if("while".equals(name)){
+
+                    }else if("print".equals(name)){
+
+                    }else if("error".equals(name)){
+
+                    }else if("result".equals(name)){
+
+                    }
+                }
                 return getLogicElementListAndDesc();
             }else if("getProperties".equals(op)){
                 String elementName = (String)input.get("element");
@@ -92,6 +108,9 @@ public class ServiceGuideAction extends XMLDoObject {
                 }else{
                     return getValue(env,v);
                 }
+            }else if("getTemplate".equals("op")){
+                String name = (String)input.get("name");
+
             }
 
         }
@@ -257,9 +276,53 @@ public class ServiceGuideAction extends XMLDoObject {
         return null;
     }
 
-    Map getLogicElementListAndDesc(){
-        return getChildrenAndDesc("do_element");
+    List getLogicElementListAndDesc(){
+        Map m =  getChildrenAndDesc("do_element");
+        List ret = new LinkedList();
+        if(null != m){
+            Iterator its = m.keySet().iterator();
+            while(its.hasNext()){
+
+                String name= (String)its.next();
+                Object mt = m.get(name);
+                Map pro = getElementPropertiesAndDesc(name);
+                String pros = getPropertiesString(name,pro);
+                Map cl = getElementChildrenAndDesc(name);
+                StringBuffer cls= new StringBuffer();
+                if(null != cl ){
+                    Iterator is = cl.keySet().iterator();
+                    while(is.hasNext()){
+                        String k = (String)is.next();
+                        Map t = (Map)cl.get(k);
+                        cls.append("<"+k+" "+getPropertiesString(k,t)+"></"+k+">");
+                    }
+                }
+                Map n = new HashMap();
+                n.put("name",name);
+                String desc = "";
+                if(null != mt && mt instanceof Map) {
+                    n.put("desc", ((Map) mt).get("@desc"));
+                    if(null !=n.get("@desc") )
+                        desc = n.get("@desc").toString();
+                }
+                n.put("body","<"+name.trim()+" "+pros+" "+(name.trim().equals("do")?"desc=\"key needs unique ." + desc + "\"":"")+">"+cls.toString()+"</"+name.trim()+">");
+                ret.add(n);
+            }
+        }
+        return ret;
     }
+    String getPropertiesString(String it,Map pro){
+        StringBuffer pros = new StringBuffer();
+        if(null != pro && pro.size()>0){
+            Iterator im = pro.keySet().iterator();
+            while(im.hasNext()){
+                Object k = im.next();
+                pros.append(" ").append(k).append("=").append("\"").append((null !=pro.get(k) && pro.get(k) instanceof Map)?"{}":"").append("\"");
+            }
+        }
+        return pros.toString();
+    }
+
     Map getCommonXMLPropertiesAndDesc(){
         return getChildrenAndDesc("common_define_properties");
     }

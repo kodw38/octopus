@@ -500,7 +500,8 @@ public class ZipUtil {
 	public static void changeFileInJar(JarInputStream in,JarOutputStream out,ReplaceZipItem[] rzis,String encode) throws Exception{
 		JarEntry jarEntry = null;
         if(null == in)return;
-        while (( jarEntry = in.getNextJarEntry() ) != null) {	
+        while (( jarEntry = in.getNextJarEntry() ) != null) {
+            log.error("do file:"+jarEntry.getName());
             if (jarEntry.isDirectory()) {
                 String name = jarEntry.getName();
             	out.putNextEntry(new ZipEntry(name));
@@ -510,6 +511,7 @@ public class ZipUtil {
             	if(null != rzis){
                     for(ReplaceZipItem it:rzis){
                         if(it.getFileName().equals(jarEntry.getName())){
+                            log.error("do file:"+jarEntry.getName());
                             Map<String,String> chgs = it.getChgvalue();
                             Iterator<String> its = chgs.keySet().iterator();
                             while(its.hasNext()){
@@ -570,7 +572,6 @@ public class ZipUtil {
             	fi.close();            	
             	out.closeEntry();
             }else{
-            	
             	boolean isadd = true;
                 if(null != rzis){
                     for(ReplaceZipItem it:rzis){

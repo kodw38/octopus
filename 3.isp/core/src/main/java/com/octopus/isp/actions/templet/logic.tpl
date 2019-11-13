@@ -64,8 +64,8 @@ common_define_properties:{
 }
 
 ,do_element:{
-do:{ properties:{key:'', action:{@value:'${actions}',@desc:'any can use service'}, input:{ check:{check:'${express}',error:{@type:[string,map],@desc:'if string ,value is throw message; if map ',@value:['',{msg:'throw message',break:'go to point'}] } }, alarm:{}, notification:{}  },config:'',output:{ check:{check:'${express}',error:{@type:[string,map],@desc:'if string ,value is throw message; if map ',@value:['',{msg:'throw message',break:'go to point'}] } }, alarm:{}, notification:{} }}}
-, if:{ properties:{cond:{@value:'${express}',@desc:'a boolean expression'} } , children:{else:{@desc:'other situation'}}, @desc:'if logic judge'}
+do:{ properties:{key:'', action:'', input:{ check:{check:'${express}',error:{@type:[string,map],@desc:'if string ,value is throw message; if map ',@value:['',{msg:'throw message',break:'go to point'}] } }, alarm:{}, notification:{}  },config:{},output:{ check:{check:'${express}',error:{@type:[string,map],@desc:'if string ,value is throw message; if map ',@value:['',{msg:'throw message',break:'go to point'}] } }, alarm:{}, notification:{} }}}
+, if:{ properties:{cond:{@value:'${express}',@desc:'a boolean expression'} } , children:{else:{}}, @desc:'if logic judge'}
 , for:{ properties:{ collection:{ @enum:['${env}','${int}'],@desc:'variable of environment or a number'},json:{len:{@value:'${int}',@desc:'batch number for each time to do'},threadnum:{@value:'${int}',@desc:'concurrent running thread number'},depend:'collection'}}}
 , while: { properties:{cond:'$Express'} }
 , print: { properties:{msg:{@desc:'fix string message or json structure data'},trace:{@desc:'will print xmlId of parent trace'},all:{@desc:'will print all data of data container '}} }
