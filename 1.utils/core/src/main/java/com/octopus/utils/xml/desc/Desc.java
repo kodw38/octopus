@@ -197,8 +197,8 @@ public class Desc extends XMLDoObject{
         }catch(Exception e){
 
         }
-        if(log.isWarnEnabled()) {
-            log.warn("not find desc file by:" + path + "/" + pkg + "/" + name);
+        if(log.isInfoEnabled()) {
+            log.info("not find desc file by:" + path + "/" + pkg + "/" + name);
         }
         return null;
     }

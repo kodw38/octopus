@@ -11,6 +11,7 @@ import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.cls.POJOUtil;
+import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
@@ -31,6 +32,7 @@ public class SessionData extends XMLDoObject {
     Map<String,List<Map<String,Object>>> map = new HashMap<String, List<Map<String,Object>>>();
     Map<String,List<Properties>> sessionDataByXmlObject = new HashMap<String, List<Properties>>();
     public static List<Map> loginFields = new ArrayList<>();
+    Map envdata=null;
     public SessionData(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
         XMLMakeup loginx = xml.getFirstChildById("loginfields");
@@ -65,6 +67,10 @@ public class SessionData extends XMLDoObject {
                     }
                 }
             }
+            XMLMakeup[] es = sessionconfigs[0].getChild("envdata");
+            if(null != es && es.length==1){
+                envdata = es[0].getPropertiesByChildNameAndText("property");
+            }
         }
         XMLMakeup x = (XMLMakeup)ArrayUtils.getFirst(xml.getChild("dataquery"));
         if(null != x){
@@ -97,6 +103,21 @@ public class SessionData extends XMLDoObject {
         return null;
     }
 
+    Map getEnvSession(XMLParameter env){
+
+        Map o = null;
+        if(null != envdata) {
+            try {
+                o = env.getMapValueFromParameter(envdata, this);
+            }catch (ISPException e){
+                log.error("",e);
+            }
+        }
+        if(null == o){
+            o = new HashMap();
+        }
+        return o;
+    }
     @Override
     public Object doSomeThing(String xmlid,XMLParameter env, Map input, Map output, Map config) throws Exception {
         RequestParameters par = (RequestParameters)env;
@@ -164,7 +185,7 @@ public class SessionData extends XMLDoObject {
                                     log.debug("will create session by userName:" + userName + " pwd is exist :" + StringUtils.isNotBlank(userPwd) + "\n " + in);
                                     if (StringUtils.isNotBlank(userName) && StringUtils.isNotBlank(userPwd)) {
                                         Session session = sm.createSession(userName, userPwd, expire, sessionid);
-                                        HashMap dd = new HashMap();
+                                        Map dd = getEnvSession(env);
                                         dd.put(loginField.get("name"), userName);
                                         dd.put(loginField.get("password"), userPwd);
 

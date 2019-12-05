@@ -1034,12 +1034,37 @@ public class ObjectUtils {
 
                         //isin=true;
 
-
                     }
                 }
 
             }
-            return new String(Arrays.copyOf(target,targetCur));
+
+            StringBuffer sb = new StringBuffer(new String(Arrays.copyOf(target, targetCur)).trim());
+            if(!expStack.isEmpty()){
+                for(int i=0;i<expStack.size();i++){
+                    char[] t = (char[])expStack.get(i);
+                    int  n= (int)expcurStack.get(i);
+                    sb.append(new String(Arrays.copyOf(t,n)).trim());
+                }
+            }
+            if(null !=expchars){
+                sb.append(new String(expchars).trim());
+            }
+            return sb.toString();
+            /*if(!expStack.isEmpty()){
+                if(null !=expchars){
+                    sb.insert(0,new String(expchars));
+                }
+                while(!expStack.isEmpty()){
+                    sb.insert(0,new String((char[])expStack.pop()));
+                }
+                sb.insert(0,new String(Arrays.copyOf(target, targetCur)));
+                return sb.toString();
+            }else if(null != expchars && expchars.length>0 && expcurStack.isEmpty()) {
+                return new String(Arrays.copyOf(target, targetCur))+ new String(expchars);
+            }else {
+                return new String(Arrays.copyOf(target, targetCur));
+            }*/
         }catch (ISPException ex){
             throw ex;
         }catch (Exception e){

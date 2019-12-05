@@ -6,6 +6,7 @@ import com.alibaba.otter.canal.parse.index.CanalLogPositionManager;
 import com.alibaba.otter.canal.protocol.position.EntryPosition;
 import com.alibaba.otter.canal.protocol.position.LogIdentity;
 import com.alibaba.otter.canal.protocol.position.LogPosition;
+import com.octopus.utils.alone.NumberUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.exception.Logger;
 import com.octopus.utils.net.NetUtils;
@@ -105,7 +106,7 @@ public class LogPositionManager extends AbstractCanalLifeCycle implements CanalL
                                 }
                                 LogIdentity iden = new LogIdentity();
                                 if(ls.get(0).get("SLAVE_ID") instanceof String) {
-                                    iden.setSlaveId(Long.parseLong((String) ls.get(0).get("SLAVE_ID")));
+                                    iden.setSlaveId(StringUtils.toLong((String) ls.get(0).get("SLAVE_ID")));
                                 }else if(ls.get(0).get("SLAVE_ID") instanceof Integer){
                                     iden.setSlaveId(Long.valueOf((Integer)ls.get(0).get("SLAVE_ID")));
                                 }else if(ls.get(0).get("SLAVE_ID") instanceof Long){

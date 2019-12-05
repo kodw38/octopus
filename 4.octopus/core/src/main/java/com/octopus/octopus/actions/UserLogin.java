@@ -32,7 +32,6 @@ public class UserLogin extends XMLDoObject {
         Properties p = new Properties();
         p.load(this.getClass().getClassLoader().getResourceAsStream("user.properties"));
         users=p;
-
     }
 
 

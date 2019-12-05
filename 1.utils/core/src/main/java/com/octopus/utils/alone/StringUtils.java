@@ -7842,8 +7842,6 @@ public class StringUtils {
 
     /**
      * 获取两个Properties差异的内容返回
-     * @param str1
-     * @param str2
      * @return Map<String,    List>
      *              adds      List<Map> key,value
      *              updates   List<Map> new,old - > key,value
@@ -8117,5 +8115,32 @@ public class StringUtils {
         }else{
             return "";
         }
+    }
+    public static long toLong(String a){
+        if(StringUtils.isBlank(a))return 0;
+        if(isNumeric(a)){
+            return Long.parseLong(a);
+        }else {
+            StringBuffer sb = new StringBuffer();
+            char[] cs= a.toCharArray();
+            long sub = 0;
+            long t=0;
+            for(char c:cs){
+                if(c>='0'&& c<='9'){
+                    sb.append((char)c);
+                    t+=(c-'0');
+                }else{
+                    //sb.append(((int)c)+""); //too long
+                    sub+=c;
+                }
+            }
+            sb.append(sub);
+            if(sb.length()<20) {
+                return Long.parseLong(sb.toString());
+            }else{
+                return t+sub;
+            }
+        }
+
     }
 }

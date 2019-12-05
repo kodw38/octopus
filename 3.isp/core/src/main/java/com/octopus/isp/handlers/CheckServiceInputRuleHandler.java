@@ -1,6 +1,8 @@
 package com.octopus.isp.handlers;
 
+import com.octopus.tools.cache.impl.cache.DefaultCache;
 import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.cls.ClassUtils;
 import com.octopus.utils.cls.proxy.IMethodAddition;
 import com.octopus.utils.exception.ExceptionUtil;
 import com.octopus.utils.exception.ISPException;
@@ -47,6 +49,7 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
             Map data = getDataMap(args);
             String id =((XMLObject) impl).getXML().getId();
             List<Map> rules = getRuleByActionId((XMLParameter)args[1],id);
+            log.debug("before check rule:"+id+","+rules);
             checkRule(rules, data, (XMLParameter) args[1],id);
             //log.error(((XMLObject) impl).getXML().getId() +" "+m+ " do check input...");
         }
@@ -80,20 +83,22 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
                                 log.debug("check rule:\nrule:"+rul+"\ndata:"+data);
                             }
                             try {
-                                Object o = RuleUtil.doRule((String) rul, data);
-                                if (null != o && o instanceof Boolean && !(Boolean) o) {
-                                    Object s = env.getValueFromExpress(rule.get("NOT_CHECK_MESSAGE"), this);
-                                    if (null != s) {
-                                        if((s instanceof String && ((String) s).startsWith("{"))){
-                                            throw new ISPException(null,(String)s);
-                                        }else {
-                                            s = s.toString();
-                                            s = StringUtils.replace((String) s, "\"", "\\\"");
-                                            s = StringUtils.replace((String) s, "\\\\\"", "\\\\\\\"");
-                                            throw new ISPException("600", "check [" + id + "] input parameters fail: " + s);
+                                if(!((String) rul).contains("${")) {
+                                    Object o = RuleUtil.doRule((String) rul, data);
+                                    if (null != o && o instanceof Boolean && !(Boolean) o) {
+                                        Object s = env.getValueFromExpress(rule.get("NOT_CHECK_MESSAGE"), this);
+                                        if (null != s) {
+                                            if ((s instanceof String && ((String) s).startsWith("{"))) {
+                                                throw new ISPException(null, (String) s);
+                                            } else {
+                                                s = s.toString();
+                                                s = StringUtils.replace((String) s, "\"", "\\\"");
+                                                s = StringUtils.replace((String) s, "\\\\\"", "\\\\\\\"");
+                                                throw new ISPException("600", "check [" + id + "] input parameters fail: " + s);
+                                            }
                                         }
-                                    }
 
+                                    }
                                 }
                             }catch(Exception ex){
                                 throw ex;
@@ -127,8 +132,26 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
     }
 
     List<Map> getReturnRuleByActionId(XMLParameter env,String s){
+        /*if("tokenValidator".equals(s)){
+            List li = new ArrayList ();
+            Map m = new HashMap();
+            m.put("SRV_NAME","tokenValidator");
+            m.put("RULE","(isnotnull(${requestHeaders}.Authorization) or isnotnull(${requestHeaders}.authorization)) and (WECHAT_SELFREG==getvalue(${requestHeaders}.sysLoginID)) and isnotnull(${return}.resultCode) and (401.002==getvalue(${return}.resultCode))");
+            m.put("NOT_CHECK_MESSAGE","{\"respCode\":\"TKNS0001\",\"respMsg\":\"Token (${token}) is not valid or has been expired.\"}");
+            m.put("PARAMETER_MAPPING",null);
+            li.add(m);
+            return li;
+        }*/
         try {
+            Object o = ClassUtils.getFieldValue(cache_srv_rule_return,"store",false);
+            Object b = ClassUtils.getFieldValue(cache_srv_rule_return,"back",false);
+            if(null != o && o instanceof Map) {
+                log.debug("cache_srv_rule_return:" + o + "\n"+b+"\n to get " + s);
+            }else{
+                log.debug("------null-----");
+            }
             if(null != cache_srv_rule_return) {
+
                 HashMap in = new HashMap();
                 //in.put("cache", "cache_srv_rule");
                 in.put("op", "get");
@@ -261,7 +284,9 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
 
         if(null != impl ) {
             String id =((XMLObject) impl).getXML().getId();
+
             List<Map> rules = getReturnRuleByActionId((XMLParameter) args[1], id);
+            log.debug("after check rule:"+id+","+rules);
             if(null != rules) {
                 log.debug("get return rule "+rules.size()+" by id:"+id+" result:"+result);
                 Map data = getReturnDataMap(args,result);

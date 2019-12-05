@@ -475,6 +475,9 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             }
 
             paramStr = new String(buffer,"UTF-8").trim();
+            if(log.isDebugEnabled()){
+                log.debug("receive request data len is "+len+",string is:\n"+paramStr);
+            }
             //add request data size to stat
             datasize+=paramStr.length();
             addRequestDataSize(pars, datasize);

@@ -300,15 +300,19 @@ public class ClassUtils {
         }
         Class c = obj.getClass();
         while (null != c) {
-            Field[] fs = c.getDeclaredFields();
-            for (Field f : fs) {
-                if (f.getName().equals(fieldName)) {
-                    f.setAccessible(true);
-                    fieldMap.put(k,f);
-                    return f;
+            try {
+                Field[] fs = c.getDeclaredFields();
+                for (Field f : fs) {
+                    if (f.getName().equals(fieldName)) {
+                        f.setAccessible(true);
+                        fieldMap.put(k, f);
+                        return f;
+                    }
                 }
+                c = c.getSuperclass();
+            }catch (Throwable e){
+                System.out.println();
             }
-            c = c.getSuperclass();
         }
         if (isThrowException)
             throw new NoSuchFieldException(c.getName() + "not find field:" + fieldName);
