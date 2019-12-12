@@ -2,6 +2,7 @@ package com.octopus.tools.dataclient.v2.ds;
 
 import com.octopus.tools.dataclient.v2.IDataSource;
 import com.octopus.tools.dataclient.v2.ISequence;
+import com.octopus.tools.mbeans.RunTimeMonitor;
 import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.ds.*;
@@ -13,6 +14,7 @@ import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
+import com.sun.xml.internal.ws.model.RuntimeModeler;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.dbcp.BasicDataSourceFactory;
 import org.apache.commons.logging.Log;
@@ -165,6 +167,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             log.error("get count error.",e);
         }finally {
             if(null != conn)conn.close();
+
         }
         return 0;
     }
@@ -885,14 +888,19 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         if(null != env)
             sql = (String)env.getExpressValueFromMap(sql,this);
         sql = StringUtils.replace(sql,"\\'","'");
+        Object ret=null;
+        long l = System.currentTimeMillis();
         if(sql.startsWith("select") || sql.startsWith("SELECT")){
             Object r=null;
             if(null != env)
-                return querySql(sql,env.getReadOnlyParameter(),start,end);
+                ret= querySql(sql,env.getReadOnlyParameter(),start,end);
             else
-                return querySql(sql,new HashMap(),start,end);
+                ret= querySql(sql,new HashMap(),start,end);
         }else
-            return exeSql(env,tradeId,xmlid,sql);
+            ret= exeSql(env,tradeId,xmlid,sql);
+
+        RunTimeMonitor.addSqlStaticInfo(sql,System.currentTimeMillis()-l,null,env);
+        return ret;
     }
 
     @Override
@@ -1083,10 +1091,13 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 }
 
             }
+            int ret=0;
             if(null != fields)
-                return getCount(table,(String[])fields.toArray(new String[0]),cds,tb);
+                 ret =getCount(table,(String[])fields.toArray(new String[0]),cds,tb);
             else
-                return getCount(table,null,cds,tb);
+                ret= getCount(table,null,cds,tb);
+            return ret;
+
         }else if("getNextSeq".equals(op)){
             return getNextSequence((String)input.get("table"));
         }
@@ -1107,10 +1118,14 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             }
 
         }
+        long l = System.currentTimeMillis();
+        List ret=null;
         if(null != fields && fields.size()>0 && fields.get(0) instanceof String)
-            return query(table,(String[])fields.toArray(new String[0]),cds,formate,start,end,tb);
+            ret= query(table,(String[])fields.toArray(new String[0]),cds,formate,start,end,tb);
         else
-            return query(table,null,cds,formate,start,end,tb);
+            ret= query(table,null,cds,formate,start,end,tb);
+        RunTimeMonitor.addSqlStaticInfo(table,System.currentTimeMillis()-l,conds,env);
+        return ret;
     }
     public boolean exist(String tableName) throws Exception {
         Connection conn = null;

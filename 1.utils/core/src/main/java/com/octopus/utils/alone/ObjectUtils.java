@@ -1456,6 +1456,8 @@ public class ObjectUtils {
     public static int getInt(Object o){
         if(o instanceof String)
             return Integer.parseInt((String)o);
+        else if(o instanceof Long)
+            return ((Long)o).intValue();
         else
             return (Integer)o;
     }
@@ -2419,6 +2421,8 @@ public class ObjectUtils {
             return Long.parseLong((String)o);
         }else if(o instanceof Long){
             return (Long)o;
+        }else if(o instanceof Integer){
+            return ((Integer)o).longValue();
         }
         return new Long(0);
     }

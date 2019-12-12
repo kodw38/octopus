@@ -452,7 +452,7 @@ public abstract class XMLObject implements Serializable,Comparable{
             }
 
         }
-        log.info("not find object[" + key + "] description file");
+        log.debug("not find object[" + key + "] description file");
         return null;
     }
 

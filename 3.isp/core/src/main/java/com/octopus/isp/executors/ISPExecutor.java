@@ -3,6 +3,7 @@ package com.octopus.isp.executors;
 import com.octopus.isp.ds.Context;
 import com.octopus.isp.ds.Env;
 import com.octopus.isp.ds.RequestParameters;
+import com.octopus.tools.mbeans.RunTimeMonitor;
 import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
@@ -17,6 +18,7 @@ import com.octopus.utils.xml.XMLUtil;
 import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
+import com.sun.xml.internal.ws.model.RuntimeModeler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -127,11 +129,31 @@ public class ISPExecutor extends XMLDoObject implements IBFExecutor {
             if(null != env && null != env.get("isSimReturn") && StringUtils.isTrue((String)env.get("isSimReturn")) && simReturn.containsKey("return_"+actions[0])){
                 parameters.setResult(new ResultCheck(true,simReturn.get("return_"+(String)actions[0])));
             }else {
-                ExecutorUtils.synWork(xmlActions[0], "doThing", new Class[]{XMLParameter.class, XMLMakeup.class}, new Object[]{parameters, xml});
+                long l = System.currentTimeMillis();
+                try {
+                    ExecutorUtils.synWork(xmlActions[0], "doThing", new Class[]{XMLParameter.class, XMLMakeup.class}, new Object[]{parameters, xml});
+                    doMonitorlog(xmlActions[0],parameters,l,null);
+                }catch (Exception e){
+                    doMonitorlog(xmlActions[0],parameters,l,e);
+                    throw e;
+                }
             }
         }else{
             ExecutorUtils.multiWorkSameParWaiting(xmlActions,"doThing",new Class[]{XMLParameter.class,XMLMakeup.class},new Object[]{parameters,xml});
         }
+    }
+    void doMonitorlog(XMLDoObject action,XMLParameter parameters,long l,Exception e){
+        try {
+            if (null != action.getDescStructure() && null != action.getDescStructure().get("original")) {
+                Object m = action.getDescStructure().get("original");
+                if (null != m && m instanceof Map) {
+                    if (null != ((Map) m).get("address") && !"".equals(((Map) m).get("address"))) {
+                        if (((Map) m).get("address") instanceof String && (null != parameters.getInputParameter() && parameters.getInputParameter() instanceof Map))
+                            RunTimeMonitor.addOutApiStaticInfo((String) ((Map) m).get("address"), (System.currentTimeMillis() - l), (Map) parameters.getInputParameter(), parameters, e);
+                    }
+                }
+            }
+        }catch (Exception ex){}
     }
 
     XMLDoObject getAction(String actionName,XMLParameter env){

@@ -1771,8 +1771,8 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                         return;
                     }
                     Map v = env.getMapValueFromParameter(o,this);
-                    if(log.isDebugEnabled())
-                    log.debug(("["+System.currentTimeMillis()+"] ["+xmlkey+"] "+v.toString()+append+"\n"));
+                    if(log.isInfoEnabled())
+                    log.info(("["+System.currentTimeMillis()+"] ["+xmlkey+"] "+v.toString()+append+"\n"));
                 }else if(msg instanceof String && ((String)msg).startsWith("${")){
                     Object o = ObjectUtils.getValueByPath(env.getReadOnlyParameter(),(String)msg);
                     if(o instanceof Collection){

@@ -1,5 +1,7 @@
 package com.octopus.utils.xml.auto;
 
+import com.octopus.isp.ds.Context;
+import com.octopus.isp.ds.Env;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.SNUtils;
 import com.octopus.utils.alone.StringUtils;
@@ -835,6 +837,23 @@ public class XMLParameter extends ParameterMap implements Serializable {
         return  containsKey(key);
     }
 
+    public void addTraceNode(){
+        Map m = (Map)getParameter("${env}");
+        if(null != m) {
+            String thisInstanceName = (String)m.get("${local_instanceId}");
+            if(StringUtils.isNotBlank(thisInstanceName)) {
+                String pre = (String) getGlobalParameter("${instrace}");
+                if (StringUtils.isNotBlank(pre)) {
+                    addGlobalParameter("${instrace}", pre + "," + thisInstanceName);
+                } else {
+                    addGlobalParameter("${instrace}", thisInstanceName);
+                }
+            }
+        }
+    }
+    public String getTraceNodes(){
+        return (String)getGlobalParameter("${instrace}");
+    }
 
     public void setResult(Object ret) {
         addParameter("${result}",ret);
@@ -842,6 +861,23 @@ public class XMLParameter extends ParameterMap implements Serializable {
         this.result = ret;
         setText(StringUtils.toXMLShiftChar(ret.toString()));
 */
+    }
+
+    public Env getEnv() {
+        return (Env)getStaticParameter("${env}");
+    }
+
+    public void setEnv(Env env) {
+        addStaticParameter("${env}", env);
+    }
+
+    public Context getContext() {
+        return (Context)getParameter("${context}");
+    }
+
+    public void setContext(Context context) {
+        addParameter("${context}", context);
+        //addStaticParameter("${context}."+context.getId(),context);
     }
 
     public void setResult(String path,Object ret){

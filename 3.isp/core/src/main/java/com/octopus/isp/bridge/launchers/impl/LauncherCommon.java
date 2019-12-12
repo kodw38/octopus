@@ -81,6 +81,7 @@ public class LauncherCommon {
                     if("authinfo".equals(str1)){
                         log.debug("authinfo:"+v);
                         Map m = StringUtils.convert2MapJSONObject(v);
+                        m.put("KEY_SESSION_ACTIVE_DATE",System.currentTimeMillis());
                         env.addAuthInfo(m);
                     }
                     paramHashtable.put(str1, v);

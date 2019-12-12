@@ -4,6 +4,7 @@ import com.octopus.isp.bridge.IBridge;
 import com.octopus.isp.bridge.ILauncher;
 import com.octopus.isp.cell.ICell;
 import com.octopus.isp.ds.*;
+import com.octopus.tools.mbeans.RunTimeMonitor;
 import com.octopus.utils.alone.SNUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.exception.Logger;
@@ -16,7 +17,6 @@ import com.octopus.utils.xml.auto.XMLParameter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +37,7 @@ public class Bridge extends XMLDoObject implements IBridge {
     XMLDoObject sessionmgr;                 //用户session信息
     Constant constants;                 //用户session信息
     IFlow flow;                          //处理管道流程
-
+    Date startTime;
     String instanceid;                 //该实例名称，根据该名称装载cell
     //ICellsGet cellsget;                  //cell获取
 
@@ -87,7 +87,9 @@ public class Bridge extends XMLDoObject implements IBridge {
 
     @Override
     public Object evaluate(RequestParameters parameters) {
+        long l = System.currentTimeMillis();
         try{
+
             parameters.setInstanceid(getInstanceId());
             if(null != constants){
                 parameters.setConstant(constants.getConstant());
@@ -103,12 +105,14 @@ public class Bridge extends XMLDoObject implements IBridge {
             if(StringUtils.isBlank(parameters.getRequestId())) {
                 parameters.setRequestId(SNUtils.getNewId());
             }
+            RunTimeMonitor.addBridgeBefore(parameters);
+
             flow.doFlow(parameters);
 
             if(log.isInfoEnabled()) {
                 log.info(Logger.getTraceString(parameters,null));
             }
-
+            RunTimeMonitor.addBridgeAfter(parameters,null,System.currentTimeMillis()-l);
             return parameters.getResult();
 
         }catch (Exception e){
@@ -118,7 +122,7 @@ public class Bridge extends XMLDoObject implements IBridge {
             Logger.error(this.getClass(),parameters, getXML().getId(),"error happened",e);
             ret.setSuccess(false);
             ret.setRet(e);
-
+            RunTimeMonitor.addBridgeAfter(parameters,e,System.currentTimeMillis()-l);
             if(log.isInfoEnabled()) {
                 log.info(Logger.getTraceString(parameters,e));
             }
@@ -152,7 +156,10 @@ public class Bridge extends XMLDoObject implements IBridge {
 
     @Override
     public void doInitial() throws Exception {
-
+        startTime = new Date();
+    }
+    public Date getStartTime(){
+        return startTime;
     }
 
     @Override

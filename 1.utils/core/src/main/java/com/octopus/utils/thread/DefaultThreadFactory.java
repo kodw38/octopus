@@ -2,6 +2,7 @@ package com.octopus.utils.thread;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * User: wfgao_000
@@ -12,7 +13,7 @@ public class DefaultThreadFactory implements ThreadFactory {
     public static String ISP_THREAD_NAME_PREX="TISP";
     final static AtomicInteger poolNumber = new AtomicInteger(1);
     final ThreadGroup group;
-    final AtomicInteger threadNumber = new AtomicInteger(1);
+    final AtomicLong threadNumber = new AtomicLong(1);
     final String namePrefix;
     public DefaultThreadFactory(boolean isSub) {
         SecurityManager s = System.getSecurityManager();

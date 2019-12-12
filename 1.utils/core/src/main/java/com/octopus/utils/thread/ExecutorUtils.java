@@ -188,6 +188,44 @@ public class ExecutorUtils {
             }
         }
     }
+    public static Map<String,Map> getWorkTimeTaskInfo() throws SchedulerException {
+        Iterator its = schedulerFactory.getAllSchedulers().iterator();
+        HashMap<String,Map> ret = new HashMap();
+        while(its.hasNext()){
+            Scheduler scheduler = (Scheduler)its.next();
+            String[] ts = scheduler.getJobNames(JobGroupName);
+            for(String t:ts){
+                JobDetail jd = scheduler.getJobDetail(t,JobGroupName);
+                Trigger[] tt = scheduler.getTriggersOfJob(t,JobGroupName);
+                if(null != tt && tt.length>0){
+                    if(!ret.containsKey(t)) ret.put(t,new HashMap());
+                    String nextTime=null;
+                    Date startTime=null;
+                    String cronExp=null;
+                    for(Trigger t1:tt) {
+                        if(null ==startTime)
+                            startTime = t1.getStartTime();
+                        if(null==nextTime){
+                            nextTime= t1.getNextFireTime().toString();
+                        }else{
+                            nextTime+=","+t1.getNextFireTime().toString();
+                        }
+                        if (t1 instanceof CronTrigger) {
+                            if(null==cronExp) {
+                                cronExp = ((CronTrigger) t1).getCronExpression();
+                            }else{
+                                cronExp+=","+((CronTrigger) t1).getCronExpression();
+                            }
+                        }
+                    }
+                    ret.get(t).put("NextFireTime", nextTime);
+                    ret.get(t).put("StartTime", startTime);
+                    ret.get(t).put("CronExpression", cronExp);
+                }
+            }
+        }
+        return ret;
+    }
 
     public static void removeWorkTimeTask(String id)throws SchedulerException{
         if(null !=schedulerFactory) {

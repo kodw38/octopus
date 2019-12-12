@@ -59,7 +59,7 @@ public class XMLMakeup implements Serializable,Comparable{
                     if(null ==k){
                         k = m.getProperties().getProperty("name");
                     }
-                    if(StringUtils.isNotBlank(k)) {
+                    if(StringUtils.isNotBlank(k) && StringUtils.isNotBlank(m.getText())) {
                         p.put(k, m.getText());
                     }
                 }

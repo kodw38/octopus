@@ -126,7 +126,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
         HttpServletResponse response = (HttpServletResponse)((Object[])obj)[1];
         RequestParameters pars = new RequestParameters();
         try {
-
+            pars.addTraceNode();
             //set header from request
             LauncherCommon.getHeaders(request, pars.getRequestHeaders(), pars,properties,cache_headers);
 
@@ -405,6 +405,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             m.putAll(s);
             m.put("UserName",s.getUserName());
             m.put("USER_TYPE",s.get("USER_TYPE"));
+            m.put("KEY_SESSION_ACTIVE_DATE",System.currentTimeMillis());
         }
     }
     //webpageLanucher do nothing when there is new service add or update

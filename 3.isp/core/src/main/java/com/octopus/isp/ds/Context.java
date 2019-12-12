@@ -1,17 +1,18 @@
 package com.octopus.isp.ds;
 
+import com.octopus.isp.ds.data.DefaultDataFormat;
+import com.octopus.isp.ds.data.IDataFormat;
 import com.octopus.tools.i18n.II18N;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.time.DateTimeUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.auto.XMLParameter;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 /**
  * User: Administrator
@@ -19,10 +20,14 @@ import java.util.Map;
  * Time: 上午8:51
  */
 public class Context extends XMLParameter {
+    static transient Log log = LogFactory.getLog(Context.class);
     II18N i18n;
     SimpleDateFormat systemtime=null;
     Locale locale=null;
     XMLMakeup root;
+    IDataFormat defaultFormat = new DefaultDataFormat();
+    Map<String,IDataFormat> formats = new HashMap();
+
     public Locale getLocale(){
         if(null == locale){
             if(null != getParameter("session.user.language"))
@@ -35,6 +40,25 @@ public class Context extends XMLParameter {
     }
     public void setRootXMLMakeup(XMLMakeup xml){
         root = xml;
+        List<XMLMakeup> cs = root.getChildren();
+        if(null != cs){
+            for(XMLMakeup c:cs){
+                String key = c.getProperties().getProperty("key");
+                String format = c.getProperties().getProperty("format");
+                String text = c.getText();
+                if(StringUtils.isNotBlank(key) && StringUtils.isNotBlank(format) && StringUtils.isNotBlank(text)){
+                    try {
+                        Class ci = Class.forName(format);
+                        if(IDataFormat.class.isAssignableFrom(ci)){
+                            IDataFormat f = (IDataFormat)ci.getConstructor(String.class,Context.class).newInstance(text,this);
+                            formats.put(key,f);
+                        }
+                    }catch (Exception e){
+                        log.error("",e);
+                    }
+                }
+            }
+        }
     }
 
     public String getSystemDate(long time){
@@ -65,8 +89,8 @@ public class Context extends XMLParameter {
 
     public boolean checkFormat(String type,Object value) throws ISPException{
         if(StringUtils.isNotBlank(type) && null != value && !"".equals(value)){
-            if(!type.startsWith("format")){
-                type="format."+type;
+            if(!type.startsWith("check")){
+                type="check."+type;
             }
             String format = (String)getParameter(type);
             if(null != format) {
@@ -90,5 +114,14 @@ public class Context extends XMLParameter {
             }
         }
         return true;
+    }
+
+    public IDataFormat getUserDatetimeFormat(){
+        IDataFormat f =  formats.get("session.user.datetimestyle");
+        if(null!=f){
+            return f;
+        }else{
+            return defaultFormat;
+        }
     }
 }

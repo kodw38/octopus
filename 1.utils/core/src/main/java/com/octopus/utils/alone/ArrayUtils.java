@@ -5144,6 +5144,20 @@ public class ArrayUtils {
         }
         return li;
     }
+    public static Map sortMapByKey(Map map){
+        List<Map.Entry> list = new ArrayList<Map.Entry>(map.entrySet());
+        Collections.sort(list,new Comparator<Map.Entry>() {
+            //升序排序
+            public int compare(Map.Entry o1,Map.Entry o2) {
+                return o1.getKey().toString().compareTo(o2.getKey().toString());
+            }
+        });
+        Map ret = new LinkedHashMap();
+        for(Map.Entry<String,String> mapping:list){
+            ret.put(mapping.getKey(),mapping.getValue());
+        }
+        return ret;
+    }
     public static boolean isNotLikeInStringList(List<String> likeLs,String str){
         if(null != likeLs && null != str){
             for(String s:likeLs){

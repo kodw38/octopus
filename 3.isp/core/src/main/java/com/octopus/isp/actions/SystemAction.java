@@ -159,7 +159,7 @@ public class SystemAction extends XMLDoObject {
                         log.error("",e);
                     }
                 }
-            },30000,300000);
+            },10000,300000);
         }catch (Exception x){
             log.error("",x);
         }

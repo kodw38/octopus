@@ -165,22 +165,7 @@ public class RequestParameters extends FlowParameters{
         }
     }
 
-    public Env getEnv() {
-        return (Env)getStaticParameter("${env}");
-    }
 
-    public void setEnv(Env env) {
-        addStaticParameter("${env}", env);
-    }
-
-    public Context getContext() {
-        return (Context)getParameter("${context}");
-    }
-
-    public void setContext(Context context) {
-        addParameter("${context}", context);
-        //addStaticParameter("${context}."+context.getId(),context);
-    }
     public void setConstant(Map constant){
         addGlobalParameter("${constant}",constant);
     }
