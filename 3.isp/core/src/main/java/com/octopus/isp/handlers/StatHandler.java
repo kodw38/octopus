@@ -519,7 +519,7 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
                                         }
                                     }
                                 }
-                                log.info("has running all services in instance[" + id + "]");
+                                log.info("all services are ready in instance[" + id + "]");
                             }
                         }
                     }

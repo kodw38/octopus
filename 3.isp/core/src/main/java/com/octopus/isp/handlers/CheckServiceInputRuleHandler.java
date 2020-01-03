@@ -143,14 +143,14 @@ public class CheckServiceInputRuleHandler  extends XMLDoObject implements IMetho
             return li;
         }*/
         try {
-            Object o = ClassUtils.getFieldValue(cache_srv_rule_return,"store",false);
-            Object b = ClassUtils.getFieldValue(cache_srv_rule_return,"back",false);
-            if(null != o && o instanceof Map) {
-                log.debug("cache_srv_rule_return:" + o + "\n"+b+"\n to get " + s);
-            }else{
-                log.debug("------null-----");
-            }
             if(null != cache_srv_rule_return) {
+                Object o = ClassUtils.getFieldValue(cache_srv_rule_return,"store",false);
+                Object b = ClassUtils.getFieldValue(cache_srv_rule_return,"back",false);
+                if(null != o && o instanceof Map) {
+                    log.debug("cache_srv_rule_return:" + o + "\n"+b+"\n to get " + s);
+                }else{
+                    log.debug("------null-----");
+                }
 
                 HashMap in = new HashMap();
                 //in.put("cache", "cache_srv_rule");

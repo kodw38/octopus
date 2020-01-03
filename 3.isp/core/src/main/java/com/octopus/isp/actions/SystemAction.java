@@ -131,6 +131,7 @@ public class SystemAction extends XMLDoObject {
                 public void run() {
 
                     try{
+                        log.error("start to reload services status from zk......");
                         initRegInfo(true);
                     }catch (Exception e){
                         e.printStackTrace();
@@ -159,7 +160,7 @@ public class SystemAction extends XMLDoObject {
                         log.error("",e);
                     }
                 }
-            },10000,300000);
+            },60000,300000);
         }catch (Exception x){
             log.error("",x);
         }
@@ -890,6 +891,59 @@ public class SystemAction extends XMLDoObject {
         }
         return null;
     }
+
+    List<Map> getServiceListFromZk(){
+        try {
+            if (null != servicepath) {
+                HashMap<String,Map> ret = new HashMap();
+                HashMap in = new HashMap();
+                in.put("op", "getChildrenData");
+                in.put("path", statpath);
+                Map<String, String> servicesStat = (Map) srvhandler.doSomeThing(null, null, in, null, null);
+                String[] insids = getInsListIds();
+                if(null != servicesStat){
+                    Iterator<String> its = servicesStat.keySet().iterator();
+                    while(its.hasNext()){
+                        String k = its.next();
+                        String name = k.substring(0,k.length()-1);
+                        name = name.substring(name.lastIndexOf(".")+1);
+                        if(!ret.containsKey(name)) {
+                            Map d = StringUtils.convert2MapJSONObject(servicesStat.get(k));
+                            if ("RUNNING".equals(d.get("INS_STATUS"))) {
+                                HashMap m = new HashMap();
+                                m.put("name",name);
+                                Map ds = getDescStructure(name);
+                                if(null == ds){
+                                    ds = getRemoteDesc(name);
+                                }
+                                if(null != ds) {
+                                    Object r = ds.get("desc");
+                                    if(null != r) {
+                                        String remark ="";
+                                        if(r instanceof String){
+                                            remark=r.toString();
+                                        }
+                                        if(r instanceof Map){
+                                            remark=ObjectUtils.convertMap2String((Map)r);
+                                        }
+                                        m.put("desc", remark);
+                                    }
+                                }
+                                ret.put(name,m);
+                            }
+                        }
+                    }
+                }
+                if(ret.size()>0){
+                    return new ArrayList(ret.values());
+                }
+            }
+
+        }catch (Exception e){
+
+        }
+        return null;
+    }
     /**
      *
      * @param name
@@ -1464,6 +1518,13 @@ public class SystemAction extends XMLDoObject {
                         return ret;
                 }
             }catch (Exception e){}
+        }
+        return null;
+    }
+    String getServiceBody(String name){
+        Map m = getServiceDescription(name);
+        if(null != m){
+            return (String)m.get("BODY");
         }
         return null;
     }
@@ -2113,6 +2174,8 @@ return false;
                         filterAuth(env,ret);
                         return ret;
                     }
+                }else if("getServiceInfoList".equals(op)){
+                    return getServiceListFromZk();
                 }else if("getTreeServices".equals(op)){
                     List<Map> ls = findServicesByCenter(env,null);
                     return getTreeServices(ls);
@@ -2122,6 +2185,8 @@ return false;
                 }else if("getServiceDescription".equals(op)){
                     //获取服务简要描述，报文体，异常，依赖等信息
                     return getServiceDescription((String) input.get("name"));
+                }else if("getServiceBody".equals(op)){
+                    return getServiceBody((String) input.get("name"));
                 }else if("getServiceUsage".equals(op)){
                     //获取使用手册，使用场景，这个文件会很大单独存储
                     return getServiceUsage((String) input.get("name"));
@@ -2325,7 +2390,7 @@ return false;
                     Map m = (Map)input.get("flowdesc");
                     String type = (String)input.get("flowType");
 
-                    Map desc = Desc.convertFlowStructure2DescMap(m,type);
+                    Map desc = Desc.convertFlowStructure2DescMap(m,type,this);
                     if (null != m) {
                         addUpdateSerivce(desc, env);
                     }
@@ -2452,6 +2517,13 @@ return false;
                     if(log.isDebugEnabled())
                     log.debug("get desc "+srvName+" desc:"+ret);
                     return ret;
+                }else if("getRemoteDesc".equals(op)){
+                    String name = (String)input.get("name");
+                    if(StringUtils.isNotBlank(name)){
+                        return getRemoteDesc(name);
+                    }else{
+                        return null;
+                    }
                 }else if("getActionPackage".equals(op)){
                     String srvName = (String)input.get("name");
                     if(StringUtils.isNotBlank(srvName)){
@@ -3285,6 +3357,13 @@ return false;
                 cache.put(instanceId + "." + name, desc);
             }
         }
+    }
+    Map getRemoteDesc(String name){
+        String[] insname = getInsNameBySrvId(name);
+        if(null != insname && insname.length>0){
+            return getRemoteDesc(name,insname[0]);
+        }
+        return null;
     }
     Map getRemoteDesc(String name,String insId){
         if(null != remote){

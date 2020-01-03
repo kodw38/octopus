@@ -1037,4 +1037,11 @@ public class XMLParameter extends ParameterMap implements Serializable {
        return (String)getValueFromExpress("${session}.UserName",null);
     }
 
+    public void setGoto(String to){
+        addGlobalParameter("goto",to);
+    }
+    public String getGoto(){
+        return (String)getGlobalParameter("goto");
+    }
+
 }

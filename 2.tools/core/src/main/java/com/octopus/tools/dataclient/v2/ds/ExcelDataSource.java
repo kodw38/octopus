@@ -64,7 +64,7 @@ public class ExcelDataSource extends XMLDoObject implements IDataSource {
     }
 
     @Override
-    public List<Map<String, Object>> query(String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
+    public List<Map<String, Object>> query(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
         ExcelReader r = getReader();
         List<Map<String,String>> data = r.getSheepData(file);
         return findRows(data,queryFields,fieldValues);
@@ -120,17 +120,17 @@ public class ExcelDataSource extends XMLDoObject implements IDataSource {
     }
 
     @Override
-    public int getCount(String file, String[] queryFields, List<Condition> fieldValues, com.octopus.utils.ds.TableBean tb) throws Exception {
+    public int getCount(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, com.octopus.utils.ds.TableBean tb) throws Exception {
         throw new Exception("not support the Excel operate [getCount]");
     }
 
     @Override
-    public List<Map<String, String>> queryAsString(String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
+    public List<Map<String, String>> queryAsString(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
         throw new Exception("not support the Excel operate [getCount]");
     }
 
     @Override
-    public List<Map<String, Object>> query(String sql, Map map, int start, int end) throws Exception {
+    public List<Map<String, Object>> query(String tradeId,String sql, Map map, int start, int end) throws Exception {
         return null;
     }
 
@@ -182,7 +182,7 @@ public class ExcelDataSource extends XMLDoObject implements IDataSource {
     }
 
     @Override
-    public boolean exist(String tableName) throws Exception {
+    public boolean exist(String tradeId,String tableName) throws Exception {
         return true;
     }
 
@@ -232,14 +232,14 @@ public class ExcelDataSource extends XMLDoObject implements IDataSource {
                 }else if("query".equals(op)){
                     List<String> fields = (List)input.get("fields");
                     if(null != fields) {
-                        return query(table, fields.toArray(new String[0]), cds, null, 0, 0,null);
+                        return query(null!=env?env.getTradeId():null,table, fields.toArray(new String[0]), cds, null, 0, 0,null);
                     }else{
-                        return query(table, null, cds, null, 0, 0,null);
+                        return query(null!=env?env.getTradeId():null,table, null, cds, null, 0, 0,null);
                     }
                 }else if("delete".equals(op)){
                     return delete(env,null,null,table,cds,null);
                 }else if("exist".equals(op)){
-                    return exist(table);
+                    return exist(null!=env?env.getTradeId():null,table);
                 }else if("update".equals(op)){
                     return update(env,null,null,table,cds,(Map)data,null);
                 }

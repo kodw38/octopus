@@ -230,10 +230,10 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         if (null != getDescStructure() && null != getDescStructure().get("input") && getDescStructure().get("input") instanceof Map) {
             String id = (String)inputData.get("srvId");
             Map dc=null;
-            if(StringUtils.isNotBlank(id) && null != getDescStructure(id)){
+            if(StringUtils.isNotBlank(id) && null != getDescStructure(id) && null !=getDescStructure(id).get("input") &&  getDescStructure(id).get("input") instanceof Map){
                 dc = (Map)getDescStructure(id).get("input");
             }
-            if(dc ==null) {
+            if(dc ==null && null != getDescStructure().get("input") && getDescStructure().get("input") instanceof Map) {
                 dc = (Map) getDescStructure().get("input");
             }
             if(null != dc){

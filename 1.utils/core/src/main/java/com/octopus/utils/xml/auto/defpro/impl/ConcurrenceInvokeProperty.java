@@ -8,6 +8,7 @@ import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
 import com.octopus.utils.xml.auto.defpro.IObjectInvokeProperty;
+import com.octopus.utils.xml.auto.defpro.impl.utils.ConcurrenceExeRun;
 import com.octopus.utils.xml.auto.defpro.impl.utils.ConcurrenceQueueTask;
 import com.octopus.utils.xml.auto.defpro.impl.utils.ConcurrenceWaitTask;
 import com.octopus.utils.xml.auto.logic.XMLLogic;
@@ -31,16 +32,19 @@ public class ConcurrenceInvokeProperty implements IObjectInvokeProperty {
     public Object exeProperty(Map proValue, XMLDoObject obj,XMLMakeup xml, XMLParameter parameter,Map input, Map output,Map config) {
         //queue concurrent
         Object num = proValue.get("threadnum");
-        String size = (String)proValue.get("size");
+        int i_size=0;
+        if(null != proValue.get("size") && proValue.get("size") instanceof Integer){
+            i_size=(Integer)proValue.get("size");
+        }else if(null != proValue.get("size") && proValue.get("size") instanceof String){
+            i_size=Integer.parseInt((String)proValue.get("size"));
+        }
         if(null != proValue.get("queue") && StringUtils.isNotBlank((String)proValue.get("queue"))){
             if(proValue.get("queue").equals("block")){
                 String id = Thread.currentThread().getName()+"_queue_"+xml.getId();
                 LinkedBlockingQueue queue= (LinkedBlockingQueue)parameter.getParameter(id);
                 if(null == queue){
-                    int i_size=0;
-                    if(StringUtils.isNotBlank(size)){
-                        i_size = Integer.parseInt(size);
-                    }
+
+
                     if(i_size>0)
                         queue = new LinkedBlockingQueue(i_size);
                     else
@@ -61,7 +65,7 @@ public class ConcurrenceInvokeProperty implements IObjectInvokeProperty {
                 }
             }
 
-        }else if(StringUtils.isNotBlank(num) && StringUtils.isNotBlank(size)){
+        }else if(StringUtils.isNotBlank(num) && i_size>0){
             String xmlid = xml.getId();
             String id = Thread.currentThread().getName()+"."+Thread.currentThread().hashCode()+"_concurrentwait_"+xmlid;
 
@@ -77,10 +81,8 @@ public class ConcurrenceInvokeProperty implements IObjectInvokeProperty {
                     if (null != num) {
                         b_num = Integer.parseInt(String.valueOf(num));
                     }
-                    int b_size = 0;
-                    if (StringUtils.isNotBlank(size)) {
-                        b_size = Integer.parseInt(size);
-                    }
+                    int b_size = i_size;
+
                     if (b_size > 0) {
                         list = new ConcurrenceWaitTask(xml.getId(),b_size, b_num, iswait);
                         list.addFinishedListener(new ClearFun(parameter, id));
@@ -95,7 +97,26 @@ public class ConcurrenceInvokeProperty implements IObjectInvokeProperty {
 
 
         }else{
-            boolean iswait = StringUtils.isTrue((String) proValue.get("iswait"));
+
+            boolean iswait = false;
+            if(null != proValue.get("iswait")) {
+                if(proValue.get("iswait") instanceof String)
+                    iswait=StringUtils.isTrue((String) proValue.get("iswait"));
+                else
+                    iswait=(Boolean)proValue.get("iswait");
+            }
+            /*if(null!=parameter.getParameter(XMLParameter.XMLLOGIC_BACK_CALL_KEY)){
+                List<XMLMakeup> xmls = xml.getChildren();
+                ConcurrenceExeRun[] ts = new ConcurrenceExeRun[xmls.size()];
+                for(int i=0;i<xmls.size();i++){
+                    ts[i]=new ConcurrenceExeRun(new Object[]{obj, parameter, input, output, config, parameter.getParameter(XMLParameter.XMLLOGIC_BACK_CALL_KEY), xmls.get(i)});
+                }
+                if(iswait){
+                    ExecutorUtils.multiWorkWaiting(ts);
+                }else{
+                    ExecutorUtils.multiWork(ts);
+                }
+            }else*/
             if(obj instanceof XMLLogic){
                 XMLLogic lg = (XMLLogic)obj;
                 InvokeTask[] ts = null;

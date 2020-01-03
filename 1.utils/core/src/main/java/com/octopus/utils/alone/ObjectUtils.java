@@ -1454,6 +1454,7 @@ public class ObjectUtils {
         return o.toString();
     }
     public static int getInt(Object o){
+        if(null ==o ||"".equals(o)) return 0;
         if(o instanceof String)
             return Integer.parseInt((String)o);
         else if(o instanceof Long)
@@ -1703,7 +1704,10 @@ public class ObjectUtils {
             }
         }
     }
-    public static String convertMap2String(Map map)  {
+    public static String convertMap2String(Map map){
+        return convertMap2String(map,true);
+    }
+    public static String convertMap2String(Map map,boolean isDoubleYingHao)  {
 /*
         if(log.isDebugEnabled()) {
             new Exception().printStackTrace();
@@ -1722,7 +1726,7 @@ public class ObjectUtils {
                             sb.append(",");
                         Object o = its.next();
                         Object v = map.get(o);
-                        appendObject2StringBuffer(sb, o, v);
+                        appendObject2StringBuffer(sb, o, v,isDoubleYingHao);
                         if (isfirst)
                             isfirst = false;
                     }
@@ -1733,9 +1737,10 @@ public class ObjectUtils {
         }
         return "";
     }
+
     public static String convertList2String(List li) {
         StringBuffer sb = new StringBuffer();
-        appendObject2StringBuffer(sb,null,li);
+        appendObject2StringBuffer(sb,null,li,true);
         return sb.toString();
     }
     public static String convertKeyWithoutThreadNameMap2String(Map map,String[] keys)  {
@@ -1758,7 +1763,7 @@ public class ObjectUtils {
                     sb.append(",");
                 Object v = map.get(o);
 
-                appendObject2StringBuffer(sb,o,v);
+                appendObject2StringBuffer(sb,o,v,true);
                 if(isfirst)
                     isfirst=false;
             }
@@ -1783,7 +1788,7 @@ public class ObjectUtils {
                         o = o.toString().substring(0, n);
                     }
                 }
-                appendObject2StringBuffer(sb,o,v);
+                appendObject2StringBuffer(sb,o,v,true);
                 if(isfirst)
                     isfirst=false;
             }
@@ -1791,18 +1796,21 @@ public class ObjectUtils {
         sb.append("}");
         return sb.toString();
     }
-    public static void appendObject2StringBuffer(StringBuffer sb,Object o,Object v)  {
+    public static void appendObject2StringBuffer(StringBuffer sb,Object o,Object v){
+        appendObject2StringBuffer(sb,o,v,true);
+    }
+    public static void appendObject2StringBuffer(StringBuffer sb,Object o,Object v,boolean isDoubleYinhao)  {
         if(v==null && o==null){
             return;
         }
         if(null != o && v == null){
-            sb.append(keyv(o)).append(":").append(valuev(null));
+            sb.append(keyv(o,isDoubleYinhao)).append(":").append(valuev(null,isDoubleYinhao));
             return;
         }
 
         if(v.getClass().isArray()){
             if(null!= o && StringUtils.isNotBlank(o)){
-                sb.append(keyv(o)).append(":");
+                sb.append(keyv(o,isDoubleYinhao)).append(":");
             }
             sb.append("[");
 
@@ -1810,27 +1818,27 @@ public class ObjectUtils {
             for(int i=0;i<Array.getLength(v);i++){
                 if(!isf)
                     sb.append(",");
-                appendObject2StringBuffer(sb, null, Array.get(v,i));
+                appendObject2StringBuffer(sb, null, Array.get(v,i),isDoubleYinhao);
                 if(isf)
                     isf=false;
             }
             sb.append("]");
         }else if(v instanceof Map){
             if (null != o)
-                sb.append(keyv(o)).append(":").append(convertMap2String((Map) v));
+                sb.append(keyv(o,isDoubleYinhao)).append(":").append(convertMap2String((Map) v,isDoubleYinhao));
             else{
                 if(v instanceof JSONObject){
                     sb.append(((JSONObject)v).toString());
                 }else if(v instanceof com.alibaba.fastjson.JSONObject){
                     sb.append(((com.alibaba.fastjson.JSONObject)v).toJSONString());
                 }else {
-                    sb.append(convertMap2String((Map) v));
+                    sb.append(convertMap2String((Map) v,isDoubleYinhao));
                 }
             }
         }else if(v instanceof Collection){
             Iterator it = ((Collection)v).iterator();
             if(null != o) {
-                sb.append(keyv(o)).append(":").append("[");
+                sb.append(keyv(o,isDoubleYinhao)).append(":").append("[");
             }else{
                 sb.append("[");
             }
@@ -1839,15 +1847,15 @@ public class ObjectUtils {
                 Object m = it.next();
                 if(!isf)
                     sb.append(",");
-                appendObject2StringBuffer(sb, null, m);
+                appendObject2StringBuffer(sb, null, m,isDoubleYinhao);
                 if(isf)
                     isf=false;
             }
             sb.append("]");
         }else if(null !=o){
-            sb.append(keyv(o)).append(":").append(valuev(v));
+            sb.append(keyv(o,isDoubleYinhao)).append(":").append(valuev(v,isDoubleYinhao));
         }else{
-            sb.append(valuev(v));
+            sb.append(valuev(v,isDoubleYinhao));
         }
     }
     static BASE64Encoder base64Encoder = new BASE64Encoder();
@@ -1868,8 +1876,12 @@ public class ObjectUtils {
             return null;
         }
     }
-    static String valuev(Object v)  {
-        if(null == v)return "\"\"";
+    static String valuev(Object v,boolean isDoubleYingHao)  {
+        char yinh='\"';
+        if(!isDoubleYingHao){
+            yinh='\'';
+        }
+        if(null == v)return ""+yinh+yinh;
         if(v instanceof String){
             if((
                     ((String)v).startsWith("[") && ((String)v).endsWith("]") && null != StringUtils.convert2ListJSONObject((String)v) && StringUtils.convert2ListJSONObject((String)v).size()>0
@@ -1881,10 +1893,10 @@ public class ObjectUtils {
                 /* remove by wangfeng 2019/4/1 replace with appendCharBefore
                 String s = StringUtils.replace(v.toString(),"\"","\\\"");
                 s = StringUtils.replace(s,"\\\\\"","\\\\\\\"");*/
-                return "\"" + s + "\"";
+                return yinh + s + yinh;
             }
         }else if(v instanceof Date){
-            return "\""+DateTimeUtils.date2String((Date)v,"yyyy-MM-dd HH:mm:ss")+"\"";
+            return yinh+DateTimeUtils.date2String((Date)v,"yyyy-MM-dd HH:mm:ss")+yinh;
         }else if(v instanceof InputStream){
             try {
                 return convertInputStream2Base64String((InputStream) v);
@@ -1902,10 +1914,12 @@ public class ObjectUtils {
         }
         return s;
     }
-    static String keyv(Object k){
+    static String keyv(Object k,boolean isYinHao){
         if(k!=null) {
-
+            if(isYinHao)
             return "\"".concat(jsonReaminDeal(k.toString()).concat("\""));
+            else
+                return jsonReaminDeal(k.toString());
         }
         return null;
     }
@@ -2486,6 +2500,23 @@ public class ObjectUtils {
                 }else{
                     if(target.get(((Map.Entry) e).getKey()) instanceof Map && ((Map.Entry) e).getValue() instanceof Map){
                         appendDeepMapNotReplaceKey((Map)((Map.Entry) e).getValue(),(Map)target.get(((Map.Entry) e).getKey()));
+                    }
+                }
+            }
+        }
+    }
+    public static void removeDeepMapByKey(Map src,Map removeMap,Map newMap){
+        if(null != src && null != removeMap) {
+            for (Object e : src.entrySet()) {
+                if(!removeMap.containsKey(((Map.Entry) e).getKey()) || null == removeMap.get(((Map.Entry) e).getKey()) || "".equals(removeMap.get(((Map.Entry) e).getKey()))) {
+                    if(System.identityHashCode(((Map.Entry) e).getValue())!=System.identityHashCode(removeMap)) {
+                        newMap.put(((Map.Entry) e).getKey(), ((Map.Entry) e).getValue());
+                    }
+                }else{
+                    if(removeMap.get(((Map.Entry) e).getKey()) instanceof Map && ((Map.Entry) e).getValue() instanceof Map){
+                        HashMap m = new HashMap();
+                        newMap.put(((Map.Entry) e).getKey(),m);
+                        removeDeepMapByKey((Map)((Map.Entry) e).getValue(),(Map)removeMap.get(((Map.Entry) e).getKey()),m);
                     }
                 }
             }

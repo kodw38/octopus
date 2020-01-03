@@ -108,9 +108,23 @@ public class ServiceGuideAction extends XMLDoObject {
                 }else{
                     return getValue(env,v);
                 }
-            }else if("getTemplate".equals("op")){
+            }else if("getTemplate".equals(op)){
                 String name = (String)input.get("name");
 
+            }else if("getDoBody".equals(op)){
+                String action = (String)input.get("action");
+                return getDoBody(action);
+            }else if("getActionList".equals(op)){
+                try {
+                    XMLDoObject system = (XMLDoObject) getObjectById("system");
+                    if(null != system){
+                        HashMap in = new HashMap();
+                        in.put("op","getServiceInfoList");
+                        return system.doSomeThing("",null,in,null,null);
+                    }
+                }catch (Exception e){
+
+                }
             }
 
         }
@@ -194,38 +208,60 @@ public class ServiceGuideAction extends XMLDoObject {
     Map getElementChildrenAndDesc(String elementName){
         return getChildrenAndDesc("do_element"+"."+elementName+".children");
     }
-
+    String getDoBody(String name){
+        StringBuffer sb = new StringBuffer("<do key=\""+name+"_xx\" action=\""+name+"\"" );
+        Map input = (Map)getElementPropertiesValueDesc("do",name,"input");
+        if(null != input){
+            Map inputd = Desc.getInvokeDescStructure(input);
+            if(null != inputd) {
+                sb.append(" input=\"").append(ObjectUtils.convertMap2String(inputd,false)).append("\"");
+            }
+        }
+        sb.append("/>");
+        return sb.toString();
+    }
     Object getElementPropertiesValueDesc(String elementName,String action,String valuePath){
         if("do".equals(elementName) && StringUtils.isNotBlank(action)){
-            XMLObject obj = getObjectById(action);
-            Map pros = (Map)ObjectUtils.getValueByPath(logicDesc,"do_element.do.properties");
-            if(null != obj && null !=pros){
-                try {
-                    Map m = new HashMap();
-                    ObjectUtils.appendDeepMapNotReplaceKey(pros, m);
-                    ObjectUtils.appendDeepMapNotReplaceKey(obj.getDescStructure(), m);
-                    if(StringUtils.isNotBlank(valuePath)) {
-                        Object o = ObjectUtils.getValueByPath(m, valuePath);
-                        if (null != o && o instanceof Map) {
-                            return (Map) o;
-                            //return Desc.getParameterDesc((Map)o);
-                        }
-                    }else{
-                        return m;
+            try {
+                XMLObject obj = getObjectById(action);
+                Map desc=null;
+                if(null !=obj) {
+                    desc = obj.getDescStructure();
+                }else{
+                    XMLDoObject system = (XMLDoObject)getObjectById("system");
+                    if(null != system) {
+                        Map input = new HashMap();
+                        input.put("op","getRemoteDesc");
+                        input.put("name",action);
+                        desc = (Map)system.doSomeThing("",null,input,null,null);
                     }
-                }catch (Exception e){
-                    log.error("",e);
                 }
-            }else if(null != pros){
-                return ObjectUtils.getValueByPath(pros,valuePath);
-            }else if(null != obj){
-                try {
-                    return ObjectUtils.getValueByPath(obj.getDescStructure(), valuePath);
-                }catch (Exception e){
+                Map pros = (Map)ObjectUtils.getValueByPath(logicDesc,"do_element.do.properties");
+                if(null != desc && null !=pros){
+
+                        Map m = new HashMap();
+                        ObjectUtils.appendDeepMapNotReplaceKey(pros, m);
+                        ObjectUtils.appendDeepMapNotReplaceKey(desc, m);
+                        if(StringUtils.isNotBlank(valuePath)) {
+                            Object o = ObjectUtils.getValueByPath(m, valuePath);
+                            if (null != o && o instanceof Map) {
+                                return (Map) o;
+                                //return Desc.getParameterDesc((Map)o);
+                            }
+                        }else{
+                            return m;
+                        }
+
+                }else if(null != pros){
+                    return ObjectUtils.getValueByPath(pros,valuePath);
+                }else if(null != desc){
+
+                        return ObjectUtils.getValueByPath(desc, valuePath);
 
                 }
+            }catch (Exception e){
+
             }
-
         }else {
             return ObjectUtils.getValueByPath(logicDesc,"do_element" + "." + elementName + ".properties." + valuePath);
         }

@@ -158,21 +158,39 @@ public class MBeanClient extends XMLDoObject {
             } else if ("getTimeTask".equals(op)) {
                 List<Map> nret = new ArrayList();
                 for (Map m : ret) {
+                    List<Map> tt = new ArrayList();
                     Map n = (Map) m.get("QuartzInfo");
                     if (null != n) {
-                        Map nn = new HashMap();
                         Iterator it = n.keySet().iterator();
+                        String IP="",PID="",InsId="";
                         while (it.hasNext()) {
+                            Map nn = new HashMap();
                             String k = (String) it.next();
+                            if("IP".equals(k)){
+                                IP=n.get(k).toString();continue;
+                            }
+                            if("PID".equals(k)){
+                                PID=n.get(k).toString();continue;
+                            }
+                            if("InsId".equals(k)){
+                                InsId=n.get(k).toString();continue;
+                            }
                             if (null != n.get(k) && n.get(k) instanceof Map) {
                                 nn.put("TaskName", k);
                                 nn.putAll((Map) n.get(k));
                             } else {
                                 nn.put(k, n.get(k));
                             }
+                            tt.add(nn);
                         }
-                        nret.add(nn);
+                        for(Map mt:tt){
+                            mt.put("IP",IP);
+                            mt.put("PID",PID);
+                            mt.put("InsId",InsId);
+                        }
+
                     }
+                    nret.addAll(tt);
                 }
                 return nret;
             } else if ("getRunningServices".equals(op)) {
@@ -295,12 +313,13 @@ public class MBeanClient extends XMLDoObject {
                                 }
                             }
                         }
-                        if(nret.size()>0){
-                            for(Map mt :nret){
-                                if(null != mt.get("apis") && mt.get("apis") instanceof Map){
-                                    mt.put("apis",new ArrayList(((Map)mt.get("apis")).values()));
-                                }
-                            }
+
+                    }
+                }
+                if(nret.size()>0){
+                    for(Map mt :nret){
+                        if(null != mt.get("apis") && mt.get("apis") instanceof Map){
+                            mt.put("apis",new ArrayList(((Map)mt.get("apis")).values()));
                         }
                     }
                 }

@@ -490,6 +490,12 @@ public class ClassUtils {
                     if (o instanceof String) {
                         return Integer.parseInt((String) o);
                     }
+                    if(o instanceof Long){
+                        return ((Long)o).intValue();
+                    }
+                    if(o instanceof Integer){
+                        return ((Integer)o).intValue();
+                    }
                 /*} catch (Exception e) {
                     e.printStackTrace();
                     return null;
@@ -502,6 +508,9 @@ public class ClassUtils {
                     }
                     if (o instanceof String) {
                         return Integer.parseInt((String) o);
+                    }
+                    if(o instanceof Long){
+                        return ((Long)o).intValue();
                     }
 
                 /*} catch (Exception e) {
@@ -517,6 +526,12 @@ public class ClassUtils {
                     if (o instanceof String) {
                         return Long.parseLong((String) o);
                     }
+                    if(o instanceof Long){
+                        return ((Long)o).longValue();
+                    }
+                    if(o instanceof Integer){
+                        return ((Integer)o).longValue();
+                    }
                 /*} catch (Exception e) {
                     e.printStackTrace();
                     return null;
@@ -529,6 +544,12 @@ public class ClassUtils {
                     }
                     if (o instanceof String) {
                         return Long.parseLong((String) o);
+                    }
+                    if(o instanceof Long){
+                        return ((Long)o);
+                    }
+                    if(o instanceof Integer){
+                        return ((Integer)o).longValue();
                     }
                 /*} catch (Exception e) {
                     e.printStackTrace();

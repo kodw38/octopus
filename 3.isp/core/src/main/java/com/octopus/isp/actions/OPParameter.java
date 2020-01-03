@@ -26,8 +26,10 @@ public class OPParameter extends XMLDoObject {
             if(StringUtils.isNotBlank(op)){
                 if(op.equals("add") && StringUtils.isNotBlank((String)input.get("key")) && null != input.get("value")){
                     env.addParameter("${"+(String)input.get("key")+"}",input.get("value"));
-                }if(op.equals("set") && StringUtils.isNotBlank((String)input.get("key")) && null != input.get("value")){
+                }else if(op.equals("set") && StringUtils.isNotBlank((String)input.get("key")) && null != input.get("value")){
                     env.addParameter((String)input.get("key"),input.get("value"));
+                }else if(op.equals("setGlobal") && StringUtils.isNotBlank((String)input.get("key")) && null != input.get("value")){
+                    env.addGlobalParameter((String)input.get("key"),input.get("value"));
                 }else if("clearAll".equals(op)){
                     env.getReadOnlyParameter().clear();
                 }

@@ -7,10 +7,12 @@ import com.octopus.utils.bftask.BFParameters;
 import com.octopus.utils.cls.ClassUtils;
 import com.octopus.utils.exception.Logger;
 import com.octopus.utils.thread.ds.*;
+import com.octopus.utils.time.DateTimeUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
+import com.octopus.utils.xml.auto.defpro.impl.utils.ConcurrenceExeRun;
 import com.octopus.utils.xml.auto.defpro.impl.utils.DoAction;
 import com.octopus.utils.xml.auto.defpro.impl.utils.DoTimeTask;
 import org.apache.commons.logging.Log;
@@ -205,10 +207,14 @@ public class ExecutorUtils {
                     for(Trigger t1:tt) {
                         if(null ==startTime)
                             startTime = t1.getStartTime();
+                        String nexttime="";
+                        if(null != t1.getNextFireTime()){
+                            nexttime = DateTimeUtils.DATA_FORMAT_YYYY_MM_DD_HH_MM_SS.format(t1.getNextFireTime());
+                        }
                         if(null==nextTime){
-                            nextTime= t1.getNextFireTime().toString();
+                            nextTime= nexttime;
                         }else{
-                            nextTime+=","+t1.getNextFireTime().toString();
+                            nextTime+=","+nexttime;
                         }
                         if (t1 instanceof CronTrigger) {
                             if(null==cronExp) {
@@ -556,6 +562,21 @@ public class ExecutorUtils {
         }
         return null;
     }
+    public static void multiWorkWaiting(ConcurrenceExeRun[] invokeTasks) {
+        if(null != invokeTasks){
+            try{
+                Executor[] es = ThreadPool.getInstance().getExecutor(invokeTasks.length);
+                for(int i=0;i<es.length;i++){
+                    es[i].execute(invokeTasks[i]);
+                }
+                for(int i=0;i<es.length;i++){
+                    ((ThreadPool.MyExecutor)es[i]).join();
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
     /**
      * 执行并等待超时,超时返回false
      * @param timeoutMillSecond
@@ -614,6 +635,14 @@ public class ExecutorUtils {
     }
 
     public static void multiWork(InvokeTask[] invokeTasks){
+        if(null != invokeTasks){
+            Executor[] es = ThreadPool.getInstance().getExecutor(invokeTasks.length);
+            for(int i=0;i<es.length;i++){
+                es[i].execute(invokeTasks[i]);
+            }
+        }
+    }
+    public static void multiWork(ConcurrenceExeRun[] invokeTasks){
         if(null != invokeTasks){
             Executor[] es = ThreadPool.getInstance().getExecutor(invokeTasks.length);
             for(int i=0;i<es.length;i++){

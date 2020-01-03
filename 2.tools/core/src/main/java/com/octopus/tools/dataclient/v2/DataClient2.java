@@ -325,10 +325,10 @@ public class DataClient2 extends XMLDoObject{
                 end =start+size;
                 List<Map<String, Object>> srcdata=null;
                 if(null != sqls && sqls.size()>0){
-                    srcdata = src.query(sqls.get(0),conds,start,end);
+                    srcdata = src.query(null!=env?env.getTradeId():null,sqls.get(0),conds,start,end);
                 }else {
                     List<Condition> cds = getCond(env,conds);
-                    srcdata = src.query(src_table, queryFields, cds, null, start, end, null);
+                    srcdata = src.query(null!=env?env.getTradeId():null,src_table, queryFields, cds, null, start, end, null);
                 }
                 if(null != srcdata){
                     count=srcdata.size();

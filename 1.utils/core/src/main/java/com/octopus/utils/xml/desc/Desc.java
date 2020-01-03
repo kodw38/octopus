@@ -278,6 +278,7 @@ public class Desc extends XMLDoObject{
             return null;
         }
     }
+
     public Map getDefaultValueDescStructure(String key)throws Exception{
         Map m = getDescStructure(key);
         return getInvokeDescStructure(m);
@@ -947,7 +948,7 @@ public class Desc extends XMLDoObject{
         },
      * @return
      */
-    public static Map convertFlowStructure2DescMap(Map flowStruct,String flowType){
+    public static Map convertFlowStructure2DescMap(Map flowStruct,String flowType,XMLDoObject obj)throws ISPException{
         if(null != flowStruct){
             Map desc = new HashMap();
             desc.put("name",flowStruct.get("title"));
@@ -960,7 +961,8 @@ public class Desc extends XMLDoObject{
             StringBuffer body = new StringBuffer();
             String hd = "<action key=\"\" ";
             Map mm = (Map)flowStruct.get("nodes");
-            LinkedHashMap tempNode = new LinkedHashMap();
+            LinkedHashMap<String,StringBuffer> tempNode = new LinkedHashMap();
+            String startId=null;
             if(null!= mm){
                 Iterator<String> its = mm.keySet().iterator();
                 while(its.hasNext()){
@@ -1014,9 +1016,11 @@ public class Desc extends XMLDoObject{
                         //a.append("key=\"").append(key).append("\"").append(" action=\"suspendTheRequest\"");
                         a.append("key=\"").append(key).append("\"").append(" action=\"interrupt\"");
                     }else if("start round".equals(type)){
-
+                        startId=id;
+                        a.append("key=\"").append(key).append("\"").append(" action=\"").append("flowStart").append("\"");
                     }else if("end".equals(type)){
-
+                        a.append("key=\"").append(key).append("\"").append(" action=\"").append("flowEnd").append("\"");
+                        //isend="true";
                     }else {
                         a.append("key=\"").append(key).append("\"").append(" action=\"").append(name).append("\"");
                     }
@@ -1034,15 +1038,15 @@ public class Desc extends XMLDoObject{
                     a.append(" width=\"").append(width).append("\"");
                     a.append(" height=\"").append(height).append("\"");
                     a.append(" alt=\"").append(alt).append("\"");
-                    a.append("/>");
+                    a.append(">");
                     tempNode.put(id,a);
                 }
             }
             hd+=" xmlid=\"Logic\">";
             Map ms= (Map)flowStruct.get("lines");
+            /*LinkedList ls = new LinkedList();
             if(null!= ms){
                 Iterator<String> ks = ms.keySet().iterator();
-                LinkedList ls = new LinkedList();
                 while(ks.hasNext()){
                     Map m = (Map)ms.get(ks.next());
                     String type = (String)m.get("type");
@@ -1067,26 +1071,239 @@ public class Desc extends XMLDoObject{
                     }
 
                 }
+
                 tempNode = ObjectUtils.setMapKeySortByKeySet(tempNode,ls);
-            }
-            Iterator<String> its = tempNode.keySet().iterator();
+            }*/
+            StringBuffer sb = new StringBuffer();
+            convertFlow2Desc(mm,tempNode,ms.values(),startId,null,sb,"");
+
+            /*Iterator<String> its = tempNode.keySet().iterator();
             while(its.hasNext()){
                 String nid = (String)its.next();
                 StringBuffer sb = (StringBuffer)tempNode.get(nid);
                 body.append(sb.toString());
-            }
+            }*/
+            body.append(sb.toString());
             body.append("</action>");
-            desc.put("input",getCollectionInput(tempNode));
+            desc.put("input",getCollectionInput(mm,obj));
             desc.put("output",getCollectionOutput(tempNode));
             desc.put("error",getCollectionError(tempNode));
             body.insert(0,hd);
             desc.put("body",body.toString());
+            desc.put("drawlines",ms);
             return desc;
         }
         return null;
     }
+    static void convertFlow2Desc(Map<String,Map> ns,LinkedHashMap<String,StringBuffer> nodes,Collection<Map> ls,String startId,String cond,StringBuffer sb,String deepend)throws ISPException{
+        StringBuffer nb = nodes.get(startId);
+
+        if(null!=nb && null != ls) {
+            String b=nb.toString();
+            if(StringUtils.isNotBlank(cond)){
+                if(nb.indexOf("input=\"")>0){
+                    b= nb.substring(0,nb.indexOf("input=\"{")+8)+"check:'#{"+cond+"}'," +nb.substring(nb.indexOf("input=\"{")+8);
+                }else{
+                    b = nb.substring(0,nb.length()-1)+" input=\"{check:'#{"+cond+"}'}\">";
+                }
+            }
+            List<Map> toList = new LinkedList();
+            boolean isCond=false;
+            for(Map m:ls) {
+                if(startId.equals(m.get("from"))) {
+                    //String from = (String) line.get("from");
+                    if(StringUtils.isNotBlank(m.get("name"))){
+                        isCond=true;
+                    }
+                    if(isBackLine(ls,m,sb)){
+                        if (StringUtils.isNotBlank(m.get("name"))) {
+                            if (b.indexOf("goto:[") > 0) {
+                                b = b.substring(0, b.indexOf("goto:[") + 6) + "{cond:'#{" + m.get("name") + "}',to:'" + m.get("to") + "'}," + b.substring(b.indexOf("goto:[") + 7);
+                            } else {
+                                if (b.indexOf("output=\"{") > 0) {
+                                    b = b.substring(0, b.indexOf("output=\"{") + 9) + "goto:[{cond:'#{" + m.get("name") + "}',to:'" + ns.get(m.get("to")).get("name") + "'}]" + b.substring(b.indexOf("output=\"{") + 10);
+                                } else {
+                                    b = b.substring(0, b.length() - 1) + " output=\"{goto:[{cond:'#{" + m.get("name") + "}',to:'" + ns.get(m.get("to")).get("name") + "'}]}\"" + ">";
+                                }
+                            }
+                            continue;
+                        } else {
+                            throw new ISPException("S_FLOW_CREATE", "back to pre point must with cond");
+                        }
+
+                    }
+                    toList.add(m);
+
+                }
+
+            }
+            if(toList.size()==0){
+                sb.append(b).append("</do>");
+            }else if(toList.size()==1){
+                sb.append(b);
+                if(StringUtils.isBlank(deepend)) {
+                    sb.append("</do>");
+                }
+                if(StringUtils.isNotBlank(deepend) && deepend.equals(toList.get(0).get("to"))){
+                    if(!StringUtils.isBlank(deepend)) {
+                        sb.append("</do>");
+                    }
+                    return;
+                }
+                convertFlow2Desc(ns,nodes,ls,(String)toList.get(0).get("to"),(String)toList.get(0).get("name"),sb,deepend);
+
+                if(!StringUtils.isBlank(deepend)) {
+                    sb.append("</do>");
+                }
+            }else{
+                List<String> tos = getTos(toList);
+                List filterback =filterBack(ls,sb,nb);
+                String deepend2 = findDeepCollection(tos,filterback);
+                if(isCond){
+                    sb.append(b);
+
+                    for(Map t:toList){
+                        if(StringUtils.isNotBlank(deepend) && deepend.equals(t.get("to"))) return;
+                        convertFlow2Desc(ns,nodes,ls,(String)t.get("to"),(String)t.get("name"),sb,deepend2);
+                    }
+                    sb.append("</do>");
+                }else{
+                    sb.append(b.substring(0,b.length()-1)).append(" concurrence=\"{iswait:true,size:"+toList.size()+",threadnum:"+toList.size()+"}\"").append(">");
+                    for(Map t:toList){
+                        if(StringUtils.isNotBlank(deepend) && deepend.equals(t.get("to"))) return;
+                        convertFlow2Desc(ns,nodes,ls,(String)t.get("to"),(String)t.get("name"),sb,deepend2);
+                    }
+                    sb.append("</do>");
+                }
+                if(StringUtils.isNotBlank(deepend2) && (StringUtils.isBlank(deepend) || !deepend.equals(deepend2))){
+                    convertFlow2Desc(ns,nodes,ls,deepend2,null,sb,deepend);
+                }
+            }
+        }
+    }
+    static boolean isBackLine(Collection<Map> ls,Map line,StringBuffer sb){
+        if(sb.indexOf((String)line.get("to"))>0)
+            return true;
+        return false;
+    }
+    static List<Map> filterBack(Collection<Map> ls,StringBuffer sb,StringBuffer nb){
+        List ret = new LinkedList();
+        for(Map m:ls){
+            if(!isBackLine(ls,m,sb) && !isBackLine(ls,m,nb)){
+                ret.add(m);
+            }
+        }
+        return ret;
+    }
+
+    static Map getFrom(Collection<Map> ls,String from){
+        for(Map m:ls){
+            if(m.get("from").equals(from)){
+                return m;
+            }
+        }
+        return null;
+    }
+    static List<String> getTos(List<Map> ls){
+        List<String> ret = new ArrayList();
+        for(Map m:ls){
+            ret.add((String)m.get("to"));
+        }
+        return ret;
+    }
+    static List<String> trace2end(String start,Collection<Map> ls,String sb){
+            sb+=start+",";
+            List<String> li = new ArrayList();
+            for(Map l:ls){
+                if(l.get("from").equals(start) ){
+                    if(StringUtils.isNotBlank(l.get("to")) && sb.indexOf(l.get("to")+",")<0){
+                        li.add((String)l.get("to"));
+                    }
+                }
+            }
+            List ret = new ArrayList();
+            if(li.size()==1){
+                return trace2end(li.get(0),ls,sb);
+            }else if(li.size()>1){
+                for(String l:li){
+                    List r = trace2end(l,ls,sb);
+                    ret.addAll(r);
+                }
+                return ret;
+            }
+            ret.add(sb);
+            return ret;
+    }
+    static String findDeepCollection(List<String> toList,Collection<Map> ls){
+        List<String> r = new ArrayList();
+        for(String to:toList) {
+            List<String> rr = trace2end(to,ls,"");
+            r.addAll(rr);
+        }
+        String m="";
+        int c=0;
+        for(String l:r){
+            int n = StringUtils.countMatches(l,",");
+            if(c==0||c<n){
+                c=n;
+                m=l;
+            }
+        }
+        String[] s = m.split(",");
+        List tl = new ArrayList();
+        LinkedList<String> lk = new LinkedList();
+        for(int i=s.length-1;i>=0;i--){
+            int n=0;
+            if(StringUtils.isNotBlank(s[i])){
+                for(String t:r){
+                    if(t.indexOf(",")>0) {
+                        //String u = t.substring(0, t.indexOf(","));
+                        if (t.indexOf(s[i]) >= 0 ) {//&& !tl.contains(u)
+                            //tl.add(u);
+                            n++;
+                        }
+                    }
+                }
+            }
+            if(n==r.size()){
+                lk.add(s[i]);
+            }
+        }
+        if(lk.size()>0){
+            return lk.getLast();
+        }
+        return null;
+    }
     // get collection all refer service input parameters exclude parameters used in inner.
-    static Map getCollectionInput(LinkedHashMap tempNode){
+    static Map getCollectionInput(Map tempNode,XMLDoObject obj){
+        if(null != tempNode){
+            Iterator its = tempNode.keySet().iterator();
+            HashMap newMap = new HashMap();
+            while(its.hasNext()){
+                Map define = new HashMap();
+                Map setMap = new HashMap();
+                String k = (String)its.next();
+                Map m = (Map)tempNode.get(k);
+                String srvName = (String)m.get("svname");
+                Map dd = getDesc(srvName,obj);
+                if(null !=dd && null != dd.get("input") && dd.get("input") instanceof Map){
+                    define.putAll((Map)dd.get("input"));
+                }
+                Object in = m.get("input");
+                if(null != in) {
+                    if(in instanceof String && StringUtils.isNotBlank((String)in)){
+                        in = StringUtils.convert2MapJSONObject((String)in);
+                    }
+                    if (null != in && in instanceof Map) {
+                        setMap.putAll((Map)in);
+                    }
+                }
+                ObjectUtils.removeDeepMapByKey(define,setMap,newMap);
+            }
+
+
+            return newMap;
+        }
         return null;
     }
     // get collection all refer service output parameters
@@ -1098,6 +1315,27 @@ public class Desc extends XMLDoObject{
         return null;
     }
 
+    public static Map getDesc(String key,XMLDoObject obj){
+        XMLDoObject system = (XMLDoObject) obj.getObjectById("system");
+        if(null != system){
+            HashMap in = new HashMap();
+            in.put("op","getDesc");
+            in.put("name",key);
+            try {
+                Object ret = system.doSomeThing(null,null,in,null,null);
+                if(null == ret){
+                    in.put("op","getRemoteDesc");
+                    ret = system.doSomeThing(null,null,in,null,null);
+                }
+                if(null != ret && ret instanceof Map){
+                    return (Map)ret;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
     /**
      * if the desc is create by Flow, can back from Desc Map to Flow Structure used to show in page
      * @param desc
@@ -1112,66 +1350,70 @@ public class Desc extends XMLDoObject{
         map.put("opType", x.getProperties().getProperty("opType"));
         if("flow".equals(desc.get("createby"))) {
             Map nodes = new HashMap();
-            Map lines = new HashMap();
-            String from = null;
-            int n = 0;
-            for (XMLMakeup c : x.getChildren()) {
-                if (StringUtils.isNotBlank(c.getProperties().getProperty("nodeid"))) {
-                    Map m = new HashMap();
-                    n++;
-                    m.put("name", c.getId());
-                    m.put("svname", c.getProperties().getProperty("action"));
-                    if(StringUtils.isNotBlank(c.getProperties().getProperty("isend"))) {
-                        m.put("isend", c.getProperties().getProperty("isend"));
-                    }
-                    int left=0;
-                    if(StringUtils.isNotBlank(c.getProperties().getProperty("left"))){
-                        left = Integer.parseInt(c.getProperties().getProperty("left"));
-                    }
-                    m.put("left", left);
-                    int top=0;
-                    if(StringUtils.isNotBlank(c.getProperties().getProperty("top"))){
-                        top = Integer.parseInt(c.getProperties().getProperty("top"));
-                    }
-                    m.put("top", top);
-                    m.put("type", c.getProperties().getProperty("type"));
-                    int width=0;
-                    if(StringUtils.isNotBlank(c.getProperties().getProperty("width"))){
-                        width=Integer.parseInt(c.getProperties().getProperty("width"));
-                    }
-                    m.put("width", width);
-                    int height=0;
-                    if(StringUtils.isNotBlank(c.getProperties().getProperty("height"))){
-                        height=Integer.parseInt(c.getProperties().getProperty("height"));
-                    }
-                    m.put("height", height);
-                    String alt = c.getProperties().getProperty("alt");
-                    boolean b=false;
-                    if(StringUtils.isNotBlank(alt)){
-                        b =Boolean.valueOf(alt);
-                    }
-                    m.put("alt", b);
-
-                    m.put("input", c.getProperties().getProperty("input"));
-
-                    nodes.put(c.getProperties().getProperty("nodeid"), m);
-                    if (StringUtils.isNotBlank(from)) {
-                        HashMap t = new HashMap();
-                        t.put("from", from);
-                        t.put("to", c.getProperties().getProperty("nodeid"));
-                        t.put("dash", false);
-                        t.put("alt", true);
-                        t.put("type", "sl");
-                        lines.put("" + n, t);
-                    }
-                    from = c.getProperties().getProperty("nodeid");
-                }
-            }
+            getNodes(x,nodes);
             map.put("nodes", nodes);
+
+            Map lines = (Map)desc.get("drawlines");
             map.put("lines", lines);
             return map;
         }else{
             return null;
+        }
+    }
+    static void getNodes(XMLMakeup x,Map nodes){
+        for (XMLMakeup c : x.getChildren()) {
+            getNodeData(c,nodes);
+            getNodes(c,nodes);
+
+        }
+    }
+    static void getNodeData(XMLMakeup c,Map nodes){
+        if (StringUtils.isNotBlank(c.getProperties().getProperty("nodeid"))) {
+            Map m = new HashMap();
+            m.put("name", c.getId());
+            m.put("svname", c.getProperties().getProperty("action"));
+            if(StringUtils.isNotBlank(c.getProperties().getProperty("isend"))) {
+                m.put("isend", c.getProperties().getProperty("isend"));
+            }
+            int left=0;
+            if(StringUtils.isNotBlank(c.getProperties().getProperty("left"))){
+                left = Integer.parseInt(c.getProperties().getProperty("left"));
+            }
+            m.put("left", left);
+            int top=0;
+            if(StringUtils.isNotBlank(c.getProperties().getProperty("top"))){
+                top = Integer.parseInt(c.getProperties().getProperty("top"));
+            }
+            m.put("top", top);
+            m.put("type", c.getProperties().getProperty("type"));
+            int width=0;
+            if(StringUtils.isNotBlank(c.getProperties().getProperty("width"))){
+                width=Integer.parseInt(c.getProperties().getProperty("width"));
+            }
+            m.put("width", width);
+            int height=0;
+            if(StringUtils.isNotBlank(c.getProperties().getProperty("height"))){
+                height=Integer.parseInt(c.getProperties().getProperty("height"));
+            }
+            m.put("height", height);
+            String alt = c.getProperties().getProperty("alt");
+            boolean b=false;
+            if(StringUtils.isNotBlank(alt)){
+                b =Boolean.valueOf(alt);
+            }
+            m.put("alt", b);
+            String in = c.getProperties().getProperty("input");
+            if(null != in && in.indexOf("check:")>=0){
+                String end = in.substring(in.indexOf("'",in.indexOf("check:'")+7)+1);
+                if(end.startsWith(",")){
+                    end = end.substring(1);
+                }
+                in = in.substring(0,in.indexOf("check:"))+end;
+            }
+            m.put("input", in);
+
+            nodes.put(c.getProperties().getProperty("nodeid"), m);
+
         }
     }
     /**
@@ -1827,6 +2069,10 @@ public class Desc extends XMLDoObject{
                         throw new ISPException("ISP02001","data length of [(name)] is over [(length)]",new String[]{name,n+""});
                     }else if(o instanceof String && ((String)o).length()>n){
                         throw new ISPException("ISP02001","data length of [(name)] is over [(length)]",new String[]{name,n+""});
+                    }else if(o instanceof Integer || o instanceof Long){
+                        if(o.toString().length()>n){
+                            throw new ISPException("ISP02001","data length of [(name)] is over [(length)]",new String[]{name,n+""});
+                        }
                     }
                 }
             }

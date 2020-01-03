@@ -399,8 +399,11 @@ public class RunTimeMonitor extends XMLDoObject implements RunTimeMonitorMBean {
             }
             if(null != getObjectById("cxf_webservice")){
                 Object ws_host = b.getEnv().getEnv().get("ws_host");
-                if (null != ws_host) {
-                    instance.put("WSPort",ws_host);
+                if (StringUtils.isNotBlank(ws_host)) {
+                    if(ws_host.toString().contains(":")) {
+                        String wsport = ws_host.toString().substring(ws_host.toString().lastIndexOf(":")+1);
+                        instance.put("WSPort", wsport);
+                    }
                 }
             }
         }

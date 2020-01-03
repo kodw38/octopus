@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
-  <component name="NewModuleRootManager" inherit-compiler-output="false">
+  <component name="NewModuleRootManager">
     <output url="file://$MODULE_DIR$/../../build/octopus/classes" />
     <output-test url="file://$MODULE_DIR$/../../build/octopus/classes" />
     <exclude-output />
@@ -9,8 +9,13 @@
       <sourceFolder url="file://$MODULE_DIR$/2.tools/core/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/3.isp/core/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/4.octopus/core/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/5.applicatoins/GetImageFromWebSite" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/4.octopus/core/src/main/resource" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/5.applicatoins/gs/trunk/core/src/main/resource" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/5.applicatoins/gs/trunk/core/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="true" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="1.8" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">
       <library>
@@ -27,4 +32,3 @@
     </orderEntry>
   </component>
 </module>
-

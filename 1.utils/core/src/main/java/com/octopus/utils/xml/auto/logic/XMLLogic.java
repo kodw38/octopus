@@ -371,8 +371,41 @@ public class XMLLogic extends XMLDoObject{
                 }
             }*/
             env.setAutoProcess(false);
+            doGoTo(x,env);
         }
 
+    }
+
+    /**
+     * goto another node, need to interrupt currently logic and find the goto node to redo with currently env data
+     * @param xml
+     * @param env
+     */
+    void doGoTo(XMLMakeup xml,XMLParameter env)throws Exception{
+        if(null != xml) {
+            String output = (String)xml.getProperties().get("output");
+            if(StringUtils.isNotBlank(output)){
+                Map out = StringUtils.convert2MapJSONObject(output);
+                if(null!=out){
+                    List<Map> gotoList = (List)out.get("goto");
+                    if(null != gotoList){
+                        for(Map m:gotoList){
+                            if(null != m.get("cond") && m.get("cond") instanceof String && StringUtils.isNotBlank(m.get("cond"))){
+                                if(XMLParameter.isHasRetainChars((String)m.get("cond"))){
+                                    if (StringUtils.isTrue(env.getExpressValueFromMap((String) m.get("cond"), this).toString())) {
+                                        if(null!=m.get("to") && m.get("to") instanceof String && StringUtils.isNotBlank(m.get("to"))){
+                                            env.setGoto((String)m.get("to"));
+                                            throw new ISPException("FlowGoto","xmlLogic will goto node "+m.get("to"));
+                                        }
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     void doFor(XMLParameter env,XMLMakeup x)throws Exception{
@@ -902,7 +935,16 @@ public class XMLLogic extends XMLDoObject{
                 if(istrade){
                     rollbacks(env,env.getResult(),e);
                 }
-                throw e;
+                //do goto interrupt
+                if(StringUtils.isNotBlank(env.getGoto())){
+                    XMLMakeup x = findSuspendNode(getXML(),env.getGoto(),null,null);
+                    if(null != x){
+                        doGotoAction(env,x);
+                    }
+                    return null;
+                }else {
+                    throw e;
+                }
             }finally {
                 if(isChild) {
                     clearTransforInputParameter(id, env);
@@ -926,13 +968,14 @@ public class XMLLogic extends XMLDoObject{
     boolean isThisNode(XMLMakeup root,String key,String srvkey,String nodeid){
         if(StringUtils.isBlank(nodeid)|| nodeid.equals("null")) nodeid=null;
         if(
-                ((StringUtils.isBlank(nodeid) && !root.getProperties().containsKey("nodeid"))
+                (StringUtils.isBlank(nodeid)
                         ||(StringUtils.isNotBlank(nodeid) && nodeid.equals(root.getProperties().getProperty("nodeid"))))
 
                 &&(StringUtils.isNotBlank(key) && root.getId().equals(key))
-                && (StringUtils.isNotBlank(root.getProperties().getProperty("action"))
+                && (null ==srvkey || (StringUtils.isNotBlank(root.getProperties().getProperty("action"))
+                      && null !=getObjectById(root.getProperties().getProperty("action"))
                         && srvkey.equals(getObjectById(root.getProperties().getProperty("action")).getXML().getId()))
-
+                   )
                 ){
             return true;
         }
@@ -970,6 +1013,65 @@ public class XMLLogic extends XMLDoObject{
         }
         return null;
     }
+    void doGotoAction(XMLParameter p,XMLMakeup x) throws Exception {
+        if(null != x) {
+            doElement(p,x);
+            //removeTimeoutRedo(p,x);
+            //上次断点执行成功，移除断点标志
+            //p.removeSuspendXMlId();
+            //p.removeSuspend();
+            //todo 移除Hbase中的上个断点日志
+
+            //继续执行孩子逻辑
+            /*for (XMLMakeup cx : x.getChildren()) {
+                doElement(p, cx);
+                //break
+                String go = p.getBreakPoint();
+                if (StringUtils.isNotBlank(go) && getXML().existKey(go)) {
+                    if (go.equals(getXML().getId()))
+                        p.removeBreakPoint();
+                    break;
+                }
+            }*/
+
+            //断点孩子逻辑执行完，开始向上遍历执行逻辑
+            boolean is=false;
+            XMLMakeup r=x;
+            XMLMakeup pm=x;
+            XMLMakeup topredox=null;
+            while(null != pm.getParent()){
+                if(isRedo(pm))
+                    topredox=pm;
+                pm = pm.getParent();
+            }
+            String curid = x.getId();
+            String target = p.getTargetNames()[0];
+            while (null != r.getParent()) {
+                List<XMLMakeup> cs = r.getParent().getChildren();
+                for (XMLMakeup c : cs) {
+                    if (c.getId().equals(curid) && (
+                            (!c.getProperties().containsKey("nodeid") && !x.getProperties().containsKey("nodeid"))
+                                    || (c.getProperties().getProperty("nodeid").equals(x.getProperties().getProperty("nodeid"))))){
+                        is=true;
+                        continue;
+                    }else if(is){
+                        doElement(p, c);
+
+                    }
+                }
+                if(null !=topredox && topredox.equals(r))
+                    p.removeRedoService();
+                is=false;
+                curid = r.getParent().getId();
+                r = r.getParent();
+                if(r.getId().equals(target)){
+                    break;
+                }
+            }
+
+        }
+    }
+
     void doActiveAction(XMLParameter p,XMLMakeup x) throws Exception {
         if(null != x) {
             doElement(p,x);

@@ -55,22 +55,22 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
 
 
     @Override
-    public List<Map<String, Object>> query(String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
+    public List<Map<String, Object>> query(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
         throw new Exception("not support query method");
     }
 
     @Override
-    public int getCount(String file, String[] queryFields, List<Condition> fieldValues, com.octopus.utils.ds.TableBean tb) throws Exception {
+    public int getCount(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, com.octopus.utils.ds.TableBean tb) throws Exception {
         throw new Exception("not support getCount method");
     }
 
     @Override
-    public List<Map<String, String>> queryAsString(String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
+    public List<Map<String, String>> queryAsString(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
         throw new Exception("not support queryAsString method");
     }
 
     @Override
-    public List<Map<String, Object>> query(String sql, Map map, int start, int end) throws Exception {
+    public List<Map<String, Object>> query(String tradeId,String sql, Map map, int start, int end) throws Exception {
         throw new Exception("not support query method");
     }
 
@@ -133,7 +133,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
     }
 
     @Override
-    public boolean exist(String tableName) throws Exception {
+    public boolean exist(String tradeId,String tableName) throws Exception {
         try {
             Admin admin = connection.getAdmin();
             if (admin.tableExists(TableName.valueOf(tableName))) {
@@ -207,7 +207,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
             }else if("dropTable".equals(op)){
                 dropTable(table);
             }else if("exist".equals(op)){
-                return exist(table);
+                return exist(null!=env?env.getTradeId():null,table);
             }else if("delete".equals(op)){
                 List<HbaseConditionEntity> dc = getConditions((Map)conds);
                 List<HbaseDataEntity> ret = queryDataByConditions(null,table,dc,fields);
@@ -767,7 +767,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
         }
     }
 
-    public boolean exist(String tableName, String rowKey) throws IOException {
+    public boolean exist(String tradeId,String tableName, String rowKey) throws IOException {
         Table table =null;
         try {
             table = connection.getTable(TableName.valueOf(tableName));

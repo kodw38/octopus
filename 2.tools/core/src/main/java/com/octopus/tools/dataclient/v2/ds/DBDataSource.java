@@ -76,7 +76,11 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         PreparedStatement st = conn.prepareStatement(s);
         if(null != pars){
             for(int i=1;i<=pars.length;i++){
-                st.setObject(i, pars[i-1]);
+                if("".equals(pars[i-1])){
+                    st.setNull(i,Types.VARCHAR);
+                }else {
+                    st.setObject(i, pars[i - 1]);
+                }
             }
         }
         return st;
@@ -87,7 +91,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         return st.executeQuery();
     }
     @Override
-    public List query(String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
+    public List query(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
         HashMap map = new HashMap();
         String sql = getSqlAndParameters(file,queryFields,fieldValues,outs,start,end,map,tb);
         Connection conn=null;
@@ -113,7 +117,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
 
-    public List<Map<String,Object>> query(String sql,Map map,int start,int end) throws SQLException {
+    public List<Map<String,Object>> query(String tradeId,String sql,Map map,int start,int end) throws SQLException {
         Connection conn=null;
         try{
             StringBuffer sb = new StringBuffer(sql);
@@ -135,7 +139,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
     }
 
     @Override
-    public int getCount(String file, String[] queryFields, List<Condition> fieldValues, com.octopus.utils.ds.TableBean tb) throws Exception {
+    public int getCount(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, com.octopus.utils.ds.TableBean tb) throws Exception {
         HashMap map = new HashMap();
         String sql = getSqlAndParameters(file,queryFields,fieldValues,null,0,0,map,tb);
         sql = getCountSql(sql);
@@ -172,7 +176,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         return 0;
     }
 
-    public List<Map<String, String>> queryAsString(String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
+    public List<Map<String, String>> queryAsString(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end, com.octopus.utils.ds.TableBean tb) throws Exception {
         HashMap map = new HashMap();
         String sql = getSqlAndParameters(file,queryFields,fieldValues,outs,start,end,map,tb);
         Connection conn=null;
@@ -328,7 +332,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
 
             long l = System.currentTimeMillis();
             PreparedStatement ps=null;
-            Map<String,Integer> meta = getSingleMetaData(file,fieldValues.get(0).keySet());
+            Map<String,Integer> meta = getSingleMetaData(null!=env?env.getTradeId():null,file,fieldValues.get(0).keySet());
             if(dataSource.getDriverClassName().contains("mysql")){
                 sb.append(" values ");
                 for(int i=0;i<fieldValues.size();i++){
@@ -502,7 +506,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 sb.append(" where ").append(getWhere(fieldValues,map,tb));
             }
             sql = sb.toString();
-            Map<String,Integer> metaData = getSingleMetaData(file,updateData.keySet());
+            Map<String,Integer> metaData = getSingleMetaData(null!=env ?env.getTradeId():null,file,updateData.keySet());
 
             List<String> keys = this.analyseSql(sql);
             Object[] pars = this.setSqlObject(map, keys);
@@ -552,7 +556,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         for(String k:keyfields){
             conds.add(Condition.createEqualCondition(k,updateData.get(k)));
         }
-        int n = getCount(file,keyfields.toArray(new String[0]),conds,tb);
+        int n = getCount(null!=env?env.getTradeId():null,file,keyfields.toArray(new String[0]),conds,tb);
         if(n>0){
             //update
             return update(env,tradeId,taskId,file,conds,updateData,tb);
@@ -563,8 +567,8 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
     }
 
     public Connection getConnection(String tradeid,String taskId) throws SQLException {
-        if(null != tradObjectList.get(tradeid+"->"+taskId)){
-            return tradObjectList.get(tradeid+"->"+taskId);
+        if(StringUtils.isNotBlank(tradeid) && null != tradObjectList.get(tradeid)){
+            return tradObjectList.get(tradeid);
         }else {
 
             if(null != dataSource) {
@@ -676,7 +680,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         }
     }
 
-    Object querySql(String sql,Map parameters,int startIndex,int endIndex) throws SQLException, NoSuchFieldException, IllegalAccessException {
+    Object querySql(String tradeId,String sql,Map parameters,int startIndex,int endIndex) throws SQLException, NoSuchFieldException, IllegalAccessException {
         Connection conn = null;
         ResultSet res = null;
         try{
@@ -692,7 +696,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             if(null != conn)conn.close();
         }
     }
-     Map<String,Integer> getSingleMetaData(String table,Collection fields)throws SQLException{
+     Map<String,Integer> getSingleMetaData(String tradeId,String table,Collection fields)throws SQLException{
         StringBuffer sql= new StringBuffer("select ");
         if(null != fields){
             Iterator<String> ts = fields.iterator();
@@ -704,14 +708,14 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             sql.append(" * ");
         }
         sql.append(" from ").append(table);
-        ResultSetMetaData m =  getMetaData(sql.toString(),null);
+        ResultSetMetaData m =  getMetaData(tradeId,sql.toString(),null);
         HashMap<String,Integer> ret = new HashMap();
        for(int i=1;i<=m.getColumnCount();i++){
            ret.put(m.getColumnName(i),m.getColumnType(i));
        }
          return ret;
     }
-    ResultSetMetaData getMetaData(String sql,Map parameters) throws SQLException {
+    ResultSetMetaData getMetaData(String tradeId,String sql,Map parameters) throws SQLException {
         Connection conn = null;
         ResultSet res = null;
         PreparedStatement st=null;
@@ -723,7 +727,12 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             st = conn.prepareStatement("select * from ("+getSql(sql,keys.toArray(new String[0]))+") ax_wf where 1=2");
             if(null != pars){
                 for(int i=1;i<=pars.length;i++){
-                    st.setObject(i, pars[i-1]);
+                    if("".equals(pars[i-1])){
+                        st.setNull(i,Types.VARCHAR);
+                    }else {
+                        st.setObject(i, pars[i - 1]);
+                    }
+
                 }
             }
             res = st.executeQuery();
@@ -807,6 +816,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         for(int i=0;i<fields.size();i++){
             if(map.containsKey(fields.get(i))){
                 Object o = map.get(fields.get(i));
+                //if("".equals(o))o = "''";
                 li.add(o);
                 fs.add(fields.get(i));
             }
@@ -893,9 +903,9 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         if(sql.startsWith("select") || sql.startsWith("SELECT")){
             Object r=null;
             if(null != env)
-                ret= querySql(sql,env.getReadOnlyParameter(),start,end);
+                ret= querySql(null!=env?env.getTradeId():null,sql,env.getReadOnlyParameter(),start,end);
             else
-                ret= querySql(sql,new HashMap(),start,end);
+                ret= querySql(null!=env?env.getTradeId():null,sql,new HashMap(),start,end);
         }else
             ret= exeSql(env,tradeId,xmlid,sql);
 
@@ -1003,7 +1013,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         }else if("truncate".equals(op)){
             return truncateTable(env,tradeId,xmlid,table);
         }else if("exist".equals(op)){
-            return exist(table);
+            return exist(null != env?env.getTradeId():null,table);
         }else if("delete".equals(op)){
             if(null != conds){
                 if(conds instanceof Map) {
@@ -1051,13 +1061,16 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 throw new Exception("not set update table["+table+"] without conds");
             }
 
-        }else if("upadd".equals(op) && null !=input.get("keyfields")){
-            List kf = (List)input.get("keyfields");
-            if(null != datas)
-                return upadd(env,tradeId,xmlid,table,kf,datas,tb);
-            else
-                throw new Exception("not set update value");
-
+        }else if("upadd".equals(op)){
+            if(null !=input.get("keyfields")){
+                List kf = (List) input.get("keyfields");
+                if (null != datas)
+                    return upadd(env, tradeId, xmlid, table, kf, datas, tb);
+                else
+                    throw new Exception("not set update value");
+            }else{
+                throw new Exception("if upadd , need to set [keyfields] property");
+            }
         }else if("query".equals(op)){
             List<Map<String,Object>> ls=null;
             if(null== conds || conds instanceof Map){
@@ -1093,9 +1106,9 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             }
             int ret=0;
             if(null != fields)
-                 ret =getCount(table,(String[])fields.toArray(new String[0]),cds,tb);
+                 ret =getCount(null!=env?env.getTradeId():null,table,(String[])fields.toArray(new String[0]),cds,tb);
             else
-                ret= getCount(table,null,cds,tb);
+                ret= getCount(null!=env?env.getTradeId():null,table,null,cds,tb);
             return ret;
 
         }else if("getNextSeq".equals(op)){
@@ -1121,13 +1134,13 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         long l = System.currentTimeMillis();
         List ret=null;
         if(null != fields && fields.size()>0 && fields.get(0) instanceof String)
-            ret= query(table,(String[])fields.toArray(new String[0]),cds,formate,start,end,tb);
+            ret= query(null!=env?env.getTradeId():null,table,(String[])fields.toArray(new String[0]),cds,formate,start,end,tb);
         else
-            ret= query(table,null,cds,formate,start,end,tb);
+            ret= query(null!=env?env.getTradeId():null,table,null,cds,formate,start,end,tb);
         RunTimeMonitor.addSqlStaticInfo(table,System.currentTimeMillis()-l,conds,env);
         return ret;
     }
-    public boolean exist(String tableName) throws Exception {
+    public boolean exist(String tradeId,String tableName) throws Exception {
         Connection conn = null;
         try{
             conn= getConnection(null,null);
@@ -1248,10 +1261,10 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
 
     boolean addTradeConsole(String tradeId,String taskId,Connection conn){
         if(StringUtils.isNotBlank(tradeId) && null != conn) {
-            Connection c = tradObjectList.get(tradeId+"->"+taskId);
+            Connection c = tradObjectList.get(tradeId);
             if (null == c) {
                 //list = new ArrayList();
-                tradObjectList.put(tradeId+"->"+taskId,conn);
+                tradObjectList.put(tradeId,conn);
             }
             //list.add(conn);
         }
@@ -1294,7 +1307,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
     public boolean commit(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret)throws Exception{
         try {
             if (null != env && StringUtils.isNotBlank(env.getTradeId())) {
-                Connection os = tradObjectList.get(env.getTradeId() + "->" + xmlid);
+                Connection os = tradObjectList.get(env.getTradeId());
                 if (null != os) {
                     //for (Object o : os) {
                     if (os instanceof Connection && !((Connection) os).isClosed()) {
@@ -1314,14 +1327,14 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 return false;
             }
         }finally {
-            tradObjectList.remove(env.getTradeId() + "->" + xmlid);
+            tradObjectList.remove(env.getTradeId());
         }
     }
     @Override
     public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
         try {
             if (null != env && StringUtils.isNotBlank(env.getTradeId())) {
-                Connection os = tradObjectList.get(env.getTradeId() + "->" + xmlid);
+                Connection os = tradObjectList.get(env.getTradeId());
                 if (null != os) {
                     //for (Object o : os) {
                     if (os instanceof Connection && !((Connection) os).isClosed()) {
@@ -1339,7 +1352,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 return false;
             }
         }finally{
-            tradObjectList.remove(env.getTradeId() + "->" + xmlid);
+            tradObjectList.remove(env.getTradeId());
         }
     }
 }
