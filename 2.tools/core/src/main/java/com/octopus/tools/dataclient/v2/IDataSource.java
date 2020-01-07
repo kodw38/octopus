@@ -30,7 +30,7 @@ public interface IDataSource {
     public List<Map<String, String>> queryAsString(String tradeId,String file, String[] queryFields, List<Condition> fieldValues, Map<String, String> outs, int start, int end,TableBean tb) throws Exception;
 
     public List<Map<String,Object>> query(String tradeId,String sql,Map map,int start,int end)throws Exception;
-    public boolean addRecord(XMLParameter env,String tradeId,String taskId,String file,Map<String,Object> fieldValues) throws Exception;
+    public Object addRecord(XMLParameter env,String tradeId,String taskId,String file,Map<String,Object> fieldValues) throws Exception;
 
     public boolean addRecords(XMLParameter env,String tradeId,String taskId,String file,List<Map<String,Object>> fieldValues) throws Exception;
 

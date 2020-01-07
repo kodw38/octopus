@@ -205,7 +205,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
     }
 
     @Override
-    public boolean addRecord(XMLParameter env,String tradeId,String taskId,String file, Map<String, Object> fieldValues) throws Exception{
+    public Object addRecord(XMLParameter env,String tradeId,String taskId,String file, Map<String, Object> fieldValues) throws Exception{
         Connection conn = null;
         StringBuffer sb=null;
         try{
@@ -228,15 +228,18 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             conn= getConnection(tradeId,taskId);
             conn.setAutoCommit(false);
             String pk = getTablePk(conn,file);
-            long pkv = -1;
+            Object pkv = null;
             if(StringUtils.isNotBlank(pk) ){
                 if(!fieldValues.containsKey(pk)){
                     sb.append(",").append(pk);
                     que.append(",?");
                     pkv = getNextSequence(file);
                 }else if(null == fieldValues.get(pk)){
-                    fieldValues.put(pk,getNextSequence(file));
+                    pkv = getNextSequence(file);
+                    fieldValues.put(pk,pkv);
                 }
+            }else{
+                pkv = fieldValues.get(pk);
             }
             sb.append(")").append(" values (").append(que.toString()).append(")");
             PreparedStatement ps = conn.prepareStatement(sb.toString());
@@ -245,7 +248,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             while(im.hasNext()){
                 ps.setObject(++m,im.next());
             }
-            if(pkv>=0){
+            if(null != pkv){
                 ps.setObject(++m,pkv);
                 fieldValues.put(pk,pkv);
             }
@@ -253,7 +256,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             if(StringUtils.isBlank(tradeId)||StringUtils.isBlank(taskId)){
                 conn.commit();
             }
-            return true;
+            return pkv;
         }catch (Exception e){
             if(StringUtils.isBlank(tradeId)||StringUtils.isBlank(taskId)){
                 if(null != conn)
@@ -448,7 +451,7 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
 
     @Override
     public boolean insertRecord(XMLParameter env,String tradeId,String taskId,String file, Map<String, Object> fieldValues, int insertPosition) throws Exception{
-        return addRecord(env,tradeId,taskId,file,fieldValues);
+        return null!=addRecord(env,tradeId,taskId,file,fieldValues);
     }
 
     @Override

@@ -75,7 +75,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
     }
 
     @Override
-    public boolean addRecord(XMLParameter env, String tradeId, String taskId, String file, Map<String, Object> fieldValues) throws Exception {
+    public Object addRecord(XMLParameter env, String tradeId, String taskId, String file, Map<String, Object> fieldValues) throws Exception {
         if(null != tablecontainer && null != fieldValues){
             String kr = tablecontainer.getPkField(file);
             String rowKey = (String)fieldValues.get(kr);
@@ -124,7 +124,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
 
     @Override
     public boolean update(XMLParameter env, String tradeId, String taskId, String file, List<Condition> fieldValues, Map<String, Object> updateData, com.octopus.utils.ds.TableBean tb) throws Exception {
-        return addRecord(env,tradeId,taskId,file,updateData);
+        return null !=addRecord(env,tradeId,taskId,file,updateData);
     }
 
     @Override

@@ -1886,4 +1886,12 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
             return false;
     }
 
+    public boolean isNotCycle(XMLMakeup x){
+        if(x.getProperties().contains("concurrence")){
+            return false;
+        }else{
+            return true;
+        }
+    }
+
 }

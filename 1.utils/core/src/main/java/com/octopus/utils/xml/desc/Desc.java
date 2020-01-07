@@ -1978,6 +1978,9 @@ public class Desc extends XMLDoObject{
                 if(StringUtils.isNotBlank(firstsvname)){
                     nameListByClass.add(firstsvname);
                 }
+            }else if("getFlowStructure".equals(input.get("op"))){
+                Map map = (Map)input.get("desc");
+                return convertDescMap2FlowStructure(map);
             }
         }
         return null;
@@ -2002,6 +2005,12 @@ public class Desc extends XMLDoObject{
                         boolean b = false;
                         while(it.hasNext()){
                             Object v = it.next();
+                            if(null !=v && v instanceof Map){
+                                if(o.equals(((Map)v).keySet().iterator().next())){
+                                    b=true;
+                                    break;
+                                }
+                            }
                             if(o.equals(v)){
                                 b=true;
                                 break;

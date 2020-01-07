@@ -135,7 +135,7 @@ public class ExcelDataSource extends XMLDoObject implements IDataSource {
     }
 
     @Override
-    public boolean addRecord(XMLParameter env, String tradeId, String taskId, String file, Map fieldValues) throws Exception {
+    public Object addRecord(XMLParameter env, String tradeId, String taskId, String file, Map fieldValues) throws Exception {
         ExcelWriter w = getWriter(env);
         w.getSheet(file).append(fieldValues);
         w.save();

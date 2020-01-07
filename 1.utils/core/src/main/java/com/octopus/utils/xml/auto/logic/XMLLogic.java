@@ -134,9 +134,11 @@ public class XMLLogic extends XMLDoObject{
         p.addParameter("${requestHeaders}",par.getParameter("${requestHeaders}"));
         p.addParameter("${requestProperties}",par.getParameter("${requestProperties}"));
         p.addParameter("${insid}",par.getParameter("${insid}"));
-        inmap.remove("exe_id");
-        inmap.remove("exe_xml");
-        inmap.remove("exe_error");
+        if(null !=inmap) {
+            inmap.remove("exe_id");
+            inmap.remove("exe_xml");
+            inmap.remove("exe_error");
+        }
         if(log.isDebugEnabled()) {
             log.debug("remote XMLParameter\n" + p);
         }
@@ -320,6 +322,17 @@ public class XMLLogic extends XMLDoObject{
     void doDo(XMLParameter env,XMLMakeup x)throws Exception{
         boolean istrade=false;
         try{
+            //log logic servicetrace
+            if(isNotCycle(getXML()) && isNotCycle(x)){
+                //env.addDetailServiceTrace(x.getId());
+                String targetName="";
+                if(null != env.getTargetNames()){
+                    targetName=env.getTargetNames()[0];
+                }
+                if(targetName.equals(getXML().getId()) && getXML().existKey(x.getId())){
+                    env.addServiceTrace(x.getId());
+                }
+            }
             env.setAutoProcess(true);
 
             istrade = startTrade(x.getId(),x,env,null,null,null);

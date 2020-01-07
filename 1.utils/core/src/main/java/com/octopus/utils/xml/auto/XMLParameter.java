@@ -9,7 +9,6 @@ import com.octopus.utils.exception.ExceptionUtil;
 import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
-import com.octopus.utils.xml.auto.logic.XMLLogic;
 import com.octopus.utils.xml.auto.pointparses.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,6 +53,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"startwith(".toCharArray()
             ,"numformat(".toCharArray()
             ,"classtype(".toCharArray()
+            ,"urlencode(".toCharArray()
             ,"notexist(".toCharArray()
             ,"getvalue(".toCharArray()
             ,"contains(".toCharArray()
@@ -113,6 +113,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,")".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
+            ,")".toCharArray()
             ,"}".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
@@ -128,6 +129,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,new PointParseStartwith()
             ,new PointParseNumFormat()
             ,new PointParseClassType()
+            ,new PointParseURLEncode()
             ,new PointParseNotExist()
             ,new PointParseValue()
             ,new PointParseContains()
@@ -160,6 +162,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"base64_encode(".toCharArray()
             ,"geterrortrace(".toCharArray()
             ,"substrnotag(".toCharArray()
+            ,"urlencode(".toCharArray()
             ,"indexof(".toCharArray()
             ,"decrypt(".toCharArray()
             ,"encrypt(".toCharArray()
@@ -180,6 +183,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"startwith(".toCharArray()
             ,"numformat(".toCharArray()
             ,"classtype(".toCharArray()
+            ,"urlencode(".toCharArray()
             ,"notexist(".toCharArray()
             ,"getvalue(".toCharArray()
             ,"contains(".toCharArray()
@@ -216,6 +220,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"startwith(".toCharArray()
             ,"numformat(".toCharArray()
             ,"classtype(".toCharArray()
+            ,"urlencode(".toCharArray()
             ,"getvalue(".toCharArray()
             ,"contains(".toCharArray()
             ,"notexist(".toCharArray()
@@ -255,6 +260,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
         NestMap.put("startwith(",")");//以什么开始的字符
         NestMap.put("numformat(",")");//
         NestMap.put("classtype(",")");//
+        NestMap.put("urlencode(",")");//base64字符编码
         NestMap.put("getvalue(",")");//base64字符编码
         NestMap.put("contains(",")");//base64字符编码
         NestMap.put("notexist(",")");//base64字符编码
@@ -853,6 +859,43 @@ public class XMLParameter extends ParameterMap implements Serializable {
     }
     public String getTraceNodes(){
         return (String)getGlobalParameter("${instrace}");
+    }
+
+    public void addDetailServiceTrace(String nodename){
+        Map m = (Map)getParameter("${env}");
+        /*String thisInstanceName="";
+        if(null != m) {
+            thisInstanceName = (String)m.get("${local_instanceId}");
+        }*/
+        //if(StringUtils.isNotBlank(thisInstanceName)) {
+            String pre = (String) getGlobalParameter("^detailservicetrace");
+            if (StringUtils.isNotBlank(pre)) {
+                addGlobalParameter("^detailservicetrace", pre + "->" + nodename);
+            } else {
+                addGlobalParameter("^detailservicetrace", nodename);
+            }
+        //}
+    }
+    public String getDetailServiceTraces(){
+        return (String)getGlobalParameter("^detailservicetrace");
+    }
+    public void addServiceTrace(String nodename){
+        Map m = (Map)getParameter("${env}");
+        /*String thisInstanceName="";
+        if(null != m) {
+            thisInstanceName = (String)m.get("${local_instanceId}");
+        }*/
+        //if(StringUtils.isNotBlank(thisInstanceName)) {
+        String pre = (String) getGlobalParameter("^servicetrace");
+        if (StringUtils.isNotBlank(pre)) {
+            addGlobalParameter("^servicetrace", pre + "->" + nodename);
+        } else {
+            addGlobalParameter("^servicetrace", nodename);
+        }
+        //}
+    }
+    public String getServiceTraces(){
+        return (String)getGlobalParameter("^servicetrace");
     }
 
     public void setResult(Object ret) {

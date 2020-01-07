@@ -1502,7 +1502,7 @@ public class SystemAction extends XMLDoObject {
         }
         return null;
     }
-    //get a service description info , include description、body、error、depend
+    //get a service description info , include description、body、error、depend,original
     Map getServiceDescription(String name){
         XMLObject o = getXMLObjectContainer().get(name);
         if(null != o){
@@ -1514,6 +1514,7 @@ public class SystemAction extends XMLDoObject {
                     ret.put("BODY",st.get("body"));
                     ret.put("ERROR",st.get("error"));
                     ret.put("DEPEND",st.get("depend"));
+                    ret.put("ORIGINAL",st.get("original"));
                     if(ret.size()>0)
                         return ret;
                 }
@@ -1524,7 +1525,10 @@ public class SystemAction extends XMLDoObject {
     String getServiceBody(String name){
         Map m = getServiceDescription(name);
         if(null != m){
-            return (String)m.get("BODY");
+            HashMap r = new HashMap();
+            r.put("BODY", (String)m.get("BODY"));
+            r.put("ORIGINAL", (Map)m.get("ORIGINAL"));
+            return ObjectUtils.convertMap2String(r);
         }
         return null;
     }
@@ -2524,6 +2528,13 @@ return false;
                     }else{
                         return null;
                     }
+                }else if("getDescInAllIns".equals(op)){
+                    String srvName = (String)input.get("name");
+                    Object ret= getDescStructure(srvName);
+                    if(null == ret){
+                        ret = getRemoteDesc(srvName);
+                    }
+                    return ret;
                 }else if("getActionPackage".equals(op)){
                     String srvName = (String)input.get("name");
                     if(StringUtils.isNotBlank(srvName)){
