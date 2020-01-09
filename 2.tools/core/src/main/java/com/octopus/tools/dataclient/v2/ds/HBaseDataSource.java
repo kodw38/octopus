@@ -230,7 +230,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                     if(StringUtils.isBlank(id) ){
                         throw new Exception("new id is null "+datas);
                     }
-                    if(!exist(table,id)) {
+                    if(!exist(tradeId,table)) {
                         Map md = getHBaseMap((Map) datas);
                         return addDataForTable(env,xmlid,table, id, md);
                     }else{

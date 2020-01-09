@@ -1088,7 +1088,7 @@ public class XMLLogic extends XMLDoObject{
     void doActiveAction(XMLParameter p,XMLMakeup x) throws Exception {
         if(null != x) {
             doElement(p,x);
-            removeTimeoutRedo(p,x);
+            removeTimeoutRedo(p);
             //上次断点执行成功，移除断点标志
             p.removeSuspendXMlId();
             p.removeSuspend();

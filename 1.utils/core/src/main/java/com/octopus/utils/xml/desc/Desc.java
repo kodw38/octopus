@@ -974,6 +974,10 @@ public class Desc extends XMLDoObject{
                     if(null != m.get("isend")) {
                         isend = (String) m.get("isend").toString();
                     }
+                    String isInterrupt = null;
+                    if(null != m.get("isinterrupt")) {
+                        isInterrupt = (String) m.get("isinterrupt").toString();
+                    }
                     String left=null;
                     if(null != m.get("left")) {
                         left =  m.get("left").toString();
@@ -1023,6 +1027,9 @@ public class Desc extends XMLDoObject{
                         //isend="true";
                     }else {
                         a.append("key=\"").append(key).append("\"").append(" action=\"").append(name).append("\"");
+                        if(null!=isInterrupt && StringUtils.isTrue(isInterrupt)){
+                            a.append(" interruptnotification=\"{}\" ");
+                        }
                     }
                     if(null != input && input.size()>0){
                         String in = ObjectUtils.convertMap2String(input);
@@ -1031,6 +1038,9 @@ public class Desc extends XMLDoObject{
                         a.append(" input=\"").append(in).append("\"");
                     }
                     a.append(" nodeid=\"").append(id).append("\"");
+                    if(StringUtils.isNotBlank(isInterrupt)) {
+                        a.append(" isInterrupt=\"").append(isInterrupt).append("\"");
+                    }
                     a.append(" isend=\"").append(isend).append("\"");
                     a.append(" left=\"").append(left).append("\"");
                     a.append(" top=\"").append(top).append("\"");

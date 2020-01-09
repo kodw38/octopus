@@ -98,8 +98,8 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         try{
             conn = getConnection(null,null);
             conn.setAutoCommit(true);
-            if(log.isDebugEnabled()) {
-                log.debug("sql:" + sql + "\n" + map);
+            if(log.isInfoEnabled()) {
+                log.info("sql:" + sql + "\n" + map);
             }
             ResultSet rs = getResult(conn,sql,map);
 
@@ -124,8 +124,8 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             sql = getPagingSQL(sb, start, end, map);
             conn = getConnection(null,null);
             conn.setAutoCommit(true);
-            if(log.isDebugEnabled()) {
-                log.debug("sql:" + sql + "\n" + map);
+            if(log.isInfoEnabled()) {
+                log.info("sql:" + sql + "\n" + map);
             }
             ResultSet rs = getResult(conn,sql,map);
             //System.out.println("query cost:"+(System.currentTimeMillis()-l) +" ms");
@@ -157,8 +157,8 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 }
             }
             ResultSet rs = st.executeQuery();*/
-            if(log.isDebugEnabled()) {
-                log.debug("sql:" + sql + "\n" + map);
+            if(log.isInfoEnabled()) {
+                log.info("sql:" + sql + "\n" + map);
             }
             ResultSet rs = getResult(conn,sql,map);
             int c=0;
@@ -191,8 +191,8 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                     st.setObject(i, pars[i-1]);
                 }
             }*/
-            if(log.isDebugEnabled()) {
-                log.debug("sql:" + sql + "\n" + map);
+            if(log.isInfoEnabled()) {
+                log.info("sql:" + sql + "\n" + map);
             }
             ResultSet rs = getResult(conn,sql,map);
             return getDataFromResultSet2String(rs);
@@ -242,15 +242,25 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 pkv = fieldValues.get(pk);
             }
             sb.append(")").append(" values (").append(que.toString()).append(")");
+            if(log.isInfoEnabled()){
+                log.info("sql:"+sb.toString());
+            }
             PreparedStatement ps = conn.prepareStatement(sb.toString());
             Iterator im = fieldValues.values().iterator();
             int m=0;
             while(im.hasNext()){
-                ps.setObject(++m,im.next());
+                Object o = im.next();
+                ps.setObject(++m,o);
+                if(log.isInfoEnabled()){
+                    log.info("set:"+m+"="+o);
+                }
             }
             if(null != pkv){
                 ps.setObject(++m,pkv);
                 fieldValues.put(pk,pkv);
+                if(log.isInfoEnabled()){
+                    log.info("set pk:"+m+"="+pkv);
+                }
             }
             ps.execute();
             if(StringUtils.isBlank(tradeId)||StringUtils.isBlank(taskId)){
@@ -354,13 +364,13 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                         sb.append(")");
                 }
                 ps = conn.prepareStatement("");
-                if(log.isDebugEnabled()) {
-                    log.debug("sql:" + sb.toString());
+                if(log.isInfoEnabled()) {
+                    log.info("sql:" + sb.toString());
                 }
                 ps.addBatch(sb.toString());
                 ps.executeBatch();
-                if(log.isDebugEnabled()) {
-                    log.debug(new Date() + " " + Thread.currentThread().getName() + " batch insert values cost:" + (System.currentTimeMillis() - l) + " count:" + fieldValues.size());
+                if(log.isInfoEnabled()) {
+                    log.info(new Date() + " " + Thread.currentThread().getName() + " batch insert values cost:" + (System.currentTimeMillis() - l) + " count:" + fieldValues.size());
                 }
 
             }else{
@@ -384,8 +394,8 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
 
                 }
                 ps.executeBatch();
-                if(log.isDebugEnabled()) {
-                    log.debug(new Date() + " " + Thread.currentThread().getName() + " batch insert objects cost:" + (System.currentTimeMillis() - l));
+                if(log.isInfoEnabled()) {
+                    log.info(new Date() + " " + Thread.currentThread().getName() + " batch insert objects cost:" + (System.currentTimeMillis() - l));
                 }
             }
             if(StringUtils.isBlank(tradeId)||StringUtils.isBlank(taskId)){
@@ -472,6 +482,9 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 sb.append(" where ").append(getWhere(fieldValues,map,tb));
             }
             String sql = sb.toString();
+            if(log.isInfoEnabled()){
+                log.info("sql:"+sql+"\n"+map);
+            }
             PreparedStatement st = getStatement(conn,sql,map);
             st.execute();
             if(null != conn && (StringUtils.isBlank(tradeId)||StringUtils.isBlank(taskId))){
@@ -493,12 +506,27 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             }
         }
     }
-
+    Map filterData(Map m){
+        if(null != m){
+            HashMap ret = new HashMap();
+            Iterator it = m.keySet().iterator();
+            while(it.hasNext()){
+                String k = (String)it.next();
+                Object v = m.get(k);
+                if(!(null != v && v instanceof String && XMLParameter.isHasRetainChars((String)v))){
+                    ret.put(k,v);
+                }
+            }
+            return ret;
+        }
+        return null;
+    }
     @Override
     public boolean update(XMLParameter env,String tradeId,String taskId,String file, List<Condition> fieldValues, Map<String, Object> updateData, com.octopus.utils.ds.TableBean tb)throws Exception{
         Connection conn = null;
         String sql=null;
         try{
+            updateData = filterData(updateData);
             conn = getConnection(tradeId,taskId);
             conn.setAutoCommit(false);
             StringBuffer sb = new StringBuffer("update ");
@@ -514,10 +542,18 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
             List<String> keys = this.analyseSql(sql);
             Object[] pars = this.setSqlObject(map, keys);
             String[] ks = keys.toArray(new String[0]);
-            PreparedStatement st = conn.prepareStatement(getSql(sql,ks));
+            String s = getSql(sql,ks);
+            if(log.isInfoEnabled()){
+                log.info("sql:"+s);
+            }
+            PreparedStatement st = conn.prepareStatement(s);
             if(null != pars){
                 for(int i=1;i<=pars.length;i++){
-                    st.setObject(i, chgValue(metaData, ks[i - 1].substring(1), pars[i - 1]));
+                    Object o = chgValue(metaData, ks[i - 1].substring(1), pars[i - 1]);
+                    st.setObject(i, o);
+                    if(log.isInfoEnabled()){
+                        log.info("set "+i+"="+o);
+                    }
                 }
             }
             st.execute();
@@ -784,7 +820,9 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         for(String field:ls){
             exesql = StringUtils.replace(exesql,field, "?");
         }
-
+        /*if(log.isInfoEnabled())
+        log.info("sql:"+exesql);
+        */
         return exesql;
 
     }
@@ -826,9 +864,9 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         }
         fields.clear();
         fields.addAll(fs);
-        if(log.isDebugEnabled()){
-            log.debug("\n fields "+fields+"\n values "+li);
-        }
+        /*if(log.isInfoEnabled()){
+            log.info("\n fields "+fields+"\n values "+li);
+        }*/
         if(li.size()>0){
             return li.toArray();
         }
@@ -852,10 +890,10 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 }
             }
         }
-        if(log.isDebugEnabled()){
-            log.debug("sql:"+sql);
+        /*if(log.isInfoEnabled()){
+            log.info("sql:"+sql);
 
-        }
+        }*/
         //li = ArrayUtils.sortByLen(li,ArrayUtils.DESC);
         return li;
     }

@@ -1095,10 +1095,12 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                         }
                     }
                     if(timeout==0){
-                        if(StringUtils.isNumeric(getXML().getProperties().getProperty("redo")))
-                            timeout = Integer.parseInt(getXML().getProperties().getProperty("redo"));
-                        else if("true".equals(getXML().getProperties().getProperty("redo"))){
-                            timeout = defaultTimeout;
+                        if(StringUtils.isNotBlank(getXML().getProperties().getProperty("redo"))) {
+                            if (StringUtils.isNumeric(getXML().getProperties().getProperty("redo")))
+                                timeout = Integer.parseInt(getXML().getProperties().getProperty("redo"));
+                            else if ("true".equals(getXML().getProperties().getProperty("redo"))) {
+                                timeout = defaultTimeout;
+                            }
                         }
                     }
 
@@ -1671,7 +1673,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
             }
             //如果前面已经调用超时，这里后端业务处理结束，删除redo日志
             if(isTimeoutActionBackground(parameter,xml)){
-                removeTimeoutRedo(parameter, xml);
+                removeTimeoutRedo(parameter);
             }
         }catch(Exception ex){
 
@@ -1693,7 +1695,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                     && StringUtils.isNotBlank(parameter.getParameter("${requestId}"))
                     && !parameter.isSuspend() ){
                 if(isTimeoutBackground(parameter,xml)){
-                    removeTimeoutRedo(parameter,xml);
+                    removeTimeoutRedo(parameter);
                     parameter.setStatus(XMLParameter.HAPPEN_TIMEOUT_EXCEPTION);//timeout_exception
                 }else{
                     parameter.setStatus(XMLParameter.HAPPEN_EXCEPTION);//exception
@@ -1811,10 +1813,10 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         return false;
     }
     //timeout 后台程序处理完毕，更新redo
-    protected void removeTimeoutRedo(XMLParameter parameter,XMLMakeup xml)throws Exception{
+    protected void removeTimeoutRedo(XMLParameter parameter)throws Exception{
         XMLDoObject suspendTheRequest = (XMLDoObject)getObjectById((String)((Map)parameter.getParameter("${env}")).get("saveRedoService"));
         parameter.setStatus(XMLParameter.TIMEOUT_DELETE);
-        suspendTheRequest.doThing(parameter,xml);
+        suspendTheRequest.doThing(parameter,null);
 
     }
     String getString(Map input,Map output,Map config){

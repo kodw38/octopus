@@ -40,6 +40,7 @@ public class Redo extends XMLDoObject {
             String id = (String)input.get("id");
             Object sv = input.get("sv");
             Object d = input.get("data");
+            Object activedata = input.get("activedata"); //if staff node , will put some approve data to the approve node.
             String action = (String)input.get("action");
             if(null !=d && d instanceof String){
                 d = StringUtils.convert2MapJSONObject((String)d);
@@ -57,6 +58,12 @@ public class Redo extends XMLDoObject {
             RequestParameters p = new RequestParameters();
             if(null != d) {
                 p.putAll((Map) d);
+            }
+            //put active new data from outside into env
+            if(null != activedata){
+                if(activedata instanceof Map){
+                    p.putAll((Map)activedata);
+                }
             }
             if(StringUtils.isNotBlank(action) && !id.contains("|")){//异步执行任务，重开始执行，严格讲不是redo，这里重做后如果遇到异常会记录redo日志，可以在redo中重做。
                 p.setTargetNames(new String[]{action});

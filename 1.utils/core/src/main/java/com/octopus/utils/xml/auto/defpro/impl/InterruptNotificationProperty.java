@@ -29,10 +29,15 @@ public class InterruptNotificationProperty implements IObjectInvokeProperty  {
          * if return false , the object will continue execute as old process
          */
     public Object exeProperty(Map proValue, XMLDoObject obj, XMLMakeup xml, XMLParameter parameter, Map input, Map output, Map config)throws Exception{
+        if(log.isDebugEnabled()){
+            log.debug("isRedoService:"+parameter.isRedoService()+"; current Do xmlid:"+xml.getId()+","+obj.getXML().getId()+"; suspendXmlID:"+parameter.getSuspendXMlId());
+        }
         if(!parameter.isRedoService() ||(parameter.isRedoService() && !(xml.getId()+","+obj.getXML().getId()).equals(parameter.getSuspendXMlId()))) {
+            //suspend current request
             try {
                 String id = suspendRequest(parameter, obj, xml,config);
                 if (StringUtils.isNotBlank(id)) {
+                    //send suspend message to kafka
                     sendKafka(parameter, obj, id,xml);
 
                 }
@@ -90,11 +95,16 @@ public class InterruptNotificationProperty implements IObjectInvokeProperty  {
         in.put("value",value);
         Object r = queue.doSomeThing(null,parameter,in,null,null);
         //send a interrupt message to user
+        if(log.isInfoEnabled()){
+            log.info("sended interrupt message to interruptNotification of kafka topic");
+        }
         in.put("topic","interruptNotificationMessage");
         in.put("key",id);
         in.put("value",value);
         queue.doSomeThing(null,parameter,in,null,null);
-
+        if(log.isInfoEnabled()){
+            log.info("sended interrupt message to interruptNotificationMessage of kafka topic");
+        }
         return r;
     }
 
@@ -124,6 +134,9 @@ public class InterruptNotificationProperty implements IObjectInvokeProperty  {
                 //parameter.setError(true);
                 save.doThing(parameter, null);
                 ResultCheck rc = (ResultCheck) parameter.getResult();
+                if(log.isInfoEnabled()){
+                    log.info("suspend current request:"+rc.getRet());
+                }
                 return (String) rc.getRet();
             }
         }catch (Exception e){
