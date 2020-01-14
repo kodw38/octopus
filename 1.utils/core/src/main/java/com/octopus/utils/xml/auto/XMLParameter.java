@@ -74,6 +74,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"lower(".toCharArray()
             ,"exist(".toCharArray()
             ,"times(".toCharArray()
+            ,"tostr(".toCharArray()
             ,"case(".toCharArray()
             ,"len(".toCharArray()
             ,"#{".toCharArray()
@@ -83,6 +84,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
 
     public static char[][] NestTagsEnd = new char[][]{
             ")".toCharArray()
+            ,")".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
@@ -150,6 +152,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,new PointParseLowerCase()
             ,new PointParseExist()
             ,new PointParseTimes()
+            ,new PointParseToStr()
             ,new PointParseCase()
             ,new PointParseLength()
             ,new PointParseCalculate()
@@ -204,6 +207,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"lower(".toCharArray()
             ,"exist(".toCharArray()
             ,"times(".toCharArray()
+            ,"tostr(".toCharArray()
             ,"case(".toCharArray()
             ,"len(".toCharArray()
             ,"${".toCharArray()
@@ -241,6 +245,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"lower(".toCharArray()
             ,"exist(".toCharArray()
             ,"times(".toCharArray()
+            ,"tostr(".toCharArray()
             ,"case(".toCharArray()
             ,"len(".toCharArray()
             ,"#{".toCharArray()
@@ -281,6 +286,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
         NestMap.put("lower(",")");
         NestMap.put("exist(",")");//base64字符编码
         NestMap.put("times(",")");//base64字符编码
+        NestMap.put("tostr(",")");//base64字符编码
         NestMap.put("case(",")");//字符运算
         NestMap.put("len(",")");//字符运算
         NestMap.put("#{","}");  //规则表达式

@@ -4986,6 +4986,15 @@ public class ArrayUtils {
         }
         return "";
     }
+    public List getKeyFromListMap2ListString(List<Map> maplist,String key){
+        List ret = new ArrayList();
+        for(Map m:maplist){
+            if(null != m.get(key)){
+                ret.add(m.get(key));
+            }
+        }
+        return ret;
+    }
     public static String toString(Collection os){
         if(null != os){
             StringBuffer sb = new StringBuffer();

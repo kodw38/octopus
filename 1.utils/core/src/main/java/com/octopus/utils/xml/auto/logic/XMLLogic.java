@@ -964,11 +964,12 @@ public class XMLLogic extends XMLDoObject{
                     clearTransforKeyParameter(id, env, xmlid);
                 }
                 env.setAutoProcess(false);
+                /* remove by wangfeng at 2020/01/14 17:21 remove end key, end exist in parent , make a mistake to remove parent ${end} key
                 String[] kes = getXML().getChildrenPropertiesValue("key");
                 if(null != kes){
                     for(String k:kes)
                         env.removeParameter("${"+k+"}");
-                }
+                }*/
                 env.removeParameter("^${input#"+temk+"}");
                 env.removeParameter("^${output#"+temk+"}");
                 env.removeParameter("^${config#"+temk+"}");

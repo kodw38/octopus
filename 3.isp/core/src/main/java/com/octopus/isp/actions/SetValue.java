@@ -50,6 +50,8 @@ public class SetValue extends XMLDoObject {
                         if(!((List)o).contains(v) ){
                             return ((List)o).add(v);
                         }
+                    }else if(StringUtils.isNotBlank(type) && "addAll".equals(type) && v instanceof Collection){
+                        ((Collection)o).addAll((Collection)v);
                     }else {
                         return ((Collection) o).add(v);
                     }

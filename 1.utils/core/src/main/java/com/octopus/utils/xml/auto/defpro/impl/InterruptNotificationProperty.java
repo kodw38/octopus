@@ -36,7 +36,8 @@ public class InterruptNotificationProperty implements IObjectInvokeProperty  {
             //suspend current request
             try {
                 String id = suspendRequest(parameter, obj, xml,config);
-                if (StringUtils.isNotBlank(id)) {
+                if (StringUtils.isNotBlank(id) && (!proValue.containsKey("isContinueAndNotify")
+                        || ((proValue.get("isContinueAndNotify") instanceof String && StringUtils.isTrue((String)proValue.get("isContinueAndNotify"))) || (Boolean)proValue.get("isContinueAndNotify") ) )) {
                     //send suspend message to kafka
                     sendKafka(parameter, obj, id,xml);
 

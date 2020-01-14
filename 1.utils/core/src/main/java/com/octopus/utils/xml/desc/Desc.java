@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.util.Hash;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -1028,7 +1029,7 @@ public class Desc extends XMLDoObject{
                     }else {
                         a.append("key=\"").append(key).append("\"").append(" action=\"").append(name).append("\"");
                         if(null!=isInterrupt && StringUtils.isTrue(isInterrupt)){
-                            a.append(" interruptnotification=\"{}\" ");
+                            a.append(" interruptnotification=\"{isContinueAndNotify:false}\" ");
                         }
                     }
                     if(null != input && input.size()>0){
@@ -1385,6 +1386,9 @@ public class Desc extends XMLDoObject{
             if(StringUtils.isNotBlank(c.getProperties().getProperty("isend"))) {
                 m.put("isend", c.getProperties().getProperty("isend"));
             }
+            if(StringUtils.isNotBlank(c.getProperties().getProperty("isInterrupt"))) {
+                m.put("isInterrupt", c.getProperties().getProperty("isInterrupt"));
+            }
             int left=0;
             if(StringUtils.isNotBlank(c.getProperties().getProperty("left"))){
                 left = Integer.parseInt(c.getProperties().getProperty("left"));
@@ -1506,6 +1510,30 @@ public class Desc extends XMLDoObject{
         }
         return null;
     }
+    public static Map getDescAnnontation(Annotation[] ans,String[] properties){
+        if(null != ans && null != properties){
+            for(Annotation a:ans){
+                if(null != a){
+                    if(ClassUtils.contains(a.getClass(),properties)){
+                        Map ret = new HashMap();
+                        for(String s:properties) {
+                            try {
+                                Object o = ClassUtils.invokeMethod(a, s,null,null);
+                                if(null != o) {
+                                    ret.put(s, o.toString());
+                                }
+                            }catch (Exception e){
+
+                            }
+                        }
+                        if(ret.size()>0)
+                        return ret;
+                    }
+                }
+            }
+        }
+        return null;
+    }
     /**
      * generator desc from normal method
      * @param c normal function class
@@ -1513,9 +1541,21 @@ public class Desc extends XMLDoObject{
      * @param savepath
      * @throws Exception
      */
+    static String[] DESC_ANNONTATION = new String[]{"date","author","depend","desc","error"};
     public static void generatorDescByClassMethod(Class c,Method m,String savepath,String body,String invoker)throws Exception{
 
         Class[] cs = m.getParameterTypes();
+
+        Map anno = getDescAnnontation(m.getDeclaredAnnotations(),DESC_ANNONTATION);
+        String date=null,author=null,depend=null,des=null,error=null;
+        if(null != anno){
+            date = (String)anno.get("date");
+            author = (String)anno.get("author");
+            depend = (String)anno.get("depend");
+            des = (String)anno.get("desc");
+            error = (String)anno.get("error");
+        }
+
         Map p=new LinkedHashMap();
         String singleList=null;
         String[] pn = POJOUtil.getParameterName(c, m);
@@ -1551,13 +1591,14 @@ public class Desc extends XMLDoObject{
         if(null != rc && !"void".equals(rc.getName())){
             rb = POJOUtil.getUSDLTypeString(rc,m.getGenericReturnType());
         }
-        String pa = saveDescFile("ByClass",savepath,m.getDeclaringClass().getName(),m.getName(),body,invoker,pars,rb,"",pn,"");
+
+        String pa = saveDescFile("ByClass",savepath,m.getDeclaringClass().getName(),m.getName(),body,invoker,pars,rb,"",pn,"",date,author,des,error,depend);
         if(null != nameListByClass){
             nameListByClass.add(m.getName());
         }
         log.info("generator desc :"+pa);
     }
-    static String saveDescFile(String type,String savepath,String pack,String name,String body,String invoker,String pars,String ret,String address,String[] parNames,String src)throws Exception{
+    static String saveDescFile(String type,String savepath,String pack,String name,String body,String invoker,String pars,String ret,String address,String[] parNames,String src,String date,String author,String desc,String error,String depend)throws Exception{
         HashMap olddesc = new HashMap();
         appExistDescInfo(savepath,pack,name+".desc",olddesc);
         if(log.isDebugEnabled()) {
@@ -1570,6 +1611,21 @@ public class Desc extends XMLDoObject{
         }
         sb.append(",package:'"+pack+"'");
         sb.append(",path:'file:"+savepath+"'");
+        if(StringUtils.isNotBlank(date)){
+            sb.append(",date:'"+date+"'");
+        }
+        if(StringUtils.isNotBlank(author)){
+            sb.append(",author:'"+author+"'");
+        }
+        if(StringUtils.isNotBlank(desc)){
+            sb.append(",desc:'"+desc+"'");
+        }
+        if(StringUtils.isNotBlank(error)){
+            sb.append(",error:"+error);
+        }
+        if(StringUtils.isNotBlank(depend)){
+            sb.append(",depend:'"+depend+"'");
+        }
         if(null != pars) {
             sb.append(",input:" + getAppendString(pars,olddesc.get("input")));
         }

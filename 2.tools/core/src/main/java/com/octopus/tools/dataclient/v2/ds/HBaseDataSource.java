@@ -145,6 +145,17 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
         return false;
     }
 
+    boolean existRec(String tableName,String pk){
+        Table htable = null;
+        try {
+            htable = connection.getTable(TableName.valueOf(tableName));
+            Get g = new Get(Bytes.toBytes(pk));
+            return htable.exists(g);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
     @Override
     public long getNextSequence(String name) throws Exception {
         ISequence s = (ISequence)getObjectById("sequence");
@@ -230,7 +241,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                     if(StringUtils.isBlank(id) ){
                         throw new Exception("new id is null "+datas);
                     }
-                    if(!exist(tradeId,table)) {
+                    if(!existRec(table,id)) {
                         Map md = getHBaseMap((Map) datas);
                         return addDataForTable(env,xmlid,table, id, md);
                     }else{

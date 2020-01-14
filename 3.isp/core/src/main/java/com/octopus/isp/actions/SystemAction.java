@@ -1579,6 +1579,9 @@ public class SystemAction extends XMLDoObject {
     boolean addService(Map allDesc,XMLParameter parameter)throws Exception{
         try {
             checkDesc(allDesc);
+            String s = (String)allDesc.get("body");
+            s  = StringUtils.replace(s,"\\n","");
+            allDesc.put("body",s);
             if(StringUtils.isBlank((String)allDesc.get("author")) && null !=parameter && parameter instanceof RequestParameters){
                 if(null != ((RequestParameters)parameter).getSession()) {
                     String author = ((RequestParameters) parameter).getSession().getUserName();
@@ -1635,6 +1638,9 @@ return false;
                 log.info("update service "+allDesc);
             }
             checkDesc(allDesc);
+            String s = (String)allDesc.get("body");
+            s = StringUtils.replace(s,"\\n","");
+            allDesc.put("body",s);
             Map data= Desc.removeNotServiceProperty(allDesc);
             if(null == getObjectById((String)data.get("name"))){
                 createXMLObjectByDesc(data,this.getClass().getClassLoader(),this,false,getSingleContainers());
@@ -1653,6 +1659,9 @@ return false;
         }
         if(StringUtils.isNotBlank((String) desc.get("name"))){
             XMLObject oo = getObjectById((String)desc.get("name"));
+            String s = (String)desc.get("body");
+            s = StringUtils.replace(s,"\\n","");
+            desc.put("body",s);
             if(null !=oo ){
                 HashMap map = new HashMap();
                 map.put("op","isStatExist");

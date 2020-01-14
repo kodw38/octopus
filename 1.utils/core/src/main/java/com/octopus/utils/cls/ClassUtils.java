@@ -1189,6 +1189,29 @@ public class ClassUtils {
         return null;
     }
 
+    public static boolean contains(Class c,String[] properties){
+        if(null != properties) {
+            Method[] fs = c.getMethods();
+            boolean[] bs = new boolean[properties.length];
+            Arrays.fill(bs,false);
+            for (Method f : fs) {
+                for(int i=0;i<properties.length;i++) {
+                    if(null !=properties[i] && f.getName().equals(properties[i])) {
+                        bs[i]=true;
+                        break;
+                    }
+                }
+            }
+            for(boolean b:bs){
+                if(!b){
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
     /*public static String[] getMethodParameterNames(Class clazz, final Method method) {
         Class[] parameterTypes = method.getParameterTypes();
         if (parameterTypes == null || parameterTypes.length == 0) {

@@ -79,11 +79,34 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
                 if("".equals(pars[i-1])){
                     st.setNull(i,Types.VARCHAR);
                 }else {
-                    st.setObject(i, pars[i - 1]);
+                    /*if(pars[i-1] instanceof Collection){
+                        Object[] aa = ((Collection)pars[i-1]).toArray(new Object[0]);
+                        st.setObject(i,convert2String(aa));
+                    }else {*/
+                        st.setObject(i, pars[i - 1]);
+                    //}
                 }
             }
         }
         return st;
+    }
+    String convert2String(Object[] aa){
+        StringBuffer sb = new StringBuffer();
+        if(aa[0] instanceof String){
+           for(int i=0;i<aa.length;i++){
+               if(sb.length()!=0)
+                   sb.append(",");
+               sb.append("'").append(aa[i]).append("'");
+           }
+        }
+        if(aa[0] instanceof Integer){
+            for(int i=0;i<aa.length;i++){
+                if(sb.length()!=0)
+                    sb.append(",");
+                sb.append(aa[i]);
+            }
+        }
+        return sb.toString();
     }
     ResultSet getResult(Connection conn,String sql,Map map) throws SQLException {
         long l = System.currentTimeMillis();

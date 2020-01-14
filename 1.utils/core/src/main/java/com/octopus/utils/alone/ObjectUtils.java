@@ -2613,18 +2613,46 @@ public class ObjectUtils {
             boolean mark = false;
             for(Map node2 : ls){
                 if(node1.get(parentId)!=null && node1.get(parentId).equals(node2.get(id))){
-                    mark = true;
-                    if(node2.get(defChildrenName) == null)
-                        node2.put(defChildrenName,new ArrayList<Map>());
-                    ((List)node2.get(defChildrenName)).add(node1);
-                    break;
+                        mark = true;
+                        if (node2.get(defChildrenName) == null)
+                            node2.put(defChildrenName, new ArrayList<Map>());
+                        ((List) node2.get(defChildrenName)).add(node1);
+                        break;
+
                 }
             }
             if(!mark){
                 nodeList.add(node1);
+
             }
         }
+        if(nodeList.size()>0 && StringUtils.isNotBlank(rootId)) {
+            List ret = new ArrayList();
+            for(Map m:nodeList){
+                Object t = getTreeMapChildByKey(m,id,defChildrenName,rootId);
+                if(null != t && t instanceof Map){
+                    ret.add(t);
+                }
+
+            }
+            return ret;
+        }
         return nodeList;
+    }
+    static Object getTreeMapChildByKey(Map m,String key,String childKey,Object keyvalue){
+        if(keyvalue.toString().equals(m.get(key).toString())){
+            return m;
+        }else  if(null != m.get(childKey)){
+            for(Object o:(Collection) m.get(childKey)){
+                if(null !=o && o instanceof Map){
+                    Object r = getTreeMapChildByKey((Map)o,key,childKey,keyvalue);
+                    if(null != r)
+                        return r;
+                }
+            }
+        }
+        return null;
+
     }
     static void convert2MapList(List src,String pid,List target,String pidName,String idName,String nameName){
         if(null != src) {
@@ -2685,6 +2713,37 @@ public class ObjectUtils {
                 return ObjectUtils.convertMap2String(ret);
             }
 
+        }
+        return null;
+    }
+
+
+    public List getTreeMapKey2List(Object obj,String defineKey,String defineChilde){
+        if(null != obj) {
+            List ret = new ArrayList();
+            if (obj instanceof Map) {
+                Map map = (Map) obj;
+                if (null != map) {
+                    if(null != map.get(defineKey) && !ret.contains(map.get(defineKey))) {
+                        ret.add(map.get(defineKey));
+                    }
+                    Object o = map.get(defineChilde);
+                    if(null != o){
+                        List r = getTreeMapKey2List(o,defineKey,defineChilde);
+                        ret.addAll(r);
+                    }
+                }
+            } else if (obj instanceof Collection) {
+                for(Object o:(Collection)obj){
+                    if(null != o && o instanceof Map){
+                        List r = getTreeMapKey2List((Map)o,defineKey,defineChilde);
+                        if(null != r && r.size()>0){
+                            ret.addAll(r);
+                        }
+                    }
+                }
+            }
+            return ret;
         }
         return null;
     }

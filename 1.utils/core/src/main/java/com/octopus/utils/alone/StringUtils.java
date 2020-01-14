@@ -6674,6 +6674,7 @@ public class StringUtils {
     }
     public static List getTagsNoMark(String s,String beginMark,String endMark){
         if(null == s )return null;
+
         StringBuffer sb = new StringBuffer();
         List ret = new LinkedList();
         for(int i=0;i<s.length();i++){
