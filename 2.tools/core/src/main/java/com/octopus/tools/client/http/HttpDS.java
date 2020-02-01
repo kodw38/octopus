@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Map;
 
 /**
  * User: Administrator
@@ -33,6 +34,7 @@ public class HttpDS {
     int connectionTimeout=0,readTimeout=0;
     Boolean redirect;
     String url;
+    Map cacert;
 
     public boolean isSendCookie() {
         return isSendCookie;
@@ -205,6 +207,17 @@ public class HttpDS {
 
     public String getBase() {
         return base;
+    }
+
+    public Map<String,String> getSSLCacert(){
+        return cacert;
+    }
+    public void addCertFile(String name,String filePath){
+        if(cacert==null)cacert=new HashMap();
+        cacert.put(name,filePath);
+    }
+    public void setSSLCacert(Map m){
+        cacert=m;
     }
 
     public void setBase(String base) {

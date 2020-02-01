@@ -33,11 +33,19 @@ public class PointParseNotNull implements IPointParse {
                         if(((Object[])o).length==0)
                             return "false";
                     }
+                }else if(tm.startsWith("@{")){
+                    if(null != obj) {
+                        if(obj.getObjectById(tm.substring(2, tm.length() - 1))==null)
+                            return "false";
+                        else
+                            return "true";
+                    }
                 }
                 if(StringUtils.isBlank(tm))
                     return "false";
                 return "true";
             }
+
             return "false";
         }catch (Exception e){
             e.printStackTrace();

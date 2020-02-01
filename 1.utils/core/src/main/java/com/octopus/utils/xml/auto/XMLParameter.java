@@ -61,6 +61,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"decrypt(".toCharArray()
             ,"encrypt(".toCharArray()
             ,"isrnull(".toCharArray()
+            ,"endwith(".toCharArray()
+            ,"replace(".toCharArray()
             ,"substr(".toCharArray()
             ,"isnull(".toCharArray()
             ,"ifnull(".toCharArray()
@@ -116,6 +118,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,")".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
+            ,")".toCharArray()
+            ,")".toCharArray()
             ,"}".toCharArray()
             ,")".toCharArray()
             ,")".toCharArray()
@@ -139,6 +143,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,new PointParseDecrypt()
             ,new PointParseEncrypt()
             ,new PointParseNullNotCal()
+            ,new PointParseEndWith()
+            ,new PointParseReplace()
             ,new PointParseSubStr()
             ,new PointParseNull()
             ,new PointParseIfNull()
@@ -194,6 +200,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"decrypt(".toCharArray()
             ,"encrypt(".toCharArray()
             ,"isrnull(".toCharArray()
+            ,"endwith(".toCharArray()
+            ,"replace(".toCharArray()
             ,"substr(".toCharArray()
             ,"isnull(".toCharArray()
             ,"ifnull(".toCharArray()
@@ -232,6 +240,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
             ,"decrypt(".toCharArray()
             ,"encrypt(".toCharArray()
             ,"isrnull(".toCharArray()
+            ,"endwith(".toCharArray()
+            ,"replace(".toCharArray()
             ,"isnull(".toCharArray()
             ,"ifnull(".toCharArray()
             ,"tojson(".toCharArray()
@@ -273,6 +283,8 @@ public class XMLParameter extends ParameterMap implements Serializable {
         NestMap.put("decrypt(",")");//base64字符编码
         NestMap.put("encrypt(",")");//base64字符编码
         NestMap.put("isrnull(",")");//base64字符编码
+        NestMap.put("endwith(",")");//base64字符编码
+        NestMap.put("replace(",")");//base64字符编码
         NestMap.put("substr(",")");//字符运算
         NestMap.put("isnull(",")");//base64字符编码
         NestMap.put("ifnull(",")");//base64字符编码

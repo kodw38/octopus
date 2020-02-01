@@ -109,7 +109,7 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
                 ObjectUtils.appendObject2StringBuffer(sb,null,par);
                 res= sb.toString();
             }
-            else if(!POJOUtil.isPrimitive(par.getClass().getName())){
+            else if(!POJOUtil.isPrimitive(par.getClass().getName()) && !StringBuffer.class.getName().equals(par.getClass().getName())){
                 //res= JSONObject.fromObject(par).toString();
                 AtomicLong size = new AtomicLong();
                 try {

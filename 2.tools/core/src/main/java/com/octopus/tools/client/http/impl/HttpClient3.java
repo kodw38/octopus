@@ -10,7 +10,6 @@ import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
 import com.octopus.utils.xml.desc.Desc;
-import io.netty.handler.codec.http.HttpResponse;
 import org.apache.commons.httpclient.*;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
@@ -20,13 +19,10 @@ import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.httpclient.protocol.Protocol;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.mapreduce.HashTable;
 import sun.misc.BASE64Encoder;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.ConnectException;
 import java.util.*;
 
@@ -65,7 +61,9 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
 
     @Override
     public void httpInvoke(HttpDS parameters) throws Exception {
+
         try{
+
 
             //if(url.isRedirect())
             String proxyName=parameters.getProxyName();
@@ -446,6 +444,7 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
             url = (String)env.getValueFromExpress(url,this);
             log.debug("remote url 3:"+url);
             if(url.startsWith("https")){
+
                 Protocol myhttps = new Protocol("https", new MySSLProtocolSocketFactory(), 443);
                 Protocol.registerProtocol("https", myhttps);
             }
@@ -665,5 +664,7 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
     public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config,Object ret,Exception e) throws Exception {
         return true;
     }
+
+
 
 }

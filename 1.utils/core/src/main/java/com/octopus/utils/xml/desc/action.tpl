@@ -7,6 +7,7 @@
  "input":{},
  "output":{},
  "date":"",
+ "version":"",
  "redo":"",
  "author":"",
  "share":"",

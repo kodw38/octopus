@@ -50,6 +50,12 @@ public class XMLLogic extends XMLDoObject{
             String a = x.getProperties().getProperty("action");
             if (StringUtils.isBlank(a))
                 throw new Exception("action is not config in " + x.toString());
+            if(XMLParameter.isHasRetainChars(a)){
+                Object o = XMLParameter.getValueFromExpress(a,env,this);
+                if(null != o && o instanceof String && !"".equals(o)){
+                    a = (String)o;
+                }
+            }
             //System.out.println("---"+new Date().getTime());
             XMLDoObject doAction = (XMLDoObject) getObjectById(a); //(XMLDoObject)ObjectUtils.getValueByPath(env.getParameter("${actions}"),a);
             //System.out.println("---"+new Date().getTime());

@@ -19,9 +19,12 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.params.ClientPNames;
 import org.apache.http.conn.params.ConnRoutePNames;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.params.BasicHttpParams;
@@ -30,8 +33,22 @@ import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.BasicHttpContext;
 import sun.misc.BASE64Encoder;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.net.ConnectException;
+import java.security.KeyFactory;
+import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.*;
 
 /**
@@ -160,7 +177,26 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
         UrlDS url = p.getUrl(parameters);
         invoke(url,parameters);
 */
+        HttpClient client = httpClient;
         try{
+            //if SSL two ways
+
+            if(null != parameters.getSSLCacert()){
+                if(StringUtils.isNotBlank(parameters.getSSLCacert().get("cacert"))
+                        && StringUtils.isNotBlank(parameters.getSSLCacert().get("key"))
+                        && StringUtils.isNotBlank(parameters.getSSLCacert().get("cert"))
+                        ) {
+
+                    HttpClient tempClient = SSLUtils.getSocketFactoryPEM(parameters.getSSLCacert().get("cacert"),parameters.getSSLCacert().get("key"),parameters.getSSLCacert().get("cert"));
+                    //SSLConnectionSocketFactory sslsf = getSocketFactoryPEM(parameters.getSSLCacert().get("pem"), parameters.getSSLCacert().get("key"));
+                    //org.apache.http.impl.client.CloseableHttpClient tempClient = HttpClients.custom().setSSLSocketFactory(sslsf).build();
+                    client = tempClient;
+                    //HttpGet httpget = new HttpGet(url);
+                    //httpClient.execute(httpget);
+
+                }
+
+            }
 
             //if(url.isRedirect())
             String proxyName=parameters.getProxyName();
@@ -190,33 +226,40 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
             }
             HttpResponse response=null;
             if("GET".equalsIgnoreCase(parameters.getMethodName())){
-                StringBuffer par = new StringBuffer();
-                if(null != parameters.getProperties()) {
 
-                    Iterator<String> its = parameters.getProperties().keySet().iterator();
-                    while(its.hasNext()) {
-                        String k = its.next();
-                        if(par.length()>0){
-                            par.append("&");
+                    StringBuffer par = new StringBuffer();
+                    if (null != parameters.getProperties()) {
+
+                        Iterator<String> its = parameters.getProperties().keySet().iterator();
+                        while (its.hasNext()) {
+                            String k = its.next();
+                            if (par.length() > 0) {
+                                par.append("&");
+                            }
+                            par.append(k).append("=").append(parameters.getProperties().get(k));
                         }
-                        par.append(k).append("=").append(parameters.getProperties().get(k));
                     }
+                    if (par.length() > 0) {
+                        if (url.contains("?")) {
+                            url += "&" + par.toString();
+                        } else {
+                            url += "?" + par.toString();
+                        }
+                    }
+                    HttpGet httpget = new HttpGet(url);
+                try {
+                    if (null != headers)
+                        for (Header h : headers) {
+                            //System.out.println(h.getName()+":"+h.getValue());
+                            if (h.getName().equals("Cookie")) continue;
+                            httpget.addHeader(h);
+                        }
+                    client.execute(httpget);
+                }catch (Exception e){
+                    throw e;
+                }finally {
+                    httpget.releaseConnection();
                 }
-                if(par.length()>0) {
-                    if (url.contains("?")) {
-                        url += "&" + par.toString();
-                    } else {
-                        url += "?" + par.toString();
-                    }
-                }
-                HttpGet httpget = new HttpGet(url);
-                if(null != headers)
-                    for(Header h:headers){
-                        //System.out.println(h.getName()+":"+h.getValue());
-                        if(h.getName().equals("Cookie")) continue;
-                        httpget.addHeader(h);
-                    }
-                httpClient.execute(httpget);
 
             }else if("POST".equals(parameters.getMethodName())){
                 long l=0;
@@ -238,7 +281,7 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
                     if(Logger.isInfoEnabled()){
                         Logger.info(this.getClass(), null, "http", "before http post", null);
                     }
-                    response = httpClient.execute(httppost);
+                    response = client.execute(httppost);
                     /*if(null != parameters.getRequestInputStream()){
                         httppost.setRequestBody(parameters.getRequestInputStream());
                     }
@@ -294,7 +337,7 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
         }
     }
 
-    void invoke(UrlDS url,HttpDS parameters)throws  Exception{
+    /*void invoke(UrlDS url,HttpDS parameters)throws  Exception{
 
         try{
             if(!url.isRedirect())
@@ -347,9 +390,9 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
         }finally {
 
         }
-    }
+    }*/
 
-    void setContentToHttpServletResponse(HttpResponse proxyResponse,HttpDS ds) throws IOException {
+    /*void setContentToHttpServletResponse(HttpResponse proxyResponse,HttpDS ds) throws IOException {
         //header code:204 No Content, 304 Not Modified, 205 Reset Content
         if(!ArrayUtils.isInIntArray(new int[]{304, 204, 205}, proxyResponse.getStatusLine().getStatusCode())){
             BufferedOutputStream out = new BufferedOutputStream(ds.getResponseOutputStream());
@@ -400,7 +443,7 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
                 httpDS.setContentLength((int) content.getContentLength());
             httpDS.setStatusCode(proxyResponse.getStatusLine().getStatusCode());
         }
-    }
+    }*/
 
     String doResponseCookie(String cookie,UrlDS ds){
         if(StringUtils.isNotBlank(cookie)){
@@ -597,6 +640,9 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
             }
         }else
             ds = new HttpDS();
+        if(null != config && null != config.get("ssl") && config.get("ssl") instanceof Map && ((Map)config.get("ssl")).size()>0){
+            ds.setSSLCacert((Map)config.get("ssl"));
+        }
         if(null!=addRequestHeaders){
             Iterator<String> its = addRequestHeaders.keySet().iterator();
             while(its.hasNext()){
@@ -661,5 +707,95 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
     @Override
     public boolean rollback(String xmlid, XMLParameter env, Map input, Map output, Map config, Object ret, Exception e) throws Exception {
         return false;
+    }
+
+    protected static SSLConnectionSocketFactory getSocketFactoryPEM(String pemPath,String keypath) throws Exception {
+        byte[] pem = fileToBytes(pemPath);
+        byte[] pemKey = fileToBytes(keypath);
+
+        byte[] certBytes = parseDERFromPEM(pem, "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----");
+        byte[] keyBytes = parseDERFromPEM(pemKey, "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
+
+        X509Certificate cert = generateCertificateFromDER(certBytes);
+        RSAPrivateKey key  = generatePrivateKeyFromDER(keyBytes);
+
+        KeyStore keystore = KeyStore.getInstance("JKS");
+        keystore.load(null);
+        keystore.setCertificateEntry("cert-alias", cert);
+        keystore.setKeyEntry("key-alias", key, "123".toCharArray(), new Certificate[] {cert});
+
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(keystore, "123".toCharArray());
+
+        KeyManager[] km = kmf.getKeyManagers();
+
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(km, null, null);
+        SSLConnectionSocketFactory sslsf =
+                new SSLConnectionSocketFactory(context,null, null,
+                        SSLConnectionSocketFactory.BROWSER_COMPATIBLE_HOSTNAME_VERIFIER);
+        return sslsf;
+    }
+    public static byte[] parseDERFromPEM(byte[] pem, String beginDelimiter, String endDelimiter) {
+        String data = new String(pem);
+        String[] tokens = data.split(beginDelimiter);
+        tokens = tokens[1].split(endDelimiter);
+        return DatatypeConverter.parseBase64Binary(tokens[0]);
+    }
+
+    public static RSAPrivateKey generatePrivateKeyFromDER(byte[] keyBytes) throws InvalidKeySpecException, NoSuchAlgorithmException {
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+
+        KeyFactory factory = KeyFactory.getInstance("RSA");
+
+        return (RSAPrivateKey)factory.generatePrivate(spec);
+    }
+    public static X509Certificate generateCertificateFromDER(byte[] certBytes) throws CertificateException {
+        CertificateFactory factory = CertificateFactory.getInstance("X.509");
+
+        return (X509Certificate)factory.generateCertificate(new ByteArrayInputStream(certBytes));
+    }
+    public static byte[] fileToBytes(String filePath) {
+        byte[] buffer = null;
+        File file = new File(filePath);
+
+        FileInputStream fis = null;
+        ByteArrayOutputStream bos = null;
+
+        try {
+            fis = new FileInputStream(file);
+            bos = new ByteArrayOutputStream();
+
+            byte[] b = new byte[1024];
+
+            int n;
+
+            while ((n = fis.read(b)) != -1) {
+                bos.write(b, 0, n);
+            }
+
+            buffer = bos.toByteArray();
+        } catch (FileNotFoundException ex) {
+            ex.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } finally {
+            try {
+                if (null != bos) {
+                    bos.close();
+                }
+            } catch (IOException ex) {
+            } finally{
+                try {
+                    if(null!=fis){
+                        fis.close();
+                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+
+        return buffer;
     }
 }

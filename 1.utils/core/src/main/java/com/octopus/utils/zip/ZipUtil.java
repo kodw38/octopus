@@ -438,10 +438,34 @@ public class ZipUtil {
             return map;
         return null;
     }
+    public static List<String> findFileNames(ZipFile file,String path,String endwith) throws IOException {
+        Enumeration eu = file.entries();
+        List<String> ret = new LinkedList();
+        if(null !=path) {
+            path = path.replaceAll("\\\\", "/");
+        }
+        while (eu.hasMoreElements()) {
+            ZipEntry en = (ZipEntry) eu.nextElement();
+            if ((null == path || (null != path && en.getName().indexOf(path)>=0)) && (null == endwith||(null != endwith && en.getName().endsWith(endwith)))) {
+                InputStream in = file.getInputStream(en);
+                ret.add(en.getName());
+            }
+        }
+        if(ret.size()>0)
+            return ret;
+        return null;
+    }
     public static Map<String,InputStream> getZipFiles(String filepath,String endWith)throws IOException {
         ZipFile zf = new ZipFile(filepath);
         if(null != zf) {
             return findFiles(zf, null, endWith);
+        }
+        return null;
+    }
+    public static List<String> getZipFileNames(String filepath,String endWith)throws IOException{
+        ZipFile zf = new ZipFile(filepath);
+        if(null != zf) {
+            return findFileNames(zf, null, endWith);
         }
         return null;
     }
