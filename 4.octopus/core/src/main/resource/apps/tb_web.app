@@ -42,8 +42,8 @@
         <property key="isDevelopment">true</property>
         <property key="outside_wsdl_dir">c:/log/ws/</property>
         <property key="ServicesDir">c:/log/sv/</property>
-        <property key="services">com.test.TestSV,com.test.TestInteSV</property>
-        <property key="serviceInvoker">com.test.TestInvoker</property>
+        <property key="services">com.hadoop.TestSV,com.hadoop.TestInteSV</property>
+        <property key="serviceInvoker">com.hadoop.TestInvoker</property>
         <property key="ws_host">http://127.0.0.1:9091</property>
 
     </env>

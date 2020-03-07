@@ -2,6 +2,7 @@ package com.octopus.isp.listeners;
 
 import com.octopus.isp.actions.SystemAction;
 import com.octopus.isp.bridge.impl.Bridge;
+import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
@@ -109,7 +110,7 @@ public class LoadActions extends XMLDoObject {
      * @param srs
      * @throws Exception
      */
-    public void init(Map<String,Map<String,XMLMakeup>> srs,Map descs,List<String> localfirstServiceList,boolean isinit)throws Exception{
+    public void init(Map<String,Map<String,XMLMakeup>> srs,Map descs,List<String> localfirstServiceList,boolean isinit,List<String> exclude)throws Exception{
         log.info("----------------begin load actions----------------");
         localfirst=localfirstServiceList;
         /*ISPDictionary dictionary = (ISPDictionary)getObjectById("Dictionary");
@@ -141,7 +142,9 @@ public class LoadActions extends XMLDoObject {
                     Iterator<XMLMakeup> ss = it.next().values().iterator();
                     while(ss.hasNext()) {
                         XMLMakeup x = ss.next();
-                        
+                        if(null != exclude && null !=x.getId() && ArrayUtils.isInStringArray(exclude,x.getId())){
+                            continue;
+                        }
                         if(null == rss || !rss.containsKey(x.getId()) ||(null != localfirstServiceList && localfirstServiceList.contains(x.getId()))) {
                             if (null == localService) localService = new ArrayList<String>();
                             Map desc = null;
@@ -460,7 +463,7 @@ public class LoadActions extends XMLDoObject {
                     if(null != input.get("isDoInit") && StringUtils.isTrue((String)input.get("isDoInit"))){
                         isinit=true;
                     }
-                    init((Map) input.get("services"),(Map) input.get("descs"),first,isinit);
+                    init((Map) input.get("services"),(Map) input.get("descs"),first,isinit,(List)input.get("exclude"));
                 }
             }else if("reConZkInit".equals(op)){
                 log.info("reload Services form zk by reconnect zk ");

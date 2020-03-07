@@ -134,7 +134,7 @@ public class DataClient2 extends XMLDoObject{
                     XMLDoObject ds = (XMLDoObject)datasources.get(r.getDataSource());
                     log.debug("used datasource "+r.getDataSource());
                     if(null != ds){
-                        if(!splitTables.contains(r.getTableName())){
+                        if(!"query".equals(r.getOp()) && !"count".equals(r.getOp()) && !splitTables.contains(r.getTableName())){
                             if(!isExist(ds,r.getTableName()) && null !=r.getOriginalTableName() && !r.getOriginalTableName().equals(r.getTableName())){
                                 createTable(ds, r.getOriginalTableName(), r.getTableName());
                             }
@@ -174,11 +174,12 @@ public class DataClient2 extends XMLDoObject{
                 if("query".equals(input.get("op"))){
                     AngleQuery.filterResult(result);
                     return AngleQuery.compose(null,result);
-                }else{
-                    if(rest.size()>0) {
-                        return rest;
-                    }else{
+                }else{if(rest.size()==0) {
                         return null;
+                    }else if(rest.size()==1){
+                        return rest.get(rest.keySet().iterator().next());
+                    }else{
+                        return rest;
                     }
                 }
 

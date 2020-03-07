@@ -519,7 +519,7 @@ public class Desc extends XMLDoObject{
                 log.error("not get service body from service description");
             }
         }else{
-            log.error("not a service description "+StringUtils.join(desc.keySet().toArray(new String[0])));
+            log.error((null!=desc?desc.get("name"):"") + "not a service description ,not body or name property. "+ArrayUtils.toJoinString(desc.keySet().toArray(new String[0])));
         }
        return null;
     }
@@ -1630,7 +1630,17 @@ public class Desc extends XMLDoObject{
             sb.append(",input:" + getAppendString(pars,olddesc.get("input")));
         }
         if(StringUtils.isNotBlank(body)){
-            sb.append(",body:\""+"<action key=\\\""+name+"\\\" input=\\\"{outsvid:'"+name+"'}\\\" result=\\\"${end}\\\" xmlid=\\\"Logic\\\">"+body+"</action>"+"\"");
+            String b = "<action key=\\\""+name+"\\\" input=\\\"{outsvid:'"+name+"'}\\\" result=\\\"${end}\\\" xmlid=\\\"Logic\\\">"+body+"</action>";
+            if(null != olddesc && null != olddesc.get("body") && olddesc.get("body") instanceof String ){
+                String ob = StringUtils.replace((String) olddesc.get("body"),"\"","\\\"");
+                if(!b.equals(ob)) {
+                    log.debug("old body:" + ob);
+                    log.debug("new body:" + b);
+                    log.debug("will use old body");
+                    b = ob;
+                }
+            }
+            sb.append(",body:\""+b+"\"");
         }
         if(null != ret){
             sb.append(",output:" + getAppendString(ret,olddesc.get("output")));
@@ -1675,7 +1685,7 @@ public class Desc extends XMLDoObject{
             Iterator its = olddesc.keySet().iterator();
             while(its.hasNext()){
                 Object k = its.next();
-                if("input".equals(k) || "output".equals(k)) continue;
+                if("input".equals(k)|| "body".equals(k) || "output".equals(k)) continue;
                 Object v = olddesc.get(k);
                 sb.append(","+k.toString()+":"+convertDescValueString(v));
             }
@@ -1800,6 +1810,10 @@ public class Desc extends XMLDoObject{
                             if (null != m.get("output")) {
                                 newdesc.put("output",m.get("output"));
                             }
+                            if (null != m.get("body")) {
+                                newdesc.put("body",m.get("body"));
+                            }
+
                         }
                     }
                 } catch (Exception e) {
@@ -1923,7 +1937,11 @@ public class Desc extends XMLDoObject{
             if("getInvokeStructure".equalsIgnoreCase((String)input.get("op"))){
                 String txt = (String)input.get("txt");
                 if(StringUtils.isNotBlank(txt)){
-                    return getInvokeStructure(StringUtils.convert2MapJSONObject(txt));
+                    Map desc = StringUtils.convert2MapJSONObject(txt);
+                    if(!desc.containsKey("body")){
+                        log.error("parse to desc service error\n orginal txt :"+txt+"\n json:"+desc);
+                    }
+                    return getInvokeStructure(desc);
                 }
             }else if("getDesc".equals(input.get("op"))){
                 String[] os = (String[])input.get("${targetNames}");
@@ -1956,6 +1974,7 @@ public class Desc extends XMLDoObject{
 
             }else if("generatorByClass".equals(input.get("op"))){
                 nameListByClass.clear();
+                log.debug("begin to generate desc by class");
                 Object srs = input.get("classpath");
                 String[] li=null;
                 if(srs instanceof List){
@@ -1967,6 +1986,7 @@ public class Desc extends XMLDoObject{
                 if(null != li && StringUtils.isNotBlank(path)) {
                     for(String s:li) {
                         try {
+                            log.debug("begin class:"+s);
                             if(s.contains("#")){
                                 String[] cs = s.split("\\#");
                                 if(cs.length==2 && StringUtils.isNotBlank(cs[1])) {

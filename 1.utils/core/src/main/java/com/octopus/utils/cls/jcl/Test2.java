@@ -27,11 +27,11 @@ public class Test2 extends TestCase{
 	
 	public static void testFtp(){
 		try{
-			//SingleClassLoader loader = new SingleClassLoader("10.11.20.104","weblogic","weblogic","test");
-			SingleClassLoader loader = new SingleClassLoader("C:\\test\\ws\\lib",Test2.class.getClassLoader());
+			//SingleClassLoader loader = new SingleClassLoader("10.11.20.104","weblogic","weblogic","hadoop");
+			SingleClassLoader loader = new SingleClassLoader("C:\\hadoop\\ws\\lib",Test2.class.getClassLoader());
 			while(true){			
 				System.out.println("-----------------------------");
-				/*invoke(loader,"com.test.LoaderTest");
+				/*invoke(loader,"com.hadoop.LoaderTest");
 				printResource(loader,"readme.txt");
 				
 				printResource(loader,"com/test2/mm.txt");
@@ -46,11 +46,11 @@ public class Test2 extends TestCase{
 	}
 	public static void main(String[] args){
 		try{
-			//SingleClassLoader loader = new SingleClassLoader("C:\\test\\ejbinvoke\\dev");
-			//loader.addFtpDirectory("10.11.20.104", "weblogic", "weblogic", "test");
+			//SingleClassLoader loader = new SingleClassLoader("C:\\hadoop\\ejbinvoke\\dev");
+			//loader.addFtpDirectory("10.11.20.104", "weblogic", "weblogic", "hadoop");
 			/*while(true){			
 				System.out.println("-----------------------------");
-				invoke(loader,"com.test.LoaderTest");
+				invoke(loader,"com.hadoop.LoaderTest");
 				printResource(loader,"readme.txt");
 				
 				printResource(loader,"com/test2/mm.txt");

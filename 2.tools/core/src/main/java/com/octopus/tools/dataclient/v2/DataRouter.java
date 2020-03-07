@@ -496,7 +496,7 @@ public class DataRouter extends XMLObject {
     }
     //single table
     List<String[]> getInsTable(XMLParameter env,String table ,String op,Object data,Map cond)throws Exception{
-        if("add".equals(op)){
+        if("add".equals(op) && null != data){
             //single add
             if(data instanceof Map){
                 return getInsTableByFieldData(env, table, (Map) data);

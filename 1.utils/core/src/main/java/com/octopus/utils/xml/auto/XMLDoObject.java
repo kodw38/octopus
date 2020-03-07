@@ -103,7 +103,9 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         if(!invokePropertyMap.containsKey("globalsingle")){
             invokePropertyMap.put("globalsingle",new SingleThreadExeProperty());
         }
-
+        if(!invokePropertyMap.containsKey("concurrenceprevent")){
+            invokePropertyMap.put("concurrenceprevent",new ConcurrencePrevent());
+        }
         if(!invokePropertyMap.containsKey("concurrence")){
             invokePropertyMap.put("concurrence",new ConcurrenceInvokeProperty());
             asynList.add("concurrence");
@@ -386,7 +388,11 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         List ret = new LinkedList();
         while(ks.hasNext()){
             String k = (String)ks.next();
-            if(null != xml && xml.getProperties().containsKey(k) && StringUtils.isNotBlank(xml.getProperties().getProperty(k))){
+            String v = xml.getProperties().getProperty(k);
+            if(null == v && xml !=getXML() ){
+                v = getXML().getProperties().getProperty(k);
+            }
+            if(null != xml && null!=v && StringUtils.isNotBlank(v)){
                 try{
                     //执行前检查
                     if(!isActive()) {
@@ -396,8 +402,8 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                     if(!checkParameters(xml.getId(),parameter,input,output,config)){
                         return new Object[]{true,null};
                     }
-                    if(!propertyDefValueCache.containsKey(xml.getProperties().getProperty(k))){
-                        propertyDefValueCache.put(k,StringUtils.convert2MapJSONObject(xml.getProperties().getProperty(k)));
+                    if(!propertyDefValueCache.containsKey(v)){
+                        propertyDefValueCache.put(k,StringUtils.convert2MapJSONObject(v));
                     }
                     Map proMap = propertyDefValueCache.get(k);
                     if(null != parameter)
@@ -1229,6 +1235,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         }
     }
 
+
     protected boolean checkStr(XMLParameter env,String exp)throws ISPException{
         Object o = env.getExpressValueFromMap(exp,this);
         return ObjectUtils.isTrue(o);
@@ -1369,6 +1376,9 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
 
         }
         ResultCheck rc= checkReturn(xmlid,env,input,output,config,env.getParameter("${return}"));
+        if(null == rc){
+            throw new ISPException("NOT_RETURN_CHECKRESULT",this.getClass().getName()+" not return ResultCheck Object in checkReturn Method.");
+        }
         rc.setStatus(ResultCheck.RESULT_CHECK_SUCCESS);
         //System.out.println(Thread.currentThread().getName()+" "+ rc.isSuccess());
         return rc;
@@ -1607,7 +1617,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
 
                             }
                             doAlarm("output",parameter,e);
-                            throw e;
+                            throw new Exception("current service "+xmlid,e);
                         }catch (Exception ex){
                             doAlarm("output",parameter,e);
                             throw ex;

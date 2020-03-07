@@ -40,6 +40,8 @@ public class RedisClient extends XMLDoObject{
                         JedisPoolConfig config = new JedisPoolConfig();
                         if(r.getProperties().containsKey("maxtotal") && StringUtils.isNotBlank(r.getProperties().getProperty("maxtotal")))
                             config.setMaxTotal(Integer.parseInt(r.getProperties().getProperty("maxtotal")));
+                        if(r.getProperties().containsKey("minIdle") && StringUtils.isNotBlank(r.getProperties().getProperty("minIdle")))
+                            config.setMaxIdle(Integer.parseInt(r.getProperties().getProperty("minIdle")));
 
                         if(r.getProperties().containsKey("maxwaitmillis") && StringUtils.isNotBlank(r.getProperties().getProperty("maxwaitmillis")))
                             config.setMaxWaitMillis(Long.parseLong(r.getProperties().getProperty("maxwaitmillis")));
@@ -51,6 +53,7 @@ public class RedisClient extends XMLDoObject{
                             password = r.getProperties().getProperty("password");
                         JedisPool p=null;
                         config.setTestOnBorrow(true);
+                        config.setTestOnReturn(true);
                         if(timeout>0)
                             if(StringUtils.isNotBlank(password))
                                 p = new JedisPool(config,r.getProperties().getProperty("ip"),Integer.parseInt(r.getProperties().getProperty("port")),timeout,password);
@@ -58,8 +61,9 @@ public class RedisClient extends XMLDoObject{
                                 p = new JedisPool(config,r.getProperties().getProperty("ip"),Integer.parseInt(r.getProperties().getProperty("port")),timeout);
                         else
                             p = new JedisPool(config,r.getProperties().getProperty("ip"),Integer.parseInt(r.getProperties().getProperty("port")));
-                        if(null !=p)
+                        if(null !=p) {
                             ls.add(p);
+                        }
 
                     }
                 }

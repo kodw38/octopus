@@ -14,7 +14,7 @@
         根据请求参数作同步返回，还是异步消息推送返回
     -->
 <bridge clazz="com.octopus.isp.bridge.impl.Bridge">
-    <instancename>isp.test</instancename>
+    <instancename>isp.hadoop</instancename>
 
     <!-- 元素定义 -->
     <defs>
@@ -89,14 +89,14 @@
     <!-- cells路径配置 -->
     <cells>
         <!-- bridge 自由cells -->
-        <cell instanceids="isp.test.1" path="com/octopus/isp/files/cells/InstancesMgr.cell" desc="判断该cell所在的实例，已经监听其他实例的状态，以及实例的扩展、收缩" />
-        <cell instanceids="isp.test.2" path="com/octopus/isp/files/cells/SecurityMgr.cell" desc="访问权限管理" />
-        <cell instanceids="isp.test" path="com/octopus/isp/files/cells/Invoke.cell" desc="负责本地、远程调用，结果汇集" />
-        <cell instanceids="isp.test.3" path="com/octopus/isp/files/cells/Error.cell" desc="负责本地、远程调用，结果汇集" />
+        <cell instanceids="isp.hadoop.1" path="com/octopus/isp/files/cells/InstancesMgr.cell" desc="判断该cell所在的实例，已经监听其他实例的状态，以及实例的扩展、收缩" />
+        <cell instanceids="isp.hadoop.2" path="com/octopus/isp/files/cells/SecurityMgr.cell" desc="访问权限管理" />
+        <cell instanceids="isp.hadoop" path="com/octopus/isp/files/cells/Invoke.cell" desc="负责本地、远程调用，结果汇集" />
+        <cell instanceids="isp.hadoop.3" path="com/octopus/isp/files/cells/Error.cell" desc="负责本地、远程调用，结果汇集" />
 
         <!-- 业务规则cells -->
-        <cell instanceids="isp.test" path="com/octopus/isp/files/cells/Rules.cell" desc="规则执行cell" />
-        <cell instanceids="isp.test" path="com/octopus/isp/files/cells/DataOperator.cell" desc="数据操作" />
+        <cell instanceids="isp.hadoop" path="com/octopus/isp/files/cells/Rules.cell" desc="规则执行cell" />
+        <cell instanceids="isp.hadoop" path="com/octopus/isp/files/cells/DataOperator.cell" desc="数据操作" />
     </cells>
 
     <!-- 请求管道 -->

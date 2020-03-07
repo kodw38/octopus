@@ -186,8 +186,8 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
                         && StringUtils.isNotBlank(parameters.getSSLCacert().get("key"))
                         && StringUtils.isNotBlank(parameters.getSSLCacert().get("cert"))
                         ) {
-
-                    HttpClient tempClient = SSLUtils.getSocketFactoryPEM(parameters.getSSLCacert().get("cacert"),parameters.getSSLCacert().get("key"),parameters.getSSLCacert().get("cert"));
+                    log.debug("set ssl cert:"+parameters.getSSLCacert());
+                    HttpClient tempClient = SSLUtils.getSSLSocktetBidirectional(null,parameters.getSSLCacert().get("cacert"),parameters.getSSLCacert().get("cert"),parameters.getSSLCacert().get("key"));
                     //SSLConnectionSocketFactory sslsf = getSocketFactoryPEM(parameters.getSSLCacert().get("pem"), parameters.getSSLCacert().get("key"));
                     //org.apache.http.impl.client.CloseableHttpClient tempClient = HttpClients.custom().setSSLSocketFactory(sslsf).build();
                     client = tempClient;
@@ -254,7 +254,15 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
                             if (h.getName().equals("Cookie")) continue;
                             httpget.addHeader(h);
                         }
-                    client.execute(httpget);
+                    response = client.execute(httpget);
+                    parameters.setStatusCode(response.getStatusLine().getStatusCode());
+                    Header[] hs = response.getAllHeaders();
+                    if(null != hs) {
+                        setHeaderToHttpServletResponse(hs, saveResponseCookies, parameters);
+                    }
+                    if(null !=response.getEntity()) {
+                        response.getEntity().writeTo(parameters.getResponseOutputStream());
+                    }
                 }catch (Exception e){
                     throw e;
                 }finally {
@@ -273,6 +281,7 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
                             if(h.getName().equals("Cookie")) continue;
                             httppost.addHeader(h);
                         }
+                        //httppost.addHeader("Content-Type","application/x-www-form-urlencoded");
 
                     HttpEntity httpEntity = createProxyPostEntity(parameters);
                     if (null != httpEntity) {
@@ -282,39 +291,14 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
                         Logger.info(this.getClass(), null, "http", "before http post", null);
                     }
                     response = client.execute(httppost);
-                    /*if(null != parameters.getRequestInputStream()){
-                        httppost.setRequestBody(parameters.getRequestInputStream());
-                    }
-                    if(null != parameters.getProperties()) {
-                        Iterator<String> its = parameters.getProperties().keySet().iterator();
-                        while(its.hasNext()) {
-                            String k = its.next();
-                            httppost.addParameter(k,parameters.getProperties().get(k));
-                        }
-                    }
-                    if(Logger.isInfoEnabled()){
-                        Logger.info(this.getClass(),null,"http","before http post",null);
-                    }
-                    client.executeMethod(httppost);
-
-                    Header[] hs = httppost.getResponseHeaders();
-                    if(null != hs)
+                    parameters.setStatusCode(response.getStatusLine().getStatusCode());
+                    Header[] hs = response.getAllHeaders();
+                    if(null != hs) {
                         setHeaderToHttpServletResponse(hs, saveResponseCookies, parameters);
-                    parameters.setStatusCode(httppost.getStatusCode());
-                    if(null != httppost.getResponseBody()) {
-                        parameters.getResponseOutputStream().write(httppost.getResponseBody());
-                    }else{
-                        if(log.isDebugEnabled()){
-                            System.out.println("response body is null, url:"+url);
-                        }
                     }
-                    if(Logger.isInfoEnabled()){
-                        Logger.info(this.getClass(),null,"http","end http post",null);
+                    if(null !=response.getEntity()) {
+                        response.getEntity().writeTo(parameters.getResponseOutputStream());
                     }
-                    if(log.isDebugEnabled()) {
-                        log.debug("httpclient3 post lost:" + (System.currentTimeMillis() - l) + " ms");
-                    }
-*/
                 }catch (Exception ioe){
                     throw new Exception(url,ioe);
                 }finally {
@@ -336,7 +320,67 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
 
         }
     }
+    void setHeaderToHttpServletResponse(Header[] hs, String[] saveResponseCookies, HttpDS httpDS){
+        if(null != hs){
+            Hashtable<String,String> rhs = new Hashtable<String, String>();
+            for(Header h:hs){
+                if(h.getName().equals("Set-Cookie")){
+                    String v = doResponseCookie(h.getValue(),saveResponseCookies);
+                    if(rhs.containsKey("Set-Cookie")){
+                        v =rhs.get("Set-Cookie") +";"+v;
+                    }
+                    rhs.put("Set-Cookie",v);
+                }else
+                    rhs.put(h.getName(),h.getValue());
+                if(log.isDebugEnabled()){
+                    log.debug("response header:"+h.toString());
+                }
+            }
+            httpDS.setResponseHeaders(rhs);
+        }
+    }
+    String doResponseCookie(String cookie,String[] saveResponseCookies){
+        if(StringUtils.isNotBlank(cookie)){
+            StringBuffer sb = new StringBuffer();
 
+            //设置代理SessionID
+            Map<String,String> cookieMap = new LinkedHashMap<String, String>();
+            String[] ss = cookie.split(";");
+            for(String s:ss){
+                int n=s.indexOf("=");
+                if(n>0){
+                    String k = s.substring(0,n).trim();
+                    String v = s.substring(n+1);
+                    cookieMap.put(k,v);
+                }else{
+                    cookieMap.put(s,null);
+                }
+            }
+            if(null != saveResponseCookies){
+                for(String s:saveResponseCookies){
+                    if(cookieMap.containsKey(s)){
+                        String v = cookieMap.get(s);
+                        cookieMap.remove(s);
+                        cookieMap.put(SAVE_RESPONSE_PREFIX+s,v);
+                    }
+                }
+            }
+
+            Iterator its = cookieMap.keySet().iterator();
+            while(its.hasNext()){
+                String k = (String)its.next();
+                String v = cookieMap.get(k);
+                if(sb.length()>0)sb.append(";");
+                if(null != v)
+                    sb.append(" ").append(k).append("=").append(v);
+                else
+                    sb.append(" ").append(k);
+            }
+            return sb.toString();
+        }
+        return "";
+
+    }
     /*void invoke(UrlDS url,HttpDS parameters)throws  Exception{
 
         try{
@@ -602,7 +646,10 @@ public class HttpClient4 extends XMLDoObject implements IHttpClient{
             method = (String)input.get("method");
             url = (String)input.get("url");
             charset=(String)input.get("charset");
-            addRequestHeaders = (Map)input.get("addRequestHeaders");
+            Object hs = input.get("addRequestHeaders");
+            if(null != hs && hs instanceof Map){
+                addRequestHeaders=(Map)hs;
+            }
             inputStream=(String)input.get("inputstream");
             inputStreamEncode=(String)input.get("inputstreamencode");
 

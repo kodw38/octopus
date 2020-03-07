@@ -3,6 +3,8 @@ package com.octopus.utils.zip;
 import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.file.FileUtils;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.log4j.Logger;
 
 import javax.servlet.http.HttpServletResponse;
@@ -12,10 +14,7 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
-import java.util.zip.Deflater;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipOutputStream;
+import java.util.zip.*;
 
 /**
  * User: wf
@@ -232,6 +231,53 @@ public class ZipUtil {
     	out.putNextEntry(new ZipEntry(ZipUtil.encode(zipFileName,"UTF-8")));
     }
 
+    public static void unTarGz(String targzfile, String targzFilePath) {
+        FileInputStream fis = null;
+        BufferedInputStream bis = null;
+        GZIPInputStream gzis = null;
+        TarArchiveInputStream tais = null;
+        OutputStream out = null;
+        try {
+            //要解压到某个指定的目录下
+            fis = new FileInputStream(targzfile);
+            bis = new BufferedInputStream(fis);
+            gzis = new GZIPInputStream(bis);
+            tais = new TarArchiveInputStream(gzis);
+            TarArchiveEntry tae = null;
+            while ((tae = tais.getNextTarEntry()) != null) {
+                File tmpFile = new File(targzFilePath + "/" + tae.getName());
+                if (tae.isDirectory()) {
+                    //使用 mkdirs 可避免因文件路径过多而导致的文件找不到的异常
+                    tmpFile.mkdirs();
+                    continue;
+                }
+                out = new FileOutputStream(tmpFile);
+                int length = 0;
+                byte[] b = new byte[1048576];
+                while ((length = tais.read(b)) != -1) {
+                    out.write(b, 0, length);
+                }
+                out.flush();
+                out.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (tais != null) tais.close();
+                if (gzis != null) gzis.close();
+                if (bis != null) bis.close();
+                if (fis != null) fis.close();
+                if (out != null) {
+                    out.flush();
+                    out.close();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     /**
      * 
      * @Function: unZipFile
@@ -241,47 +287,51 @@ public class ZipUtil {
      * @date: 2011-2-16 ����08:57:51
      */
     public static void unZipFile(String zipFilePath,String unZipPath)throws Exception{
-    	ZipFile zipfile = new ZipFile(zipFilePath);
-    	if(null != zipfile){
-    		File zipdir = new File(unZipPath);
-    		if(!zipdir.exists()){
-    			zipdir.mkdirs();
-    		}
-    		Enumeration eu = zipfile.entries();
-    		while (eu.hasMoreElements()) {
-                InputStream in=null;
-                FileOutputStream out=null;
-        		try {
-        			java.util.zip.ZipEntry zipEntry = (java.util.zip.ZipEntry) eu.nextElement();        			
-                    String fileName = zipEntry.getName();
-                    if(fileName.endsWith("/")){
-                        new File(unZipPath+File.separator+fileName).mkdir();
-                        continue;
-                    }
-                    File f = new File(unZipPath+File.separator+fileName);
-                    if(!f.getParentFile().isDirectory()){
-                        f.getParentFile().mkdirs();
-                    }
-                    in = zipfile.getInputStream(zipEntry);
-                    out = new FileOutputStream(f);
-                    byte[] by = new byte[1024];
-                    int c;
-                    while ((c = in.read(by)) != -1) {
-                        out.write(by, 0, c);
-                    }
-                    out.close();
-                    in.close();
+        if(zipFilePath.endsWith(".tar.gz")){
+            unTarGz(zipFilePath,unZipPath);
+        }else {
+            ZipFile zipfile = new ZipFile(zipFilePath);
+            if (null != zipfile) {
+                File zipdir = new File(unZipPath);
+                if (!zipdir.exists()) {
+                    zipdir.mkdirs();
+                }
+                Enumeration eu = zipfile.entries();
+                while (eu.hasMoreElements()) {
+                    InputStream in = null;
+                    FileOutputStream out = null;
+                    try {
+                        java.util.zip.ZipEntry zipEntry = (java.util.zip.ZipEntry) eu.nextElement();
+                        String fileName = zipEntry.getName();
+                        if (fileName.endsWith("/")) {
+                            new File(unZipPath + File.separator + fileName).mkdir();
+                            continue;
+                        }
+                        File f = new File(unZipPath + File.separator + fileName);
+                        if (!f.getParentFile().isDirectory()) {
+                            f.getParentFile().mkdirs();
+                        }
+                        in = zipfile.getInputStream(zipEntry);
+                        out = new FileOutputStream(f);
+                        byte[] by = new byte[1024];
+                        int c;
+                        while ((c = in.read(by)) != -1) {
+                            out.write(by, 0, c);
+                        }
+                        out.close();
+                        in.close();
 //                    log.info("unzip "+zipFilePath+"�е�"+fileName+"��Ŀ¼:"+f.getPath());
-                
 
-	            } finally {
-                    if(null != out)
-                    out.close();
-                    if(null != in)
-                    in.close();
-	            }
-    		}
-    	}
+
+                    } finally {
+                        if (null != out)
+                            out.close();
+                        if (null != in)
+                            in.close();
+                    }
+                }
+            }
+        }
     }
     
     public static String encode(String s, String enc)throws Exception{
@@ -812,7 +862,11 @@ public class ZipUtil {
     public static void zipFiles(String destZipFilePath,String[] sroucepath){
         File zipFile = new File(destZipFilePath);
         try {
-
+            if(!zipFile.exists()){
+                if(!zipFile.getParentFile().exists()){
+                    zipFile.getParentFile().mkdirs();
+                }
+            }
             FileOutputStream fos = new FileOutputStream(zipFile);
             ZipOutputStream zos = new ZipOutputStream(fos);
             String baseDir = "";
@@ -918,7 +972,7 @@ public class ZipUtil {
     /**
      * 压缩文件夹
      */
-    private static void compressDir(File dir, ZipOutputStream zos,String baseDir) {
+    public static void compressDir(File dir, ZipOutputStream zos,String baseDir) {
         if (!dir.exists())
             return;
         File[] files = dir.listFiles();

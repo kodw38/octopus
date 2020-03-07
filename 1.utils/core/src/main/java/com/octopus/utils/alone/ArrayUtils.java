@@ -3113,7 +3113,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of Objects is empty or <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is empty or <code>null</code>
      * @since 2.1
      */
@@ -3128,7 +3128,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive longs is empty or <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is empty or <code>null</code>
      * @since 2.1
      */
@@ -3139,7 +3139,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive ints is empty or <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is empty or <code>null</code>
      * @since 2.1
      */
@@ -3150,7 +3150,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive shorts is empty or <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is empty or <code>null</code>
      * @since 2.1
      */
@@ -3161,7 +3161,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive chars is empty or <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is empty or <code>null</code>
      * @since 2.1
      */
@@ -3172,7 +3172,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive bytes is empty or <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is empty or <code>null</code>
      * @since 2.1
      */
@@ -3183,7 +3183,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive doubles is empty or <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is empty or <code>null</code>
      * @since 2.1
      */
@@ -3194,7 +3194,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive floats is empty or <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is empty or <code>null</code>
      * @since 2.1
      */
@@ -3205,7 +3205,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive booleans is empty or <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is empty or <code>null</code>
      * @since 2.1
      */
@@ -3217,7 +3217,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of Objects is not empty or not <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is not empty or not <code>null</code>
      * @since 2.5
      */
@@ -3246,7 +3246,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive longs is not empty or not <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is not empty or not <code>null</code>
      * @since 2.5
      */
@@ -3257,7 +3257,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive ints is not empty or not <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is not empty or not <code>null</code>
      * @since 2.5
      */
@@ -3268,7 +3268,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive shorts is not empty or not <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is not empty or not <code>null</code>
      * @since 2.5
      */
@@ -3279,7 +3279,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive chars is not empty or not <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is not empty or not <code>null</code>
      * @since 2.5
      */
@@ -3290,7 +3290,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive bytes is not empty or not <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is not empty or not <code>null</code>
      * @since 2.5
      */
@@ -3301,7 +3301,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive doubles is not empty or not <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is not empty or not <code>null</code>
      * @since 2.5
      */
@@ -3312,7 +3312,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive floats is not empty or not <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is not empty or not <code>null</code>
      * @since 2.5
      */
@@ -3323,7 +3323,7 @@ public class ArrayUtils {
     /**
      * <p>Checks if an array of primitive booleans is not empty or not <code>null</code>.</p>
      *
-     * @param array  the array to test
+     * @param array  the array to hadoop
      * @return <code>true</code> if the array is not empty or not <code>null</code>
      * @since 2.5
      */
@@ -5368,5 +5368,15 @@ public class ArrayUtils {
         }else{
             return a;
         }
+    }
+    public static boolean isStartWithHeads(String str,String[] withs){
+        if(StringUtils.isNotBlank(str) && null != withs) {
+            for (String with : withs) {
+                if (str.startsWith(with)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

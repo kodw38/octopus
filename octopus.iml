@@ -11,9 +11,6 @@
       <sourceFolder url="file://$MODULE_DIR$/4.octopus/core/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/5.applicatoins/GetImageFromWebSite" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/4.octopus/core/src/main/resource" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/5.applicatoins/gs/trunk/core/src/main/resource" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/5.applicatoins/gs/trunk/core/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="true" />
     </content>
     <orderEntry type="jdk" jdkName="1.8" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />

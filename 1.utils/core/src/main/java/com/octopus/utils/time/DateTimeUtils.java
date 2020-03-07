@@ -98,7 +98,26 @@ public class DateTimeUtils {
             return DATA_FORMAT_HH_MM_SS;
         throw new Exception("not support date pattern["+pattern+"]");
     }
-
+    /**
+     *
+     * @param strDate
+     * @unit YEAR,DAY,HOUR,MINUTE,SECOND
+     * @return
+     */
+    public static boolean isLeftOrRight(String strDate,Integer range,String unit) throws Exception {
+        Date a = getDate(strDate);
+        Date n = new Date();
+        if("DAY".equals(unit)){
+            return (n.after(addOrMinusDays(a.getTime(),-range)) && n.before(addOrMinusDays(a.getTime(),range)));
+        }else if("HOUR".equals(unit)){
+            return (n.after(addOrMinusHours(a.getTime(),-range)) && n.before(addOrMinusHours(a.getTime(),range)));
+        }else if("MINUTE".equals(unit)){
+            return (n.after(addOrMinusMinutes(a.getTime(),-range)) && n.before(addOrMinusMinutes(a.getTime(),range)));
+        }else if("SECOND".equals(unit)){
+            return (n.after(addOrMinusSecond(a.getTime(),-range)) && n.before(addOrMinusSecond(a.getTime(),range)));
+        }
+        return false;
+    }
     /**
      * yyyy+-num mm+-num dd+- num
      * @param pattern
@@ -107,7 +126,7 @@ public class DateTimeUtils {
     public static boolean isDatePattern(String pattern){
         if("hhmmss".equals(pattern))return true;
        //return StringUtils.regExpress(pattern,"^yyyy([-|/+]\\d{1,2})?[-| |/]?(MM([-|/+]\\d{1,2})?)?[-| |/]?(dd([-|/+]\\d{1,2})?)? ?(hh([-|/+]\\d{1,2})?)?:?(mm([-|/+]\\d{1,2})?)?:?(ss([-|/+]\\d{1,2})?)?");
-       return StringUtils.regExpress(pattern,"^(yyyy([-|/+]\\d{1,2})?|MM)([-|/+]\\d{1,2})?[-| |/]?(MM([-|/+]\\d{1,2})?|dd([-|/+]\\d{1,2})?)?[-| |/]?(dd([-|/+]\\d{1,2})?|yyyy([-|/+]\\d{1,2})?)? ?(hh|\\d{1,2}([-|/+]\\d{1,2})?)?:?(mm|\\d{1,2}([-|/+]\\d{1,2})?)?:?(ss|\\d{1,2}([-|/+]\\d{1,2})?)?");
+       return StringUtils.regExpress(pattern,"^(yyyy([-|/+]\\d{1,2})?|yy([-|/+]\\d{1,2})?|MM)([-|/+]\\d{1,2})?[-| |/]?(MM([-|/+]\\d{1,2})?|dd([-|/+]\\d{1,2})?)?[-| |/]?(dd([-|/+]\\d{1,2})?|yyyy([-|/+]\\d{1,2})?)? ?(hh|\\d{1,2}([-|/+]\\d{1,2})?)?:?(mm|\\d{1,2}([-|/+]\\d{1,2})?)?:?(ss|\\d{1,2}([-|/+]\\d{1,2})?)?");
     }
     public static boolean isNumChar(char c){
         if(c>=48 && c<=57)
@@ -385,7 +404,11 @@ public class DateTimeUtils {
                 sb.append(sp3).append(StringUtils.leftPad("" + cal.get(GregorianCalendar.SECOND), 2, "0"));
             }
         }
-        return sb.toString();
+        if(null != yyyy && (yyyy.equals("yy")||yyyy.equals("nullyy"))){
+            return sb.toString().substring(2);
+        }else {
+            return sb.toString();
+        }
     }
 
 
@@ -401,7 +424,7 @@ public class DateTimeUtils {
             System.out.println(DateTimeUtils.getStringDate("yyyyMMdd-"+1+" hh-1:mm:ss",null));
             System.out.println(DateTimeUtils.getStringDate("MM/dd/yyyy",null));
             System.out.println(DateTimeUtils.getStringDate("MM/dd/yyyy hh:mm:ss",null));
-            System.out.println(DateTimeUtils.getStringDate("yyyy/MM/dd 00:00:00",null));*/
+            System.out.println(DateTimeUtils.getStringDate("yyyy/MM/dd 00:00:00",null));
             System.out.println(DateTimeUtils.getStringDate("MM/dd/yyyy-1 23-1:01-1:02-2",null));
             System.out.println(DateTimeUtils.getStringDate("MM/dd/yyyy-1 23-1:01-1:02-3",null));
             System.out.println(DateTimeUtils.getStringDate("MM/dd/yyyy-1 23-1:01-1:02-3",null));
@@ -417,9 +440,10 @@ public class DateTimeUtils {
             System.out.println(getDate("16:35:03 00"));
             String[] pts = getStringBetweenDates("yyyyMMdd-14","yyyyMMdd");
             pts = getBetweenString("yyyyMM","yyyyMMdd-14","yyyyMMdd");
-            System.out.println(Arrays.asList(pts));
-            System.out.println(getStringDateByPattern("hhmmss",new Date()));
-            System.out.println(getStringDateByPattern("yyyy-MM-dd hh:mm:ss",new Date()));
+            System.out.println(Arrays.asList(pts));*/
+            //System.out.println(getStringDateByPattern("hhmmss",new Date()));
+            //System.out.println(getStringDateByPattern("yyyy-MM-dd hh:mm:ss",new Date()));
+            System.out.println(isDatePattern("yyyyMMdd-1"));
         }catch (Exception e){
             e.printStackTrace();
         }

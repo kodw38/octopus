@@ -30,7 +30,7 @@ import java.util.Base64;
 public class SSLUtils {
     static String PASSWORD="<password>";
     //---------------------------------------------------------------------------------------
-    public static SSLSocketFactory getSSLSocktetBidirectional(String TYPE,String CA_PATH,String CRT_PATH,String KEY_PATH) throws Exception {
+    public static HttpClient getSSLSocktetBidirectional(String TYPE,String CA_PATH,String CRT_PATH,String KEY_PATH) throws Exception {
         // CA certificate is used to authenticate server
         CertificateFactory cAf = CertificateFactory.getInstance("X.509");
         FileInputStream caIn = new FileInputStream(CA_PATH);
@@ -56,14 +56,20 @@ public class SSLUtils {
         kmf.init(ks, PASSWORD.toCharArray());
 
         // finally, create SSL socket factory
-        SSLContext context = SSLContext.getInstance("TLSv1");
+        SSLContext context = SSLContext.getInstance("TLS");
         context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new SecureRandom());
 
-        return context.getSocketFactory();
+        SSLConnectionSocketFactory ssf= new SSLConnectionSocketFactory(context,new String[]{"TLSv1","TLSv1.1","TLSv1.2"},null,new HttpsHostnameVerifier ());
+        //注册
+        Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create().register("http", PlainConnectionSocketFactory.INSTANCE).register("https", ssf).build();
+        //池化管理
+        PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+        CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(connManager).build();
+        return httpClient;
     }
     private static PrivateKey getPrivateKey(String path) throws Exception {
         //byte[] buffer = Base64.getDecoder().decode(getPem(path));
-        byte[] buffer = Base64.getDecoder().decode(getPem(path));
+        byte[] buffer = Base64.getMimeDecoder().decode(getPem(path));
 
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(buffer);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -95,8 +101,20 @@ public class SSLUtils {
         byte[] certBytes = parseDERFromPEM(certAndKey, "-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----");
         byte[] keyBytes = parseDERFromPEM(certAndKey, "-----BEGIN PRIVATE KEY-----", "-----END PRIVATE KEY-----");
 
-        X509Certificate cert = generateCertificateFromDER(certBytes);
-        RSAPrivateKey key  = generatePrivateKeyFromDER(keyBytes);
+        X509Certificate cert = null;
+        if(null != certBytes)
+            cert = generateCertificateFromDER(certBytes);
+
+        RSAPrivateKey key  = null;
+        if(null != keyBytes)
+            key = generatePrivateKeyFromDER(keyBytes);
+        if(null == key){
+            byte[] k = fileToBytes(client_key);
+            keyBytes = parseDERFromPEM(k, "-----BEGIN RSA PRIVATE KEY-----", "-----END RSA PRIVATE KEY-----");
+            key = generatePrivateKeyFromDER(keyBytes);
+        }
+        if(null != keyBytes)
+            key = generatePrivateKeyFromDER(keyBytes);
 
         KeyStore keystore = KeyStore.getInstance("JKS");
         keystore.load(null);
@@ -181,8 +199,12 @@ public class SSLUtils {
     protected static byte[] parseDERFromPEM(byte[] pem, String beginDelimiter, String endDelimiter) {
         String data = new String(pem);
         String[] tokens = data.split(beginDelimiter);
-        tokens = tokens[1].split(endDelimiter);
-        return DatatypeConverter.parseBase64Binary(tokens[0]);
+        if(tokens.length==2) {
+            tokens = tokens[1].split(endDelimiter);
+            return DatatypeConverter.parseBase64Binary(tokens[0]);
+        }else {
+            return null;
+        }
     }
 
     protected static RSAPrivateKey generatePrivateKeyFromDER(byte[] keyBytes) throws InvalidKeySpecException, NoSuchAlgorithmException {

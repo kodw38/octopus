@@ -59,8 +59,8 @@
 
         <property key="isDevelopment">true</property>
         <property key="DevelopmentTempDir">c:/log/sv/</property>
-        <property key="services">com.test.TestSV,com.test.TestInteSV</property>
-        <property key="serviceInvoker">com.test.TestInvoker</property>
+        <property key="services">com.hadoop.TestSV,com.hadoop.TestInteSV</property>
+        <property key="serviceInvoker">com.hadoop.TestInvoker</property>
         <property key="ws_host">http://127.0.0.1:9091</property>
 
     </env>
@@ -296,7 +296,7 @@
         <action key="invokeWebService" result="${end}" xmlid="Logic">
             <do key="xmldata" action="utils" input="{op:'convertJson2XMLString',data:'${data}'}"/>
             <do key="invoke_ws" action="httpClient" input="{method:'POST',url:'(${address})/(${actionName})',addRequestHeaders:{Accept-Encoding:'gzip,deflate',Content-Type:'text/xml;charset=UTF-8',SOAPAction:''}
-            ,inputstream:'<soapenv:Envelope xmlns:soapenv=&quot;http://schemas.xmlsoap.org/soap/envelope/&quot; xmlns:impl=&quot;http://impl.service.com/&quot;><soapenv:Header/><soapenv:Body><impl:test>(${xmldata})</impl:test></soapenv:Body></soapenv:Envelope>'}" output="{format:'format({return:\'${return}.responseOutputStream\',charset:\'UTF-8\',clazz:\'java.util.HashMap\'})'}"/>
+            ,inputstream:'<soapenv:Envelope xmlns:soapenv=&quot;http://schemas.xmlsoap.org/soap/envelope/&quot; xmlns:impl=&quot;http://impl.service.com/&quot;><soapenv:Header/><soapenv:Body><impl:hadoop>(${xmldata})</impl:hadoop></soapenv:Body></soapenv:Envelope>'}" output="{format:'format({return:\'${return}.responseOutputStream\',charset:\'UTF-8\',clazz:\'java.util.HashMap\'})'}"/>
             <do key="end" action="var" input="{value:'${invoke_ws}.soap:Envelope.soap:Body.ns1:testResponse'}"/>
         </action>
 

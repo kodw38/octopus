@@ -500,12 +500,12 @@ public class XMLUtil {
     		HashMap map = new HashMap<String, String>();
     		map.put("WWW", "XXXX");
     		map.put("WWW2", "1111");
-    		OutputStream out = new FileOutputStream(new File("c:\\ics\\test.xml"));    		
+    		OutputStream out = new FileOutputStream(new File("c:\\ics\\hadoop.xml"));
     		XStream xstream = new XStream();   
     		xstream.toXML(map, out);
     		
     		XStream xr = new XStream();
-    		FileInputStream in = new FileInputStream(new File("c:\\ics\\test.xml"));
+    		FileInputStream in = new FileInputStream(new File("c:\\ics\\hadoop.xml"));
     		HashMap m  = (HashMap)xr.fromXML(in);
     		System.out.println(m.get("WWW"));
 */

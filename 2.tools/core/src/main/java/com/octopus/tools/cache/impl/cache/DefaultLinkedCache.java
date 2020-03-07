@@ -137,11 +137,13 @@ public class DefaultLinkedCache extends XMLDoObject implements ICache {
                 if(!store.containsKey(key)) store.put(key,new LinkedList());
                 List li = (List)store.get(key);
                 if(null != li){
-                    for(int i=0;i<li.size();i++){
-                        Object o = li.get(i);
-                        Object o1 = getObjects(unique, o);
-                        if(null != o1 && ArrayUtils.isEquals(o1,o2)){
-                            return false;
+                    synchronized (li) {
+                        for (int i = 0; i < li.size(); i++) {
+                            Object o = li.get(i);
+                            Object o1 = getObjects(unique, o);
+                            if (null != o1 && ArrayUtils.isEquals(o1, o2)) {
+                                return false;
+                            }
                         }
                     }
                 }

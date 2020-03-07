@@ -6,7 +6,7 @@
     </defs>
     <express xmlid="express" clazz="com.octopus.utils.flow.impl.SimpleExpress"/>
     <executor xmlid="flowexecutor" clazz="com.octopus.models.bftask.TestExecutor"/>
-    <flow xmlid="flow" key="test.flow">
+    <flow xmlid="flow" key="hadoop.flow">
         <!--
             一般、判断、分叉、会签、子流程
              normal/judge/fork/subflow/error
@@ -59,7 +59,7 @@
                 <step seq="5" action="fork.b.5" desc=""/>
             </before>
         </node>
-        <node xmlid="node" type="subflow" seq="6" subid="test.flow2">
+        <node xmlid="node" type="subflow" seq="6" subid="hadoop.flow2">
             <before>
                 <step seq="6" action="subflow.b.6" desc=""/>
             </before>
@@ -70,7 +70,7 @@
             </before>
         </node>
     </flow>
-    <flow xmlid="flow" key="test.flow2" >
+    <flow xmlid="flow" key="hadoop.flow2" >
         <node xmlid="node" type="normal" seq="1">
             <before>
                 <step seq="1" action="flow2.normal.1"/>

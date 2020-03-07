@@ -264,7 +264,7 @@ public class BaseExpression {
     protected Object calValue(String value1, String opt, String value2) throws Exception {
         try {
             if (null == value1 || null == value2) return 0;
-            if (isNumber(value1) && isNumber(value2)) {
+            if (isNumber(value1) && value1.length()<16 && isNumber(value2) && value2.length()<16) {
                 if (value1.startsWith("f")) value1 = value1.replace("f", "-");
                 if (value2.startsWith("f")) value2 = value2.replace("f", "-");
 

@@ -3,12 +3,15 @@ package com.octopus.isp.actions;
 import com.octopus.isp.bridge.impl.Bridge;
 import com.octopus.isp.ds.RequestParameters;
 import com.octopus.tools.dataclient.v2.ds.TableContainer;
+import com.octopus.tools.deploy.property.ExcelPropertiesGetter;
 import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.bftask.BFParameters;
 import com.octopus.utils.cachebatch.DateTimeUtil;
 import com.octopus.utils.cls.proxy.GeneratorClass;
+import com.octopus.utils.ds.TableBean;
+import com.octopus.utils.ds.TableField;
 import com.octopus.utils.exception.ExceptionUtil;
 import com.octopus.utils.exception.ISPException;
 import com.octopus.utils.file.FileUtils;
@@ -2679,6 +2682,78 @@ return false;
                     }else{
                         throw new ISPException("SYSTEM.NOT_CONFIG_BUILD_PATH","please config [buildDir] property in main file");
                     }
+                }else if("generatorApplications".equals(op)){
+                    if(null != input.get("AppInfo") && input.get("AppInfo") instanceof Map) {
+                        Map appInfo = (Map) input.get("AppInfo");
+                        List<Map> pty3=null;
+                        if(null != input.get("3Pty3") && input.get("3Pty3") instanceof List)
+                            pty3 = (List) input.get("3Pty3");
+                        List<Map> tables = null;
+                        if(null != input.get("DataObject") && input.get("DataObject") instanceof List)
+                            tables = (List) input.get("DataObject");
+                        List<Map> dbaccts = null;
+                        if(null != input.get("DBAcct") && input.get("DBAcct") instanceof List)
+                            dbaccts=(List) input.get("DBAcct");
+                        List<Map> deployIns = null;
+                        if(null != input.get("DeployIns") && input.get("DeployIns") instanceof List)
+                            deployIns=(List) input.get("DeployIns");
+                        List<Map> deployReq = null;
+                        if(null != input.get("DeployReq") && input.get("DeployReq") instanceof List)
+                        deployReq=(List) input.get("DeployReq");
+                        List<Map> deployTools = null;
+                        if(null != input.get("DeployTools") && input.get("DeployTools") instanceof List)
+                            deployTools=(List) input.get("DeployTools");
+                        List<Map> webs = null;
+                        if(null != input.get("Webs") && input.get("Webs") instanceof List)
+                        webs = (List) input.get("Webs");
+                        List<Map> component = null;
+                        if(null != input.get("Component") && input.get("Component") instanceof List)
+                            component=(List) input.get("Component");
+                        List<Map> adminUser = null;
+                        if(null !=input.get("AdminUser") && input.get("AdminUser") instanceof List)
+                            adminUser=(List) input.get("AdminUser");
+                        List<Map> contexts = null;
+                        if(null !=input.get("Context") && input.get("Context") instanceof List)
+                            contexts=(List) input.get("Context");
+                        List<Map> pars = null;
+                        if(null != input.get("parameters") && input.get("parameters") instanceof List)
+                            pars=(List) input.get("parameters");
+                        List configFiles = null;
+                        if(null !=input.get("ConfigFiles") && input.get("ConfigFiles") instanceof List)
+                            configFiles=(List) input.get("ConfigFiles");
+                        List<Map> services = null;
+                        if(null != input.get("Services") && input.get("Services") instanceof List)
+                            services=(List) input.get("Services");
+                        Map svnSrvs = null;
+                        if(null != input.get("SVNServices") && input.get("SVNServices") instanceof Map)
+                            svnSrvs=(Map) input.get("SVNServices");
+
+                        List<Map> srvs = new ArrayList();
+                        if(null != services && null !=svnSrvs) {
+                            for (Map t : services) {
+                                if (!svnSrvs.containsKey(t.get("SRV_NAME"))) {
+                                    srvs.add(t);
+                                }
+                            }
+                        }
+                        String userCode = (String) ((Map) env.get("${session}")).get("UserName");
+
+
+                        String buildRoot = (String) ((Map) env.get("${env}")).get("buildUsrDir");
+                        if (StringUtils.isNotBlank(buildRoot)) {
+                            buildRoot = buildRoot.replaceAll("\\\\","/");
+                            /*if (!(buildRoot.endsWith("/") || buildRoot.endsWith("\\"))) {
+                                buildRoot = buildRoot + "/";
+                            }*/
+
+                            generatorApplication2(buildRoot, userCode, env, appInfo, pty3, contexts, tables, dbaccts, deployIns, deployReq, deployTools, pars
+                                    , srvs, svnSrvs, webs, component, adminUser, configFiles);
+                        } else {
+                            throw new ISPException("SYSTEM.NOT_CONFIG_BUILD_PATH", "please config [buildUsrDir] property in main file");
+                        }
+                    }else{
+                        throw new ISPException("GENERATOR_NOT_APP","Can not find app information ");
+                    }
                 }else if("getWebNames".equals(op)){
                     String buildroot =(String)((Map)env.get("${env}")).get("buildDir");
                     if(StringUtils.isNotBlank(buildroot)) {
@@ -2749,6 +2824,443 @@ return false;
             }
         }
         return ret;
+    }
+    Object generatorApplication2(String buildroot,String userCode,XMLParameter env,Map appInfo,List<Map> pty3,List<Map> contexts,List<Map> tables,List<Map> dbaccts
+            ,List<Map> deployIns,List<Map> deployReq,List<Map> deployTools
+    ,List<Map> pars,List<Map> srvs,Map<String,String> svnSrvs,List<Map> webs,List<Map> component,List<Map> adminUser,List<String> configFiles) throws Exception {
+        if(null != appInfo) {
+            String appName = (String) appInfo.get("APP_NAME");
+            if (StringUtils.isNotBlank(appName)) {
+                //build path
+                String buildpath = buildroot +"/" + userCode + "/" + appName;
+
+                for(Map insInfo :deployIns) {
+                    boolean isConsole=false;
+                    if(StringUtils.isNotBlank(insInfo.get("INSTANCE_NAME"))) {
+                        if (((String) insInfo.get("INSTANCE_NAME")).equalsIgnoreCase("CONSOLE")) {
+                            isConsole = true;
+                        }
+                        Map parameters = getParameters(appName, (String) insInfo.get("INSTANCE_NAME"), pars);
+                        String targetName = buildpath + "/dist/" + appName + "_" + insInfo.get("INSTANCE_NAME")+"_"+insInfo.get("INS_TYPE")+".zip";
+
+                        generatorIns(targetName, isConsole, env, appName, buildroot, buildpath, configFiles, pty3, contexts, tables, dbaccts
+                                , insInfo, deployReq, deployTools, parameters, component, adminUser, srvs, svnSrvs);
+                    }
+                }
+                File f = new File(buildpath+"/dist");
+                File[] fs = f.listFiles();
+                String[] tas = new String[fs.length];
+                for(int i=0;i<fs.length;i++){
+                    tas[i]=fs[i].getPath();
+                }
+                ZipUtil.zipFiles(buildpath+"/"+appName+".zip",tas);//(,new String[]{buildpath+"/dist"});
+
+                cleanDirs(new String[]{buildpath+"/components",buildpath+"/dist",buildpath+"/descs",buildpath+"/bin",buildpath+"/lib",buildpath+"/classes",buildpath+"/data",buildpath+"/logs",buildpath+"/web",buildpath+"/doc"});
+
+            }
+        }
+        return null;
+    }
+    Map getParameters(String appName,String instanceName,List<Map> pars){
+        Map ret = new HashMap();
+        if(null != pars){
+            for(Map m:pars){
+                if(((String)m.get("INSTANCE_NAME")).equalsIgnoreCase(instanceName)){
+                    String f = (String)m.get("FILE_NAME");
+                    if(null != f){
+                        Object seq = m.get("REQ_ID");
+                        if(null !=seq && seq instanceof Integer){
+                            if(!ret.containsKey(f)) ret.put(f,new ArrayList());
+                            for(int i=0;i<(Integer)seq;i++){
+                                if(((ArrayList)ret.get(f)).size()<=i){
+                                    ((ArrayList)ret.get(f)).add(new HashMap());
+                                }
+                            }
+                            //if(null != ((ArrayList)ret.get(f)).get((Integer)seq-1)) ((ArrayList)ret.get(f)).add((Integer)seq-1,new HashMap());
+                            ((Map)((ArrayList)ret.get(f)).get((Integer)seq-1)).put(m.get("SRC_PAR"),m.get("TARGET_PAR"));
+                        }else{
+                            if(!ret.containsKey(f)) ret.put(f,new HashMap());
+                            ((Map)ret.get(f)).put(m.get("SRC_PAR"),m.get("TARGET_PAR"));
+                        }
+                    }
+
+                }
+            }
+        }
+        if(null != ret && ret.size()>0)
+            return ret;
+        else
+            return null;
+    }
+    Map getInsInfo(String appName,String name,List<Map> deployIns){
+        if(null !=deployIns){
+            for(Map m:deployIns){
+                if(((String)m.get("APP_NAME")).equalsIgnoreCase(appName) && ((String)m.get("INSTANCE_NAME")).equalsIgnoreCase(name)){
+                    return m;
+                }
+            }
+        }
+        return null;
+    }
+    void prepareEnv(String buildroot,String buildpath,Map insInfo,Map<String,Object> parameters,List<String> configFiles){
+
+        chgFiles(buildroot+"/define",buildpath,parameters,configFiles);
+        //chgFiles(buildroot+"/define",buildpath,parameters,configFiles);
+        //chgFiles(buildroot+"/define",buildpath,parameters,configFiles);
+        //chgFiles(buildroot+"/define",buildpath,parameters,configFiles);
+        ////chgFiles(buildroot+"/define/web",buildpath+"/web",parameters,configFiles);
+        //chgFiles(buildroot+"/define",buildpath,parameters,configFiles);
+    }
+
+    void generatorIns(String targetFileName,boolean isConsole,XMLParameter env,String appName,String buildRoot,String buildpath
+            ,List<String> consoleConfigFiles,List<Map> pty3,List<Map> context,List<Map> tables,List<Map> dbaccts,Map insInfo,List<Map> deployReq
+            ,List<Map> deployTools,Map<String,Object> pars,List<Map> component,List<Map> adminUser,List<Map> srvs,Map<String,String> svnSrvs){
+        if(null != pty3){
+            //copy 3pty examples zookeeper, hbase
+            for(Map pty:pty3){
+                String name = (String)pty.get("3PTY_NAME");
+                if(StringUtils.isNotBlank(name)){
+                    File f = new File(buildRoot+"/define/components/"+name);
+                    if(f.exists()){
+                        try {
+                            //FileUtils.copyFile(f, new File(buildpath + "/components/" + name));
+                            ZipUtil.unZipFile(buildRoot+"/define/components/"+name,buildpath + "/components/" );
+                        }catch (Exception e){
+                            log.error("unzip file error "+buildRoot+"/define/components/"+name,e);
+                        }
+                    }
+                }
+            }
+        }
+        //generator context file and add start app file
+        if(null != context){
+            generatorContextFile(buildpath+"/classes/funs/contexts.xml",context);
+            Object o = pars.get("classes/tb_web.app");
+            if(null != o && o instanceof Map){
+                ((Map) o).put("<!-- contexts -->","<contexts xml=\"classpath:funs/contexts.xml\"/>");
+            }
+        }
+        //change defines file to specific instance
+        prepareEnv(buildRoot,buildpath,insInfo,pars,consoleConfigFiles);
+        try {
+            FileUtils.copyFile(buildRoot + "/define/lib/treasurebag_lib.jar", buildpath + "/lib/treasurebag_lib.jar");
+            FileUtils.copyFile(buildRoot + "/define/lib/treasurebag_services.jar", buildpath + "/lib/treasurebag_services.jar");
+        }catch (Exception e){
+
+        }
+        //generator tableContainer.xml
+        if(null != tables){
+            updateTables(buildpath+"/classes/funs/tablecontainer.xml",tables,adminUser);
+        }
+        //generator dataclient.xml
+        if(null != dbaccts){
+            updateDatabase(buildpath+"/classes/funs/dataclient.xml",dbaccts,"CONSOLE");
+        }
+        //package deploy tools
+        if(null != deployTools){
+
+        }
+        //console functions
+        if(null != component){
+
+        }
+
+        try {
+            if(isConsole) {
+                File tar = new File(buildpath + "/web");
+                if(!tar.exists()) tar.mkdirs();
+                FileUtils.copyDict(new File(buildRoot + "/define/webs/console"),tar,null,null,null,null);
+            }else{
+                if("BALANCE".equalsIgnoreCase((String)insInfo.get("INS_TYPE"))){
+                    File tar = new File(buildpath + "/web");
+                    if(!tar.exists()) tar.mkdirs();
+                    FileUtils.copyDict(new File(buildRoot + "/define/webs/"+insInfo.get("INSTANCE_NAME")),tar,null,null,null,null);
+                //generator server version jar from isp_user_app_services
+                }else
+                    generatorServiceJar(buildpath+"/lib/",appName+"_services.jar",env,srvs,svnSrvs);
+            }
+        }catch (Exception e){
+            log.error("copy web error ",e);
+        }
+        if(isConsole)
+            ZipUtil.zipFiles(targetFileName,new String[]{buildpath+"/lib",buildpath+"/bin",buildpath+"/classes",buildpath+"/data",buildpath+"/logs"
+                    ,buildpath+"/web",buildpath+"/components",buildpath+"/doc"});
+        else
+            ZipUtil.zipFiles(targetFileName,new String[]{buildpath+"/lib",buildpath+"/bin",buildpath+"/classes",buildpath+"/data",buildpath+"/logs"
+                ,buildpath+"/web",buildpath+"/doc"});
+        cleanDirs(new String[]{buildpath+"/bin",buildpath+"/classes",buildpath+"/components",buildpath+"/lib",buildpath+"/data",buildpath+"/logs",buildpath+"/web",buildpath+"/doc"});
+    }
+
+    void updateDatabase(String saveFile,List<Map> accs,String insName){
+        if (StringUtils.isNotBlank(saveFile) && null != accs){
+            FileInputStream fi=null;
+            try {
+                TableContainer tb = (TableContainer)getObjectById("tablecontainer");
+                if(null != tb) {
+                    File tf = new File(saveFile);
+                    fi = new FileInputStream(tf);
+                    HashMap m = new HashMap();
+
+                    StringBuffer sb = new StringBuffer();
+                    for(Map a :accs) {
+                        if(a.get("INSTANCE_NAME").equals(insName)) {
+                            Object hostip = m.get("HOST_IP");
+                            Object port = m.get("HOST_PORT");
+                            Object userName = m.get("USER_NAME");
+                            Object userPwd = m.get("USER_PWD");
+                            sb.append("<datasource key=\"" + a.get("SOURCE_NAME") + "\" isenable=\"true\" xmlid=\"dbsource\">\n" +
+                                    "            <property name=\"driverClassName\" value=\"com.mysql.jdbc.Driver\" />\n" +
+                                    "            <property name=\"url\" value=\"jdbc:mysql://" + hostip + ":" + port + "/mysql?rewriteBatchedStatements=true&amp;cachePrepStmts=true&amp;useServerPrepStmts=true&amp;useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true&amp;failOverReadOnly=false\" />\n" +
+                                    "            <property name=\"username\" value=\"" + userName + "\" />\n" +
+                                    "            <property name=\"password\" value=\"" + userPwd + "\" />\n" +
+                                    "            <property name=\"initialSize\" value=\"0\" />\n" +
+                                    "            <property name=\"maxActive\" value=\"20\" />\n" +
+                                    "            <property name=\"maxIdle\" value=\"20\" />\n" +
+                                    "            <property name=\"testWhileIdle\" value=\"true\" />\n" +
+                                    "            <property name=\"validationQuery\" value=\"SELECT COUNT(*) FROM DUAL\" />\n" +
+                                    "            <property name=\"timeBetweenEvictionRunsMillis\" value=\"60000\" />\n" +
+                                    "            <property name=\"minEvictableIdleTimeMillis\" value=\"10000\" />\n" +
+                                    "            <property name=\"removeAbandoned\" value=\"false\" />\n" +
+                                    "        </datasource>\n");
+                        }
+                    }
+                    m.put("<!-- datasource -->",sb.toString());
+
+                    byte[] bs = FileUtils.replaceFile(fi, m, "UTF-8");
+                    FileUtils.saveStringBufferFile(new StringBuffer(new String(bs)), saveFile, false);
+                }
+            }catch (Exception e){
+
+            }finally {
+                try {
+                    if (null != fi) fi.close();
+                }catch (Exception e){}
+            }
+        }
+    }
+    void updateTables(String saveFile,List<Map> tables,List<Map> adminUser) {
+        if (StringUtils.isNotBlank(saveFile) && null != tables){
+            FileInputStream fi=null;
+            try {
+                TableContainer tb = (TableContainer)getObjectById("tablecontainer");
+                if(null != tb) {
+                    File tf = new File(saveFile);
+                    fi = new FileInputStream(tf);
+
+
+                    Map m = new HashMap();
+                    StringBuffer fields = new StringBuffer();
+                    StringBuffer tabs = new StringBuffer();
+                    StringBuffer route = new StringBuffer();
+                    StringBuffer sequeces = new StringBuffer();
+                    StringBuffer users = new StringBuffer();
+                    List<String> tempFields =new ArrayList();
+                    for (Map t : tables) {
+                        //<property IS_CACHE="0" TABLE_NAME="ISP_STATIC_DATA" FIELD_CODE="EXTERN_CODE_TYPE" USED_TYPES="Q" NOT_NULL="0" TABLE_NUM="3"/>
+                        String tab = (String) t.get("TABLE_NAME");
+                        TableBean tbean = tb.getAllTables().get(tab);
+                        if (null != tbean) {
+                            List<TableField> tfs = tbean.getTableFields();
+                            if (null != tfs) {
+                                for (TableField f : tfs) {
+                                    tabs.append("<property IS_CACHE=\"" + (f.isCache() ? 1 : 0) + "\" TABLE_NAME=\"" + tab + "\" FIELD_CODE=\"" + f.getField().getFieldCode() + "\" USED_TYPES=\"" + f.getUsedTypes().get(0) + "\" NOT_NULL=\"" + (f.isNotNull() ? 1 : 0) + "\" TABLE_NUM=\"" + f.getTableNum() + "\"/>\n");
+                                    if (!tempFields.contains(f.getField().getFieldCode())) {
+                                        fields.append("<property FIELD_NAME=\"" + f.getField().getFieldName() + "\" FIELD_CODE=\"" + f.getField().getFieldCode() + "\" FIELD_TYPE=\"" + f.getField().getFieldType() + "\" FIELD_LEN=\"" + f.getField().getFieldLen() + "\" FIELD_NUM=\"" + f.getField().getFieldNum() + "\" STATE=\"1\"/>\n");
+                                        tempFields.add(f.getField().getFieldCode());
+                                    }
+                                }
+                            }
+                        }
+                        String source = (String) t.get("SOURCE_NAME");
+                        String spe = (String) t.get("SPLIT_EXPRESS");
+                        String routee = (String) t.get("ROUTE_EXPRESS");
+                        String range = (String) t.get("SPLIT_RANGE");
+                        if (StringUtils.isNotBlank(spe) || StringUtils.isNotBlank(routee) || StringUtils.isNotBlank(range)) {
+                            route.append("<property ROUTER_ID=\"\" DATA_SOURCE=\""+source+"\" TABLE_NAME=\""+tab+"\" SPLIT_EXPRESS=\""+spe+"\" ROUTE_EXPRESS=\""+routee+"\" SPLIT_RANGE=\"" + range + "\"/>\n");
+                        }
+                        sequeces.append("<property SEQUENCE_NAME=\""+tab+"$SEQ\" INCREMENT_BY=\"1\" LAST_NUMBER=\"10000\"/>\n");
+                    }
+                    if(null != adminUser){
+                        for(Map u:adminUser) {
+                            String i18n="";
+                            Map n = new HashMap();
+                            chgI18nKey(u,n);
+                            if(null != n) {
+                                i18n = ObjectUtils.convertMap2String(n);
+                            }
+                            users.append("<property USER_CODE=\"" + u.get("USER_CODE") + "\" USER_NAME=\""+u.get("USER_NAME")+"\" LOGIN_ACCT=\""+u.get("LOGIN_ACCT")+"\" LOGIN_PWD=\""+u.get("LOGIN_PWD")+"\" I18N=\""+i18n+"\" TENANT_CODE=\""+u.get("TENANT_CODE")+"\" PHONE=\"\" MAIL=\"\" USER_TYPE=\"ADMIN\" STATUS=\"1\"/>\n");
+                        }
+                    }
+                    m.put("<!-- FIELDS-->", fields.toString());
+                    m.put("<!-- TABLES -->", tabs.toString());
+                    m.put("<!-- ROUTER -->", route.toString());
+                    //<property SEQUENCE_NAME="ISP_USER_APP_PAYMENT$SEQ" INCREMENT_BY="1" LAST_NUMBER="10000"/>
+                    m.put("<!-- SEQUENCES -->", sequeces.toString());
+                    m.put("<!-- USERS -->", users.toString());
+                    byte[] bs = FileUtils.replaceFile(fi, m, "UTF-8");
+                    FileUtils.saveStringBufferFile(new StringBuffer(new String(bs)), saveFile, false);
+                }
+            }catch (Exception e){
+                log.error("update tablecontainer.xml error",e);
+            }finally {
+                try {
+                    if (null != fi) fi.close();
+                }catch (Exception e){}
+            }
+        }
+    }
+    void chgI18nKey(Map u,Map n){
+        String language = (String)u.get("LANGUAGE");
+        if(StringUtils.isNotBlank(language))
+            n.put("language",language);
+        String country = (String)u.get("COUNTRY");
+        if(StringUtils.isNotBlank(country))
+            n.put("country",country);
+        String dateformat = (String)u.get("DATE_FORMAT");
+        if(StringUtils.isNotBlank(dateformat))
+            n.put("date",dateformat);
+        String timezone = (String)u.get("TIME_ZONE");
+        if(StringUtils.isNotBlank(timezone))
+            n.put("zone",timezone);
+        String currency = (String)u.get("CURRENCY");
+        if(StringUtils.isNotBlank(currency))
+            n.put("currency",currency);
+    }
+    void generatorContextFile(String saveFile,List<Map> context) {
+        if (StringUtils.isNotBlank(saveFile) && null != context){
+            StringBuffer sb = new StringBuffer();
+            sb.append("<contexts clazz=\"com.octopus.isp.ds.Contexts\">\n");
+            for (Map m : context) {
+                if(StringUtils.isTrue((String)m.get("IS_DEFAULT").toString())) {
+                    sb.append("<context default=\"true\">\n");
+                }else{
+                    sb.append("<context>\n");
+                }
+                HashMap u = new HashMap();
+                chgI18nKey(m,u);
+                Iterator its = u.keySet().iterator();
+                while(its.hasNext()){
+                    String k = (String)its.next();
+                    Object o = u.get(k);
+                    if(null !=k && null != o && StringUtils.isNotBlank(o))
+                        sb.append("<property key=\""+k+"\">"+o+"</property>\n");
+                }
+                sb.append("</context>\n");
+            }
+            sb.append("<i18n ref=\"i18n\"/>\n");
+            sb.append("</contexts>");
+            try {
+                FileUtils.saveFile(sb, saveFile, false, false);
+            }catch(Exception e){
+                log.error("generator context error:",e);
+            }
+        }
+    }
+
+    void cleanDirs(String[] dirs){
+        if(null != dirs){
+            for(String s:dirs){
+                FileUtils.deleteDir(s);
+            }
+        }
+    }
+    void chgFiles(String srcDir,String targetDir,Map<String,Object> parameters,List<String> configFiles){
+        if(null != configFiles){
+            for(String fp:configFiles){
+                File f = new File(srcDir+"/"+fp);
+                if(f.exists()){
+                    try {
+                        if(f.isDirectory()){
+
+                            FileUtils.copyCurFloderFiles(srcDir + "/" + fp, targetDir + "/" + fp, null, "");
+
+                        }else {
+                            FileUtils.copyFile(f, new File(targetDir + "/" + fp));
+                        }
+                    }catch (Exception e){
+                        log.error("copy dir error:",e);
+                    }
+                }
+            }
+        }
+        if(null != parameters) {
+            Iterator its = parameters.keySet().iterator();
+            while(its.hasNext()) {
+                String k = (String)its.next();
+                String fn = srcDir+"/"+k;
+                File ff = new File(fn);
+                FileInputStream fi=null;
+                if(ff.exists()) {
+                    try {
+                        Object obj = parameters.get(k);
+                        if(obj instanceof Map) {
+                            fi = new FileInputStream(ff);
+                            String tf = targetDir+"/"+k;
+                            byte[] bs = FileUtils.replaceFile(fi, (Map)obj, "UTF-8");
+                            FileUtils.saveStringBufferFile(new StringBuffer(new String(bs)), tf, false);
+                            fi.close();
+                        }else if(obj instanceof List){
+                            int c=0;
+                            for(Object m :(List)obj){
+                                if(m instanceof Map){
+                                    fi = new FileInputStream(ff);
+                                    String n = k.substring(0,k.lastIndexOf("."));
+                                    String e = k.substring(k.lastIndexOf("."));
+                                    String tf = targetDir+"/"+n+"_"+(c++)+e;
+                                    byte[] bs = FileUtils.replaceFile(fi, (Map)m, "UTF-8");
+                                    FileUtils.saveStringBufferFile(new StringBuffer(new String(bs)), tf, false);
+                                    fi.close();
+                                }
+                            }
+                        }
+
+                    }catch (Exception e){
+                        log.error("chgFiles ",e);
+                    }finally {
+                        try {
+                            if (null != fi) fi.close();
+                        }catch (Exception e){}
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     *
+     * @param savepath
+     * @param targetjarName
+     * @param env
+     * @param srvs
+     * @param svnSrvs include children action
+     * @throws Exception
+     */
+    void generatorServiceJar(String savepath,String targetjarName,XMLParameter env,List<Map> srvs,Map<String,String>svnSrvs) throws Exception {
+        Map<String,String> descs = new HashMap();
+        List<String> filterOutNotSvnSrvNames = new ArrayList();
+        if(null !=srvs){
+            for(Map m:srvs){
+                if(StringUtils.isNotBlank(m.get("SRV_NAME"))) {
+                    if(!(null != svnSrvs && svnSrvs.containsKey(m.get("SRV_NAME")))){
+                        filterOutNotSvnSrvNames.add((String) m.get("SRV_NAME"));
+                    }
+                }
+            }
+        }
+        //service name list not in svn, these is latest version
+        getAllChildrenDescStringList(env,filterOutNotSvnSrvNames,descs,new ArrayList());
+        //add svn service to descs
+        if(null != descs){
+            Iterator its = descs.keySet().iterator();
+            while(its.hasNext()){
+                String k = (String)its.next();
+                String desc = descs.get(k);
+                descs.put(k,desc);
+            }
+        }
+        //generator app services desc jar
+        getServicesDescJar(env, descs, targetjarName,savepath);
+
     }
     Object generatorApplication(String newJarName,XMLParameter env,List<String> srvNames,List<String> excludejars,String appName,String acctCode
             ,String webname,String approot,Map<String,Map<String,String>> parameters,List<String> descjars)throws Exception{
@@ -3406,20 +3918,22 @@ return false;
 
     Object doRemoteAction(String insId,String srvName,Map input){
         try {
-            BFParameters p = new BFParameters(false);
-            p.addParameter("${targetNames}", new String[]{srvName});
-            p.addParameter("${input_data}", input);
-            p.addParameter("${insid}", insId);
-            Hashtable hb = new Hashtable();
-            hb.put("targetinsid",insId);
-            p.addParameter("${requestHeaders}",hb);
-            remote.doThing(p, null);
-            Object o = p.getResult();
-            if (null != o) {
-                if (o instanceof ResultCheck) {
-                    o = ((ResultCheck) o).getRet();
+            if(null !=insId) {
+                BFParameters p = new BFParameters(false);
+                p.addParameter("${targetNames}", new String[]{srvName});
+                p.addParameter("${input_data}", input);
+                p.addParameter("${insid}", insId);
+                Hashtable hb = new Hashtable();
+                hb.put("targetinsid", insId);
+                p.addParameter("${requestHeaders}", hb);
+                remote.doThing(p, null);
+                Object o = p.getResult();
+                if (null != o) {
+                    if (o instanceof ResultCheck) {
+                        o = ((ResultCheck) o).getRet();
+                    }
+                    return o;
                 }
-                return o;
             }
         }catch (Exception e){
             log.error("invoke remote error", ExceptionUtil.getRootCase(e));

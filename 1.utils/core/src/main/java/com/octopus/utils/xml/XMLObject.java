@@ -176,11 +176,13 @@ public abstract class XMLObject implements Serializable,Comparable{
                         if(objectIds.size()>i && null != objectIds.get(i) && null != m.get(objectIds.get(i))) {
                             m.get(objectIds.get(i)).setRefer();
                             m.get(objectIds.get(i)).initial();
+                            log.info("do initial "+objectIds.get(i));
                         }
                     } catch (Exception e) {
                         log.error(id + " initial happen error:", e);
                     }
                 }
+                log.info("initial all");
 
         }
     }
@@ -1580,7 +1582,7 @@ public abstract class XMLObject implements Serializable,Comparable{
             if(null != o){
                 return o;
             }else{
-                o = xmlExtFields.get(fieldName);
+                o = getObjectFromXmlExt(xmlExtFields,fieldName);
                 if(null != o)
                     return o;
                 XMLObject p = (XMLObject)getParent();
@@ -1590,7 +1592,7 @@ public abstract class XMLObject implements Serializable,Comparable{
                     try{
                         o = ClassUtils.getFieldValue(p,fieldName,false);
                         if(null  != o)return o;
-                        o = p.xmlExtFields.get(fieldName);
+                        o = getObjectFromXmlExt(p.xmlExtFields,fieldName);
                         if(null != o)return o;
                     }catch (Exception ex){
                         ex.printStackTrace();
@@ -1605,7 +1607,7 @@ public abstract class XMLObject implements Serializable,Comparable{
                 try{
                     Object o = ClassUtils.getFieldValue(p, fieldName, false);
                     if(null  != o)return o;
-                    o = p.xmlExtFields.get(fieldName);
+                    o = getObjectFromXmlExt(p.xmlExtFields,fieldName);
                     if(null != o)return o;
                 }catch (Exception ex){
                 }finally {
@@ -1613,16 +1615,51 @@ public abstract class XMLObject implements Serializable,Comparable{
                 }
             }
         }
-
+        return null;
+    }
+    Object getObjectFromXmlExt(Map xmlExt,String id){
+        if(null != xmlExt){
+            Object o = xmlExt.get(id);
+            if(null != o)return o;
+            Object t = xmlExt.get("actions");
+            if(null!=t && t instanceof Map){
+                o = ((Map) t).get(id);
+            }
+            if(null !=o)return o;
+            t = xmlExt.get("services");
+            if(null!=t && t instanceof Map){
+                o = ((Map) t).get(id);
+            }
+            return o;
+        }
         return null;
     }
 
     public XMLObject getObjectById(String id){
         if(null != id) {
             if(null == singleXmlObjectContainer ) {
-                return XmlObjectContainer.get(id);
+                Object o =  XmlObjectContainer.get(id);
+                if(null ==o){
+                    XMLObject root = getRoot();
+                    if(null != root) {
+                        Object t = root.getPropertyObject(id);
+                        if (null != t && XMLObject.class.isAssignableFrom(t.getClass())) {
+                            o = (XMLObject) t;
+                        }
+                    }
+                }
+                return (XMLObject) o;
             }else{
                 XMLObject o= singleXmlObjectContainer.get(id);
+                if(null ==o){
+                    XMLObject root = getRoot();
+                    if(null != root) {
+                        Object t = root.getPropertyObject(id);
+                        if (null != t && XMLObject.class.isAssignableFrom(t.getClass())) {
+                            o = (XMLObject) t;
+                        }
+                    }
+                }
                 if(null==o){
                     o= XmlObjectContainer.get(id);
                 }

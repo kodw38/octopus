@@ -1,6 +1,5 @@
 package com.octopus.isp.bridge.launchers.impl;
 
-import com.octopus.isp.actions.websocket.jetty.MyWebSocketServlet;
 import com.octopus.isp.bridge.IBridge;
 import com.octopus.isp.bridge.ILauncher;
 import com.octopus.isp.bridge.impl.Bridge;
@@ -15,6 +14,7 @@ import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.SNUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.exception.Logger;
+import com.octopus.utils.file.FileUtils;
 import com.octopus.utils.img.ImageUtils;
 import com.octopus.utils.net.NetUtils;
 import com.octopus.utils.xml.XMLMakeup;
@@ -29,9 +29,12 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import sun.misc.BASE64Decoder;
 
 import javax.servlet.*;
@@ -662,6 +665,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 // Setup SSL
                 org.eclipse.jetty.util.ssl.SslContextFactory sslContextFactory = new org.eclipse.jetty.util.ssl.SslContextFactory();
                 sslContextFactory.setKeyStorePath(System.getProperty("jetty.keystore.path", ksStorePath));
+                //sslContextFactory.setTrustStorePath();
                 sslContextFactory.setKeyStorePassword(System.getProperty("jetty.keystore.password", storePassword));
                 if(StringUtils.isNotBlank(managerPassword)) {
                     sslContextFactory.setKeyManagerPassword(System.getProperty("jetty.keymanager.password", managerPassword));
@@ -684,29 +688,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 server.setConnectors(new Connector[]{httpConnector, httpsConnector});
 
 
-                org.eclipse.jetty.webapp.WebAppContext webapp = new org.eclipse.jetty.webapp.WebAppContext();
-                webapp.setContextPath(contextPath);
-
-                webapp.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-                //webapp.setInitParameter("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false"); //resource can avliable dynamic
-                //webapp.setResourceBase(webContextPath);
-                //定位项目中class文件的位置
-                webapp.setClassLoader(Thread.currentThread().getContextClassLoader());
-                if(StringUtils.isNotBlank(baseResource)) {
-                    webapp.setBaseResource(org.eclipse.jetty.util.resource.Resource.newResource(baseResource));
-                    File tmpFile = new File(baseResource + "/web_temp");
-                    webapp.setTempDirectory(tmpFile);
-                }else{
-                    webapp.setBaseResource(org.eclipse.jetty.util.resource.Resource.newClassPathResource(""));
-                }
-
-                if (isUsedWebSocket) {
-                    webapp.addServlet(new ServletHolder(new MyWebSocketServlet()), "/websocket");
-                }
-                //        webapp.setDescriptor(serverWebXml);
-                FilterHolder holder = new FilterHolder(new MyFilter(this, null));
-                webapp.addFilter(holder, "/*", EnumSet.of(DispatcherType.REQUEST));
-                server.setHandler(webapp);
+                getWebContexts(contextPath,baseResource,server,isUsedWebSocket);
                 server.start();
                 System.out.println("web Server [https://"+ NetUtils.getip()+":"+sslport + baseResource + "] is started!");
                 //server.join();
@@ -755,23 +737,65 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
         }
     }
 
+    void getWebContexts(String contextPath,String baseResource,Server server,boolean isUsedWebSocket)throws Exception{
+        if(baseResource.endsWith("webs") && ArrayUtils.isInStringArray(FileUtils.getCurDirNames(baseResource),"root")){
+            List<String> ls = FileUtils.getCurDirNames(baseResource);
+            ContextHandlerCollection contexts = new ContextHandlerCollection();
+            for(String n:ls){
+                String c = n;
+                if(n.equals("root")){
+                    if(StringUtils.isBlank(contextPath))
+                        c="";
+                        else
+                    c=contextPath;
+                }
+                ContextHandler handler = getWebContext("/"+c,baseResource+"/"+n,isUsedWebSocket);
+                contexts.addHandler(handler);
+            }
+            server.setHandler(contexts);
+        }else{
+            ContextHandler handler = getWebContext(contextPath,baseResource,isUsedWebSocket);
+            server.setHandler(handler);
+        }
+    }
+    ContextHandler getWebContext(String contextPath, String baseResource, boolean isUsedWebSocket) throws IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
+        org.eclipse.jetty.webapp.WebAppContext webapp = new org.eclipse.jetty.webapp.WebAppContext();
+        webapp.setContextPath(contextPath);
+        webapp.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+        //webapp.setInitParameter("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false"); //resource can avliable dynamic
+        //webapp.setResourceBase(webContextPath);
+        //定位项目中class文件的位置
+        webapp.setClassLoader(Thread.currentThread().getContextClassLoader());
+        if(StringUtils.isNotBlank(baseResource)) {
+            webapp.setBaseResource(org.eclipse.jetty.util.resource.Resource.newResource(baseResource));
+            File tmpFile = new File(baseResource + "/web_temp");
+            webapp.setTempDirectory(tmpFile);
+        }else{
+            webapp.setBaseResource(org.eclipse.jetty.util.resource.Resource.newClassPathResource(""));
+        }
+
+        if (isUsedWebSocket) {
+            webapp.addServlet(new ServletHolder((WebSocketServlet)Class.forName("com.octopus.isp.actions.websocket.jetty.MyWebSocketServlet").newInstance()), "/websocket");
+        }
+        //        webapp.setDescriptor(serverWebXml);
+        FilterHolder holder = new FilterHolder(new MyFilter(this, null));
+        webapp.addFilter(holder, "/*", EnumSet.of(DispatcherType.REQUEST));
+        return webapp;
+    }
     void startWeb(String resourcePath,String contextPath,boolean isUsedWebSocket,int port){
         if(port>0) {
-
-
             Server server = new Server(port);
 
-            WebAppContext context = new WebAppContext();
-            if (StringUtils.isBlank(contextPath)) {
-                contextPath = "/";
-            }else {
-                context.setContextPath(contextPath);
-            }
-            context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-            //context.setInitParameter("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false"); //resource can avliable dynamic
-            context.setClassLoader(Thread.currentThread().getContextClassLoader());
-
             try {
+                /*WebAppContext context = new WebAppContext();
+                if (StringUtils.isBlank(contextPath)) {
+                    contextPath = "/";
+                }else {
+                    context.setContextPath(contextPath);
+                }
+                context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+                //context.setInitParameter("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false"); //resource can avliable dynamic
+                context.setClassLoader(Thread.currentThread().getContextClassLoader());
                 if (StringUtils.isNotBlank(resourcePath)) {
                     context.setResourceBase(resourcePath);
                     File tmpFile = new File(resourcePath + "/web_temp");
@@ -780,12 +804,13 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                     context.setBaseResource(org.eclipse.jetty.util.resource.Resource.newClassPathResource(""));
                 }
                 FilterHolder holder = new FilterHolder(new MyFilter(this, null));
-                context.addFilter(holder, "/*",EnumSet.of(DispatcherType.REQUEST));
+                context.addFilter(holder, "*//*",EnumSet.of(DispatcherType.REQUEST));
                 if (isUsedWebSocket) {
-                    context.addServlet(new ServletHolder(new MyWebSocketServlet()), "/websocket");
+                    context.addServlet(new ServletHolder((WebSocketServlet)Class.forName("com.octopus.isp.actions.websocket.jetty.MyWebSocketServlet").newInstance()), "/websocket");
                 }
                 //context.addServlet(HelloWordService.class,"/hessian/ProxyGetUU");
-                server.setHandler(context);
+                server.setHandler(context);*/
+                getWebContexts(contextPath,resourcePath,server,isUsedWebSocket);
                 server.start();
                 System.out.println("web Server [http://" + NetUtils.getip() + ":" + port + resourcePath + "] is started!");
             } catch (Exception e) {

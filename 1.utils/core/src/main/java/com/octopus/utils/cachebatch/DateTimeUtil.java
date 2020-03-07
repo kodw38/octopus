@@ -487,6 +487,27 @@ public class DateTimeUtil {
     }
 
     /**
+     *
+     * @param strDate
+     * @unit YEAR,DAY,HOUR,MINUTE,SECOND
+     * @return
+     */
+    public static boolean isLeftOrRight(String strDate,Integer range,String unit) throws ParseException {
+        Date a = getDate(strDate);
+        Date n = new Date();
+        if("DAY".equals(unit)){
+            return (n.after(addOrMinusDays(a.getTime(),-range)) && n.before(addOrMinusDays(a.getTime(),range)));
+        }else if("HOUR".equals(unit)){
+            return (n.after(addOrMinusHours(a.getTime(),-range)) && n.before(addOrMinusHours(a.getTime(),range)));
+        }else if("MINUTE".equals(unit)){
+            return (n.after(addOrMinusMinutes(a.getTime(),-range)) && n.before(addOrMinusMinutes(a.getTime(),range)));
+        }else if("SECOND".equals(unit)){
+            return (n.after(addOrMinusSecond(a.getTime(),-range)) && n.before(addOrMinusSecond(a.getTime(),range)));
+        }
+        return false;
+    }
+
+    /**
      * add by liufeng 20061031 strFormat值如："yyyy-MM-dd HH:mm:ss"
      *
      * @param strDate   String

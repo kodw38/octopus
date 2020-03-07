@@ -154,7 +154,7 @@ public class WSServiceData {
         m.put("name","java.lang.String");
         m.put("age","int");
         m.put("date","java.util.Date");
-        pojo.put("com.ws.pojo.test.WTest",m);*/
+        pojo.put("com.ws.pojo.hadoop.WTest",m);*/
          return pojoList;
     }
 
@@ -166,19 +166,19 @@ public class WSServiceData {
         s.setDesc("how are you");
 
         s.addClassInfo("", "hello", new String[][]{{"name", "java.lang.String"}}, "String");
-        s.addClassInfo("","pojo",new String[][]{{"info","com.ws.pojo.test.WTest"}},"String");
+        s.addClassInfo("","pojo",new String[][]{{"info","com.ws.pojo.hadoop.WTest"}},"String");
 
-        s.addClassInfo("","DataQuery",new String[][]{{"queryCond","com.test.WSQueryBean"}},"com.test.DataQueryReturn[]");
+        s.addClassInfo("","DataQuery",new String[][]{{"queryCond","com.hadoop.WSQueryBean"}},"com.hadoop.DataQueryReturn[]");
         li.add(s);
 
         ServiceInfo s2 = new ServiceInfo();
         s2.setServiceName("he");
-        s2.addClassInfo("com.test.TestWS", "doSome2", new String[][]{{"name", "java.lang.String"},{"type", "java.lang.String"}}, "String");
-        s2.addClassInfo("com.test.TestWS","doSome",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
-        s2.addClassInfo("com.test.TestWS","doSome3",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
-        s2.addClassInfo("com.test.TestWS","doSome4",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
-        s2.addClassInfo("com.test.TestWS","doSome5",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
-        s2.addClassInfo("com.test.TestWS","doSome6",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
+        s2.addClassInfo("com.hadoop.TestWS", "doSome2", new String[][]{{"name", "java.lang.String"},{"type", "java.lang.String"}}, "String");
+        s2.addClassInfo("com.hadoop.TestWS","doSome",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
+        s2.addClassInfo("com.hadoop.TestWS","doSome3",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
+        s2.addClassInfo("com.hadoop.TestWS","doSome4",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
+        s2.addClassInfo("com.hadoop.TestWS","doSome5",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
+        s2.addClassInfo("com.hadoop.TestWS","doSome6",new String[][]{{"name","java.lang.String"},{"type", "java.lang.String"}},"String");
         li.add(s2);*/
 
         return serviceList;

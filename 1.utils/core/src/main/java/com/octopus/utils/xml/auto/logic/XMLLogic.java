@@ -742,6 +742,10 @@ public class XMLLogic extends XMLDoObject{
                 }
                 throw new ISPException(code,o.toString());
             }else{
+                Object o = env.getValueFromExpress(msg,this);
+                if(null != o && o instanceof String){
+                    msg = (String)o;
+                }
                 throw new ISPException(code,msg);
             }
         }
@@ -1002,6 +1006,15 @@ public class XMLLogic extends XMLDoObject{
         return false;
 
     }
+
+    /**
+     *
+     * @param root
+     * @param key  realActionName
+     * @param srvname relXMLName
+     * @param nodeid flowNodeId
+     * @return
+     */
     XMLMakeup findSuspendNode(XMLMakeup root,String key,String srvname,String nodeid){
         if(isThisNode(root,key,srvname,nodeid)){
             return root;
@@ -1130,7 +1143,7 @@ public class XMLLogic extends XMLDoObject{
                 for (XMLMakeup c : cs) {
                     if (c.getId().equals(curid) && (
                             (!c.getProperties().containsKey("nodeid") && !x.getProperties().containsKey("nodeid"))
-                    || (c.getProperties().getProperty("nodeid").equals(x.getProperties().getProperty("nodeid"))))){
+                    || (null != c.getProperties().getProperty("nodeid") && c.getProperties().getProperty("nodeid").equals(x.getProperties().getProperty("nodeid"))))){
                         is=true;
                         continue;
                     }else if(is){

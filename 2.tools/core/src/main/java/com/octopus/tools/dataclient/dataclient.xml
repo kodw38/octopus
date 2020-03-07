@@ -15,7 +15,7 @@
             <orm  datasources="gs" engines="db.mysql"/>
             <orm  datasources="local" engines="db.mysql"/>
             <orm  datasources="mysql" engines="db.mysql"/>
-            <orm  datasources="test" engines="db.oracle,db.mysql,file.properties"/>
+            <orm  datasources="hadoop" engines="db.oracle,db.mysql,file.properties"/>
         </orms>
     </router>
 

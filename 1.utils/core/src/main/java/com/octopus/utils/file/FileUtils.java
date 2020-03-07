@@ -863,6 +863,25 @@ public class FileUtils {
 
     public static boolean deleteDir(String path) {
         File dir = new File(path);
+        if(dir.exists()) {
+            if (dir.isDirectory()) {
+                String[] children = dir.list();
+                //递归删除目录中的子目录下
+                for (int i = 0; i < children.length; i++) {
+                    boolean success = deleteDir(dir + "/" + children[i]);
+                    if (!success) {
+                        return false;
+                    }
+                }
+            }
+            // 目录此时为空，可以删除
+            return dir.delete();
+        }else{
+            return false;
+        }
+    }
+    public static boolean deleteDirContent(String path) {
+        File dir = new File(path);
         if (dir.isDirectory()) {
             String[] children = dir.list();
             //递归删除目录中的子目录下
@@ -872,9 +891,10 @@ public class FileUtils {
                     return false;
                 }
             }
+        }else{
+            dir.delete();
         }
-        // 目录此时为空，可以删除
-        return dir.delete();
+        return true;
     }
 
 
@@ -974,8 +994,10 @@ public class FileUtils {
     public static void copyCurFloderFiles(String sourcepath,String targetpath,List li,String filterFilesName)throws Exception{
         File f = new File(sourcepath);
         if(f.isDirectory()){
+            File ta = new File(targetpath);
+            if(!ta.exists()) ta.mkdirs();
             File[] fs = f.listFiles();
-            if(null != fs){
+            if(null != fs && fs.length>0){
                 String s =null;
                 String t= null;
                 for(int k=0;k<fs.length;k++){
@@ -988,8 +1010,12 @@ public class FileUtils {
                         	}                            
                         }
                         if(isin){
+                            s = s.replaceAll("\\\\","/");
+                            sourcepath = sourcepath.replaceAll("\\\\","/");
+                            targetpath = targetpath.replaceAll("\\\\","/");
                             t = s.replace(sourcepath,targetpath);
-                            li.add(s+"="+t);
+                            if(null != li)
+                                li.add(s+"="+t);
                             copyFile(s,t);
                         }
                     }
@@ -1186,24 +1212,33 @@ public class FileUtils {
 
 
     public static void copyFile(File in, File out) throws Exception {
-        FileInputStream fis = new FileInputStream(in);
-        if(!out.exists()){
-            makeFilePath(out.getPath());
+        FileInputStream fis = null;
+        FileOutputStream fos = null;
+        try {
+            fis = new FileInputStream(in);
+            if (!out.exists()) {
+                makeFilePath(out.getPath());
+            }
+            if (out.isDirectory()) {
+                out = new File(out.getPath() + "/" + in.getName());
+                fos = new FileOutputStream(out);
+            } else
+                fos = new FileOutputStream(out);
+            int len = fis.available();
+            if (len > 0) {
+                byte[] buf = new byte[len];
+                int i = 0;
+                while ((i = fis.read(buf, 0, len)) != -1) {
+                    fos.write(buf);
+                }
+            }
+        }finally {
+            if(null !=fis)
+            fis.close();
+            if(null!=fos)
+            fos.close();
         }
-        FileOutputStream fos=null;
-        if(out.isDirectory()){
-            out = new File(out.getPath()+"/"+in.getName());
-            fos = new  FileOutputStream(out);
-        }else
-            fos = new FileOutputStream(out);
-        int len = fis.available();
-        byte[] buf = new byte[len];
-        int i = 0;
-        while ((i = fis.read(buf,0,len)) != -1) {
-            fos.write(buf);
-        }
-        fis.close();
-        fos.close();
+
     }
 
     public static String[] getJavaFileSetFunctions(String filePath) throws Exception {

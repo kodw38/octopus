@@ -15,4 +15,5 @@ public interface II18NItem {
     public Object getLocaleValue(Properties locale);
     public Object getSystemValue(Object localeValue,Properties locale);
     public Object exportAll();
+    public Object changeFrom(String typeValue,Object obj);
 }

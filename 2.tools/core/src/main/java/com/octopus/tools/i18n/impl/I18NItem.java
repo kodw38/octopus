@@ -43,7 +43,12 @@ public class I18NItem extends XMLObject implements II18NItem {
 
     @Override
     public void initial() throws Exception {
-
+        if(type==null && locale==null){
+            String id = getXML().getId();
+            String[] ids = id.split("\\|");
+            type=ids[0];
+            locale=ids[1];
+        }
     }
 
 
@@ -124,5 +129,13 @@ public class I18NItem extends XMLObject implements II18NItem {
 
     public Object exportAll(){
         return existstyle.export(cache.getAll());
+    }
+
+    @Override
+    public Object changeFrom(String typeValue, Object obj) {
+        if(StringUtils.isNotBlank(typeValue) && null != obj) {
+            return null;
+        }
+        return null;
     }
 }

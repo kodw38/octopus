@@ -14,7 +14,7 @@
         <listener clazz="" seq=""/>
     </listeners>
 
-    <cache key="cache.test" xmlid="cache">
+    <cache key="cache.hadoop" xmlid="cache">
         <!-- 缓存监听 -->
         <listeners>
              <listener clazz="" seq=""/>

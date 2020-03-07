@@ -211,7 +211,7 @@ public class SessionData extends XMLDoObject {
                     }
                 }
                 if(log.isDebugEnabled()){
-                    log.debug("sessionId:"+sessionid);
+                    log.debug("sessionId:"+sessionid+",login is "+t+", session:"+par.getSession()+","+par.getResult());
                 }
                 //get user info and set session, session will been set each request parameters  // remove && StringUtils.isNotBlank(sessionid)
                 if((null != par.getResult() || (null != t && t)) && null != par.getSession() ){

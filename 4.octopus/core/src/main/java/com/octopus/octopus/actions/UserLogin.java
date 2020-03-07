@@ -84,7 +84,7 @@ public class UserLogin extends XMLDoObject {
             if(null == configuserauth){
                 log.info("not set configuserauth");
             }
-            if(null != configuserauth){
+            if(null != configuserauth && null != getConfigUserAuth()){
                 boolean is=  checkUser(input,getConfigUserAuth());
                 if(is) return is;
             }
@@ -180,10 +180,13 @@ public class UserLogin extends XMLDoObject {
                 }
                 return map;
             }
-            if(null != configuserauth){
-                Object o = getSrvs(getConfigUserAuth(),input,userName);
-                if(null != o){
-                    return o;
+            if(null != configuserauth && StringUtils.isNotBlank(configuserauth)){
+                XMLDoObject auth =getConfigUserAuth();
+                if(null != auth) {
+                    Object o = getSrvs(auth, input, userName);
+                    if (null != o) {
+                        return o;
+                    }
                 }
             }
             if(null != userauth){

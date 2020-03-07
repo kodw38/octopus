@@ -3,7 +3,7 @@
    mysql routing http://dev.mysql.com/doc/mysql-router/en/mysql-router-general-features-connection-routing.html
    mysql:http://dev.mysql.com/doc/connector-j/en/connector-j-usagenotes-j2ee-concepts-managing-load-balanced-connections.html
    jdbc:mysql:loadbalance://[host1][:port],[host2][:port][,[host3][:port]]...[/[database]] » [?propertyName1=propertyValue1[&propertyName2=propertyValue2]...]
-    jdbc:mysql:replication://master,slave1,slave2,slave3/test
+    jdbc:mysql:replication://master,slave1,slave2,slahadooptest
 -->
 <dataclient clazz="com.octopus.tools.dataclient.v2.DataClient2" base="mysql">
     <defs>
@@ -79,7 +79,7 @@
         </datasource>
 
         <datasource key="deploy" xmlid="excelsource" desc="Excel Store ">
-            <property name="url" value="c:/log/test.xlsx" />
+            <property name="url" value="c:/log/hadoop.xlsx" />
         </datasource>
     </datasources>
     <sequence key="sequence" clazz="com.octopus.tools.dataclient.v2.DefaultSequence" table="isp_sequence"/>

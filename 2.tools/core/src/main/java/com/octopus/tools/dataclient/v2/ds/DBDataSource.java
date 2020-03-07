@@ -966,8 +966,9 @@ public class DBDataSource extends XMLDoObject implements IDataSource {
         long l = System.currentTimeMillis();
         if(sql.startsWith("select") || sql.startsWith("SELECT")){
             Object r=null;
+            log.info("execute sql:" + sql);
             if(null != env)
-                ret= querySql(null!=env?env.getTradeId():null,sql,env.getReadOnlyParameter(),start,end);
+                ret = querySql(null != env ? env.getTradeId() : null, sql, env.getReadOnlyParameter(), start, end);
             else
                 ret= querySql(null!=env?env.getTradeId():null,sql,new HashMap(),start,end);
         }else

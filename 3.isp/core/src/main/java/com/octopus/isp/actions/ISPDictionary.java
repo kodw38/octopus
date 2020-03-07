@@ -214,6 +214,9 @@ public class ISPDictionary extends XMLDoObject{
                         Map id=null;
                         if(null != input.get("desc")){
                             Map d = StringUtils.convert2MapJSONObject((String)input.get("desc"));
+                            if(d.get("name").equals("HallQueue")){
+                                System.out.println();
+                            }
                             id = Desc.getInvokeDescStructure(d);
                         }
                         if(log.isDebugEnabled())
