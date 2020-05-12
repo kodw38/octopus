@@ -1,0 +1,13 @@
+{"name":"HDFSClient"
+,"opType":"system"
+,"path":"file:../data/sv/"
+,"package":"com.system.hadoop.hdfs"
+,"config":{uri:{@type:'string',desc:'hdfs://localhost:9000'}}
+,"input":{op:{@enum:['getOutputStream','uploadFile','list','delete','listFiles','listAllFiles'],@type:'string'},remoteFile:{@type:'string',@desc:'file path in hdfs'},localFile:{@type:'string',@desc:'file path in local'}}
+,"date":"2019-05-4 12:07:21"
+,"redo":""
+,"author":"Root"
+,"desc":"This is a HDFSClient wrap in TB , need a Hadoop server running and config connection info .support Files get and put in hdfs"
+,"body":""
+,"error":{},"depend":{},"original":{},"scene":{}
+,"createby":"WF","example":{},"busiArchitecture":{},"techArchitecture":{}}

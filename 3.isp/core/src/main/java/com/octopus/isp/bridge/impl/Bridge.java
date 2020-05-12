@@ -9,6 +9,7 @@ import com.octopus.utils.alone.SNUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.exception.Logger;
 import com.octopus.utils.flow.IFlow;
+import com.octopus.utils.time.DateTimeUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
@@ -158,8 +159,16 @@ public class Bridge extends XMLDoObject implements IBridge {
     public void doInitial() throws Exception {
         startTime = new Date();
     }
-    public Date getStartTime(){
-        return startTime;
+    public String getStartTime(){
+        try {
+            if (null != contexts) {
+                return contexts.getDefaultContext().getSystemDate(startTime.getTime());
+            }else {
+                return DateTimeUtils.date2String(startTime);
+            }
+        }catch (Exception e) {
+            return DateTimeUtils.date2String(startTime);
+        }
     }
 
     @Override

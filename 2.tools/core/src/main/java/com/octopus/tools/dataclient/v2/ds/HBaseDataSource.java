@@ -18,6 +18,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by robai on 2017/11/6.
@@ -27,6 +29,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
     Connection connection=null;
     TableContainer tablecontainer;
     HashMap<String , List<Map>> tradeDataList = new HashMap();
+    String familyName="data";
     public HBaseDataSource(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
         if(null != xml) {
@@ -45,7 +48,9 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
         try {
             //log.error("classloader:"+this.getClass().getClassLoader());
             //log.error("classloader:"+ConnectionFactory.class.getClassLoader());
-            connection = ConnectionFactory.createConnection(configuration);
+            ExecutorService executor = Executors.newFixedThreadPool(20);
+            connection = ConnectionFactory.createConnection(configuration,executor);
+
             //dropTable("FLOW_INTERRUPT_DATA");
             //createTable("FLOW_INTERRUPT_DATA","id","data","svinfo");
         }catch (Exception e){
@@ -76,9 +81,12 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
 
     @Override
     public Object addRecord(XMLParameter env, String tradeId, String taskId, String file, Map<String, Object> fieldValues) throws Exception {
-        if(null != tablecontainer && null != fieldValues){
+        /*if(null != tablecontainer && null != fieldValues){
             String kr = tablecontainer.getPkField(file);
             String rowKey = (String)fieldValues.get(kr);
+            if(StringUtils.isBlank(rowKey)){
+                rowKey=getNextSequence(file)+"";
+            }
             Table table=null;
             try {
                 table = connection.getTable(TableName.valueOf(file));
@@ -87,7 +95,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                 while(its.hasNext()) {
                     String c = (String)its.next();
                     String o = (String)fieldValues.get(c);
-                    put.addColumn(Bytes.toBytes(c), Bytes.toBytes(c), Bytes.toBytes(o));
+                    put.addColumn(familyFieldsName, Bytes.toBytes(c), Bytes.toBytes(o));
                 }
                 table.put(put);
                 return true;
@@ -98,23 +106,71 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
 
         }else{
             return false;
-        }
-
+        }*/
+        return null;
     }
 
     @Override
     public boolean addRecords(XMLParameter env, String tradeId, String taskId, String file, List<Map<String, Object>> fieldValues) throws Exception {
-        throw new Exception("not support addRecords method");
+        if(null != tablecontainer && null != fieldValues){
+            String kr = tablecontainer.getPkField(file);
+            Table table = null;
+            try {
+                table = connection.getTable(TableName.valueOf(file));
+                List list = new LinkedList();
+                for(Map<String,Object> m:fieldValues) {
+                    String rowKey = (String) m.get(kr);
+                    if(StringUtils.isBlank(rowKey)){
+                        rowKey=getNextSequence(file)+"";
+                    }
+                    Put put = new Put(Bytes.toBytes(rowKey));
+                    Iterator its = m.keySet().iterator();
+                    while (its.hasNext()) {
+                        String c = (String) its.next();
+                        Object o =  m.get(c);
+
+                        put.addColumn(familyName.getBytes(), Bytes.toBytes(c), toBytes(o));
+                    }
+                    list.add(put);
+                }
+                table.put(list);
+                return true;
+            }finally {
+                if(null != table)
+                    table.close();
+            }
+
+        }else{
+            return false;
+        }
+    }
+
+    byte[] toBytes(Object o){
+        if(null ==o){
+            return Bytes.toBytes("");
+        }else if(o instanceof String) {
+            return Bytes.toBytes((String)o);
+        }else if(o instanceof Integer){
+            return Bytes.toBytes((Integer) o);
+        }else if(o instanceof Double){
+            return Bytes.toBytes((Double) o);
+        }else if(o instanceof Long){
+            return Bytes.toBytes((Long) o);
+        }else{
+            return Bytes.toBytes(o.toString());
+        }
     }
 
     @Override
     public boolean insertRecord(XMLParameter env, String tradeId, String taskId, String file, Map<String, Object> fieldValues, int insertPosition) throws Exception {
-        throw new Exception("not support insertRecord method");
+        addRecord(env,tradeId,taskId,file,fieldValues);
+        return true;
     }
 
     @Override
     public boolean insertRecords(XMLParameter env, String tradeId, String taskId, String file, List<Map<String, Object>> fieldValues, int insertPosition) throws Exception {
-        throw new Exception("not support insertRecords method");
+        addRecords(env,tradeId,taskId,file,fieldValues);
+        return true;
     }
 
     @Override
@@ -248,7 +304,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                         throw new Exception("the pk "+id+" existed in "+table);
                     }
                 }else if(datas instanceof List){
-                    List<HbaseDataEntity> list = getListData((List)datas);
+                    List<HbaseDataEntity> list = getListData(table,(List)datas);
                     insertDataList(env,xmlid,list);
                 }else{
                     throw new Exception(this.getClass().getName()+" not support "+datas.getClass().getName());
@@ -260,7 +316,6 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
             }else if("upadd".equals(op)){
 
             }else if("query".equals(op)){
-
                 List<HbaseConditionEntity> dc = getConditions((Map) conds);
                 List<HbaseDataEntity> ret = queryDataByConditions(null, table, dc,fields);
                 return getResult(ret);
@@ -272,7 +327,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
         return null;
     }
 
-    static List<HbaseConditionEntity> getConditions(Map map){
+    List<HbaseConditionEntity> getConditions(Map map){
         if(null != map && map.size()>0) {
             List ret = new ArrayList();
             Iterator its = map.keySet().iterator();
@@ -281,7 +336,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                 String v = (String) map.get(k);
                 HbaseConditionEntity t = new HbaseConditionEntity();
                 t.setColumn(Bytes.toBytes(k));
-                t.setFamilyColumn(Bytes.toBytes(k));
+                t.setFamilyColumn(Bytes.toBytes(familyName));
                 t.setValue(Bytes.toBytes(v));
                 t.setCompareOp(CompareFilter.CompareOp.EQUAL);
                 ret.add(t);
@@ -332,8 +387,21 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
         return m;
     }
 
-    List<HbaseDataEntity> getListData(List list)throws Exception{
-        throw new Exception("not support now");
+    List<HbaseDataEntity> getListData(String table,List<Map> list)throws Exception{
+        if(null != list){
+            List ret = new ArrayList();
+            for(Map m :list){
+                HbaseDataEntity entity = new HbaseDataEntity();
+                entity.setTableName(table);
+                entity.setMobileKey(getNextSequence(table)+"");
+                HashMap data = new HashMap();
+                data.put(familyName,m);
+                entity.setColumns(data);
+                ret.add(entity);
+            }
+            return ret;
+        }
+        return null;
     }
 
     @Override
@@ -386,9 +454,9 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
     /**
      * 创建表
      * @param tableName 表名
-     * @param familyNames 列族名
+     * @param fieldsNames 列族名
      * */
-    public void createTable(String tableName, String... familyNames) throws IOException {
+    public void createTable(String tableName, String... fieldsNames) throws IOException {
         Admin admin = connection.getAdmin();
         if (admin.tableExists(TableName.valueOf(tableName))) {
             log.error("table "+tableName +" has existed");
@@ -396,9 +464,12 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
         }
         //通过HTableDescriptor类来描述一个表，HColumnDescriptor描述一个列族
         HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableName));
-        for (String familyName : familyNames) {
-            tableDescriptor.addFamily(new HColumnDescriptor(familyName));
-        }
+        /*for (String fieldName : fieldsNames) {
+            HColumnDescriptor column = new HColumnDescriptor(fieldName);
+            column.setMaxVersions(1);
+
+        }*/
+        tableDescriptor.addFamily(new HColumnDescriptor(familyName));
         admin.createTable(tableDescriptor);
     }
     /**
@@ -453,7 +524,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
             TableName tableName = TableName.valueOf(name);
             htable = connection.getTable(tableName);
             HashMap tm = new HashMap();
-            HColumnDescriptor[] columnFamilies = htable.getTableDescriptor().getColumnFamilies();// 获取所有的列名
+            HColumnDescriptor[] columnFamilies = htable.getTableDescriptor().getColumnFamilies();// 获取所有的列族
             for (HColumnDescriptor hColumnDescriptor : columnFamilies) {
                 String familyName = hColumnDescriptor.getNameAsString();
                 Map<String, String> columnNameValueMap = columnValues.get(familyName);
@@ -590,7 +661,7 @@ public class HBaseDataSource extends XMLDoObject implements IDataSource {
                 for (String columnfamily : entity.getColumns().keySet()) {
                     for (String column : entity.getColumns().get(columnfamily).keySet()) {
                         if(data.containsKey(column)) {
-                            put.addColumn(columnfamily.getBytes(), column.getBytes(), Bytes.toBytes((String) data.get(column)));
+                            put.addColumn(familyName.getBytes(), column.getBytes(), Bytes.toBytes((String) data.get(column)));
                             log.debug("update set value="+data.get(column)+" where columnfamily="+columnfamily+" and column="+column);
                             d.put(column,data.get(column));
                         }

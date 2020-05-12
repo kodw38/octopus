@@ -140,6 +140,7 @@ public class XMLLogic extends XMLDoObject{
         p.addParameter("${requestHeaders}",par.getParameter("${requestHeaders}"));
         p.addParameter("${requestProperties}",par.getParameter("${requestProperties}"));
         p.addParameter("${insid}",par.getParameter("${insid}"));
+        p.addParameter("${env}",par.getParameter("${env}"));
         if(null !=inmap) {
             inmap.remove("exe_id");
             inmap.remove("exe_xml");

@@ -81,7 +81,7 @@ public class SystemAction extends XMLDoObject {
         if(StringUtils.isNotBlank(xml.getProperties().getProperty("simreturndir"))) {
             simreturndir = (String) getEmptyParameter().getValueFromExpress(xml.getProperties().getProperty("simreturndir"),this);
         }
-
+        //init local services after this instance launch up
         addSystemLoadInitAfterAction(this,"init",null,null);
     }
     public void doInitial(){
@@ -95,39 +95,17 @@ public class SystemAction extends XMLDoObject {
                 map.put("path", traceFlagPath);
                 srvhandler.doSomeThing(null, null, map, null, null);
             }
-            initRegInfo(false);
-            if (StringUtils.isNotBlank(getXML().getProperties().getProperty("initpublish"))) {
-                Object o = getEmptyParameter().getValueFromExpress(getXML().getProperties().getProperty("initpublish"), this);
-                if (o instanceof List) {
-                    initpublish = (List) o;
-                }
-            }
-            if (null != initpublish) {
-                for (String s : initpublish) {
-                    try {
-                        Map m = getDescStructure(s);
-                        if (null != m) {
-                            String p = getServicePath((String)m.get("opType"),(String)m.get("package"),(String)m.get("name"));
-                            Map map = new HashMap();
-                            map.put("op","isExist");
-                            map.put("path",p);
-                            Object o = srvhandler.doSomeThing(null, null, map, null, null);
-                            if(null != o && o instanceof Boolean && (Boolean)o) {
-                                map.put("op", "getData");
-                                String txt = (String)srvhandler.doSomeThing(null, null, map, null, null);
-                                Map body = StringUtils.convert2MapJSONObject((String) txt);
-                                if(DateTimeUtil.getDate((String)body.get("date")).before(DateTimeUtil.getDate((String)m.get("date")))){
-                                    publishAddUpdateService(null, m);
-                                    log.info("init publish " + s);
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
+            //register server infor to zk
+            //initRegInfo(false);
 
-                    }
-                }
-            }
-
+            //if there are published services need to update
+            updatePublishedSrvs();
+            //load all services to local
+            //refreshSrvInfo();
+            String s = getXML().getProperties().getProperty("refreshIntervalTime");
+            String d = getXML().getProperties().getProperty("refreshDelayTime");
+            if(StringUtils.isBlank(s)) s="600000";
+            if(StringUtils.isBlank(d)) s="10000";
             Timer t = new Timer();
             t.schedule(new TimerTask() {
                 @Override
@@ -135,49 +113,92 @@ public class SystemAction extends XMLDoObject {
 
                     try{
                         log.error("start to reload services status from zk......");
+                        //because server info in zk is temporary, so it may happen session timeout and lost , so need to register
                         initRegInfo(true);
-                    }catch (Exception e){
-                        e.printStackTrace();
-                    }
-                    try {
                         //load all services to local
-                        Map<String, List<Map>> srvs = new HashMap();
-                        Map<String, List<Map>> li = getSrvInfoRelIns(srvs);// when ins remove or srv add delete will notification this store
-                        if (null != li) {
-                            if (null != srvIdRelIns) {
-                                synchronized (srvIdRelIns) {
-                                    srvIdRelIns = li;
-                                }
-                            } else {
-                                srvIdRelIns = li;
-                            }
-                        }
-                        if (null != srvInfoInCenter) {
-                            synchronized (srvInfoInCenter) {
-                                srvInfoInCenter = srvs;
-                            }
-                        } else {
-                            srvInfoInCenter = srvs;
-                        }
+                        refreshSrvInfo();
                     }catch (Exception e){
                         log.error("",e);
                     }
                 }
-            },60000,300000);
+            },Integer.valueOf(d),Integer.valueOf(s));
         }catch (Exception x){
             log.error("",x);
         }
     }
+    //update published srvs in zk
+    void updatePublishedSrvs()throws Exception{
+        if (StringUtils.isNotBlank(getXML().getProperties().getProperty("initpublish"))) {
+            Object o = getEmptyParameter().getValueFromExpress(getXML().getProperties().getProperty("initpublish"), this);
+            if (o instanceof List) {
+                initpublish = (List) o;
+            }
+        }
+        if (null != initpublish) {
+            for (String s : initpublish) {
+                try {
+                    Map m = getDescStructure(s);
+                    if (null != m) {
+                        String p = getServicePath((String)m.get("opType"),(String)m.get("package"),(String)m.get("name"));
+                        Map map = new HashMap();
+                        map.put("op","isExist");
+                        map.put("path",p);
+                        Object o = srvhandler.doSomeThing(null, null, map, null, null);
+                        if(null != o && o instanceof Boolean && (Boolean)o) {
+                            map.put("op", "getData");
+                            String txt = (String)srvhandler.doSomeThing(null, null, map, null, null);
+                            Map body = StringUtils.convert2MapJSONObject((String) txt);
+                            //if local service is after zk services , zk service will be updated
+                            if(DateTimeUtil.getDate((String)body.get("date")).before(DateTimeUtil.getDate((String)m.get("date")))){
+                                publishAddUpdateService(null, m);
+                                log.info("init publish " + s);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
 
+                }
+            }
+        }
+    }
+    //re get all services related with instance name
+    void refreshSrvInfo()throws Exception{
+        Map<String, List<Map>> srvs = new HashMap();
+        Map<String, List<Map>> li = getSrvInfoRelIns(srvs);// when ins remove or srv add delete will notification this store
+        if (null != li) {
+            if (null != srvIdRelIns) {
+                synchronized (srvIdRelIns) {
+                    srvIdRelIns = li;
+                }
+            } else {
+                srvIdRelIns = li;
+            }
+        }
+        if (null != srvInfoInCenter) {
+            synchronized (srvInfoInCenter) {
+                srvInfoInCenter = srvs;
+            }
+        } else {
+            srvInfoInCenter = srvs;
+        }
+    }
+    //register this server to zk
     void initRegInfo(boolean isReCon){
         try {
             if(srvhandler==null)return ;
             log.debug("java.library.path\n"+System.getProperty("java.library.path"));
 
 
-            //reg this instance info to zk
+            //register this instance info to zk
             if(StringUtils.isNotBlank(serverspath)){
-                Bridge root = (Bridge)getObjectById("bridge");
+                XMLObject rt = getRoot();
+                Bridge root=null;
+                if(null != rt && rt instanceof Bridge){
+                    root = (Bridge) rt;
+                }
+                if(null == root) {
+                    root = (Bridge) getObjectById("bridge");
+                }
                 if(null != root){
                     HashMap map = new HashMap();
                     String id = root.getInstanceId();
@@ -186,7 +207,9 @@ public class SystemAction extends XMLDoObject {
                     Boolean b = (Boolean)srvhandler.doSomeThing(null, null, map, null, null);
                     XMLParameter env = getEmptyParameter();
                     if(null != b && !b) {
+                        //if this instance name did not exist in zk, reg this server
                         if (!b || id.contains("CONSOLE") || isReCon) {
+                            //if did not exist in zk ,or name is CONSILE or reconnection
                             if(id.contains("CONSOLE")){
                                 try {
                                     Thread.sleep(2000);
@@ -210,7 +233,7 @@ public class SystemAction extends XMLDoObject {
                             Map properties = getEnvProperties();
                             String webport= (String)properties.get("webport");
                             String wshost = (String)properties.get("ws_host");
-
+                            //if web port from system.property
                             String twp = System.getProperty("tb-webport");
                             if(StringUtils.isNotBlank(twp)){
                                 webport =twp;
@@ -219,7 +242,11 @@ public class SystemAction extends XMLDoObject {
                             if(StringUtils.isNotBlank(twsp)){
                                 wshost =twsp;
                             }
-                            map.put("data", "{\"insId\":\""+id+"\",\"ip\":\"" + NetUtils.getip() +"\",\"port\":\""+webport+"\",\"ws_host\":\""+wshost+"\",\"loginuser\":\""+properties.get("logUserName")+"\",\"loginpwd\":\""+properties.get("logPassword")+"\",\"jmxRemotePort\":\""+System.getProperty("com.sun.management.jmxremote.port")+"\",\"pid\":\"" + JVMUtil.getPid() + "\",\"logPath\":\""+logpath+"\"}");
+                            String startTime = "";
+                            if(null !=root){
+                                startTime = root.getStartTime();
+                            }
+                            map.put("data", "{\"insId\":\""+id+"\",\"ip\":\"" + NetUtils.getip() +"\",\"port\":\""+webport+"\",\"ws_host\":\""+wshost+"\",\"loginuser\":\""+properties.get("logUserName")+"\",\"loginpwd\":\""+properties.get("logPassword")+"\",\"jmxRemotePort\":\""+System.getProperty("com.sun.management.jmxremote.port")+"\",\"pid\":\"" + JVMUtil.getPid() + "\",\"startTime\":\""+startTime+"\",\"timestamp\":\""+System.currentTimeMillis()+"\",\"logPath\":\""+logpath+"\"}");
                             srvhandler.doSomeThing(null, null, map, null, null);
                             log.info("syn center info,register ins:" + map.get("data"));
 
@@ -284,7 +311,6 @@ public class SystemAction extends XMLDoObject {
 
                                 if (!getSrvs.containsKey(name)) getSrvs.put(name, new ArrayList());
                                 getSrvs.get(name).add(m);
-
                                 updateLocalCacheOfRemoteDesc(tempLocalCache,name,(String)m.get("INS_ID"),"ADD");
 
                             }
@@ -895,6 +921,10 @@ public class SystemAction extends XMLDoObject {
         return null;
     }
 
+    /**
+     * get all srv info list for showing in srv flow page
+     * @return map<srvName,srvDesc>
+     */
     List<Map> getServiceListFromZk(){
         try {
             if (null != servicepath) {

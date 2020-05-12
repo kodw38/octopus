@@ -742,6 +742,36 @@ public class StringUtils {
     }
 
     /**
+     *
+     * @param str
+     * @param searchStr
+     * @return
+     */
+    public static boolean contains(String str, String[] searchStr) {
+        if (str == null || searchStr == null) {
+            return false;
+        }
+        int[] nn =new int[searchStr.length];
+        int[] nl =new int[searchStr.length];
+        for(int i=0;i<searchStr.length;i++)
+            nl[i]=str.length()-searchStr[i].length();
+        boolean[] nb=new boolean[searchStr.length];
+        int sourceCount= str.length();
+        for (int i = 0; i < sourceCount; i++) {
+            for(int j=0;j<searchStr.length;j++){
+                if(i<=nl[j] && searchStr[j].charAt(nn[j])==str.charAt(i)){
+                    nn[j]++;
+                    if(nn[j]==searchStr[j].length())return true;
+                }else{
+                    nn[j]=0;
+                }
+            }
+
+        }
+        return false;
+    }
+
+    /**
      * <p>Finds the n-th index within a String, handling <code>null</code>.
      * This method uses {@link String#indexOf(String)}.</p>
      *
@@ -8142,6 +8172,52 @@ public class StringUtils {
                 return t+sub;
             }
         }
-
     }
+
+    /**
+     *
+     * txt中是否包含keys中的某个字符串
+     * 一个性能的测试数据
+     * 用IndexOf 89ms
+     * 用这个方法
+     *
+     * @param txt
+     * @param keys
+     * @return
+     */
+    /*public static boolean contains(String txt,String[] keys){
+        if(null ==txt|| null == keys)return false;
+        int minlen=Integer.MAX_VALUE,maxlen=0;
+        for(int i=0;i<keys.length;i++){
+            if(keys[i].length()>maxlen) maxlen=keys[i].length();
+            if(keys[i].length()<minlen) minlen=keys[i].length();
+        }
+        String[][] temp = new String[maxlen+1][];
+        for(int i=0;i<keys.length;i++){
+            if(temp[keys[i].length()]==null)
+                temp[keys[i].length()]=new String[]{keys[i]};
+            else{
+                temp[keys[i].length()]=Arrays.copyOf(temp[keys[i].length()], temp[keys[i].length()].length+1);
+                temp[keys[i].length()][temp[keys[i].length()].length-1]=keys[i];
+            }
+        }
+
+        int continueCount=0;
+        char[] t = new char[maxlen];
+        for(int i=0;i<txt.length();i++){
+            t[i]=txt.charAt(i);
+            continueCount++;
+            if(continueCount<minlen)continue;
+
+            if(temp[continueCount]!=null){
+                //有这个长度的key，需要判断这个长度下的keys是否匹配
+                for(int j=0;j<temp[continueCount].length;j++) {
+                    int m = 0;
+                    for (; m < continueCount && temp[continueCount][j].charAt(m) == t[m]; m++) ;
+                    if (m == continueCount) return true;
+                }
+            }
+
+        }
+    }*/
 }

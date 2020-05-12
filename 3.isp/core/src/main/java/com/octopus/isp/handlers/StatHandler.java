@@ -1,6 +1,7 @@
 package com.octopus.isp.handlers;
 
 import com.octopus.isp.bridge.impl.Bridge;
+import com.octopus.isp.ds.Contexts;
 import com.octopus.isp.ds.RequestParameters;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
@@ -9,11 +10,15 @@ import com.octopus.utils.cls.proxy.IMethodAddition;
 import com.octopus.utils.net.NetUtils;
 import com.octopus.utils.si.jvm.JVMUtil;
 import com.octopus.utils.thread.ExecutorUtils;
+import com.octopus.utils.time.DateTimeUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
 import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
+import jdk.internal.util.EnvUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
 import java.util.*;
@@ -23,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Created by kod on 2017/3/26.
  */
 public class StatHandler extends XMLDoObject implements IMethodAddition {
+    static transient Log log = LogFactory.getLog(StatHandler.class);
     static Map<String,AtomicLong> INVOKE_COUNT=new HashMap();//调用成功次数
     static Map<String,AtomicLong> INVOKE_COST_TIME=new HashMap();//调用耗费总时常 mic second
     static Map<String,Long> INVOKE_TIME_TEMP=new HashMap();//调用耗费总时常 mic second
@@ -127,21 +133,26 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
     }
 
     void setStatToCenter(XMLObject obj,Map desc,String id,boolean isable) throws Exception {
-        String pack = (String)desc.get("package");
-        String redo=null;
+        String pack = (String) desc.get("package");
+        String redo = null;
         boolean isobj = false;
-        if(null != desc.get("redo") && desc.get("redo") instanceof String) {
+        if (null != desc.get("redo") && desc.get("redo") instanceof String) {
             redo = (String) desc.get("redo");
         }
-        if(null != desc.get("redo") && desc.get("redo") instanceof Map) {
+        if (null != desc.get("redo") && desc.get("redo") instanceof Map) {
             redo = ObjectUtils.convertMap2String((Map) desc.get("redo"));
             isobj = true;
         }
-        String path = (String)desc.get("path");
-        String opType = (String)desc.get("opType");
-        String share = (String)desc.get("share");
-        String date = (String)desc.get("date");
-        String author = (String)desc.get("author");
+        String path = (String) desc.get("path");
+        String opType = (String) desc.get("opType");
+        String share = (String) desc.get("share");
+        String date = (String) desc.get("date");
+        String author = (String) desc.get("author");
+        String loadDate=null;
+        if (null != ((Contexts) getObjectById("contexts")) && null !=((Contexts) getObjectById("contexts")).getDefaultContext()){
+            loadDate = ((Contexts) getObjectById("contexts")).getDefaultContext().getSystemDate();
+        }
+        if(null == loadDate)loadDate= DateTimeUtils.getCurrDate();
         String isalarm="";
         if(obj instanceof XMLDoObject) {
             isalarm = String.valueOf(((XMLDoObject)obj).isAlarm());
@@ -151,8 +162,10 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
         in.put("op", "onlySetData");
         String pid = JVMUtil.getPid();
         in.put("path", logpathparent + "/." + instanceId + "." + id + ".");
-        in.put("data", "{\"IP\":\"" + ip + "\",\"package\":\""+pack+ "\",\"isable\":\""+String.valueOf(isable)+"\",\"redo\":"+(isobj?redo:("\""+redo+ "\""))+",\"share\":\""+share+"\",\"author\":\""+author+ "\",\"isalarm\":\""+isalarm+ "\",\"path\":\""+path+ "\",\"opType\":\""+opType+ "\",\"date\":\""+date+"\",\"INS_ID\":\"" + instanceId + "\" ,\"INS_STATUS\":\"RUNNING\",\"PID\":" + pid + ",\"INVOKE_COUNT\":" + INVOKE_COUNT.get(id) + ",\"INVOKE_ERROR_COUNT\":" + INVOKE_ERROR_COUNT.get(id) + ",\"INVOKE_COST_TIME\":" + INVOKE_COST_TIME.get(id) + ",\"INVOKE_SIZE\":" + INVOKE_THROUGH_DATA_SIZE.get(id) + "}");
+        in.put("data", "{\"IP\":\"" + ip + "\",\"package\":\""+pack+ "\",\"isable\":\""+String.valueOf(isable)+"\",\"redo\":"+(isobj?redo:("\""+redo+ "\""))+",\"share\":\""+share+"\",\"author\":\""+author+ "\",\"isalarm\":\""+isalarm+ "\",\"path\":\""+path+ "\",\"opType\":\""+opType+ "\",\"date\":\""+date+"\",\"INS_ID\":\"" + instanceId + "\" ,\"INS_STATUS\":\"RUNNING\",\"PID\":" + pid +",\"REGISTER_DATE\":\""+loadDate+"\",\"INVOKE_COUNT\":" + INVOKE_COUNT.get(id) + ",\"INVOKE_ERROR_COUNT\":" + INVOKE_ERROR_COUNT.get(id) + ",\"INVOKE_COST_TIME\":" + INVOKE_COST_TIME.get(id) + ",\"INVOKE_SIZE\":" + INVOKE_THROUGH_DATA_SIZE.get(id) + "}");
         ExecutorUtils.work(loghandler, "doSomeThing", new Class[]{String.class, XMLParameter.class, Map.class, Map.class, Map.class}, new Object[]{null, null, in, null, null});
+        log.debug("register service "+id+" to zookeeper "+in.get("path"));
+
     }
     void initSetCount(String id,Map d){
         setINVOKE_COUNTData(d,id,"INVOKE_COUNT");
@@ -460,6 +473,7 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
                                 s = ObjectUtils.convertMap2String(sm);
                                 HashMap mt = new HashMap();
                                 mt.put("op", "onlySetData");
+                                mt.put("isLeaderDo", "true");
                                 mt.put("path", logpathparent+"/"+k);
                                 mt.put("data",s);
                                 loghandler.doSomeThing(null,null,mt,null,null);
@@ -513,6 +527,7 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
                                             s = ObjectUtils.convertMap2String(sm);
                                             HashMap mt = new HashMap();
                                             mt.put("op", "onlySetData");
+                                            mt.put("isLeaderDo", "true");
                                             mt.put("path", logpathparent + "/" + k);
                                             mt.put("data", s);
                                             loghandler.doSomeThing(null, null, mt, null, null);

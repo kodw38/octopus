@@ -3,6 +3,8 @@ package com.octopus.tools.pubsub;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.cls.ClassUtils;
+import com.octopus.utils.net.NetUtils;
+import com.octopus.utils.si.jvm.JVMUtil;
 import com.octopus.utils.thread.ExecutorUtils;
 import com.octopus.utils.thread.ds.InvokeTask;
 import com.octopus.utils.thread.ds.InvokeTaskByObjName;
@@ -36,6 +38,7 @@ public class ZkClientListen extends XMLLogic {
     List<String> currentList = new ArrayList();
     static Map<String,List<InvokeTaskByObjName>> envHandles = new HashMap();
     static AtomicInteger watchCount= new AtomicInteger(0);
+    String group ="/tb/ins";
 
     public ZkClientListen(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
@@ -352,6 +355,9 @@ public class ZkClientListen extends XMLLogic {
             zkClient = new ZkClient((String) cof.get("hostPort"), (Integer)cof.get("sessionTimeout"), (Integer)cof.get("connectTimeout"), new BytesPushThroughSerializer());
             //zkClient = new ZkClient((String) cof.get("hostPort"), 30000, 30000, new BytesPushThroughSerializer());
             addStatusListener();
+            String id = NetUtils.getip()+"|"+ JVMUtil.getPid();
+            createPath(group);
+            zkClient.createEphemeral(group+"/"+id,(System.currentTimeMillis()+"").getBytes());
         }catch (Exception e){
             log.error(cof.get("hostPort"),e);
             if(null != zkClient) {
@@ -372,7 +378,6 @@ public class ZkClientListen extends XMLLogic {
                     addTriggerWatch();
                 }
             });
-
 
         }catch (Exception e){
             log.error("zookeeper connect service error , will try again",e);
@@ -457,6 +462,38 @@ public class ZkClientListen extends XMLLogic {
         }catch (RuntimeException e){
             log.error("zk create path error ["+p+"]",e);
             throw e;
+        }
+    }
+    boolean isLeader(){
+        List<String> ls = zkClient.getChildren(group);
+        if(null != ls && ls.size()>0){
+            String ip="",pid="";
+            long minstarttime=0;
+            for(String s:ls){
+                byte[] d = zkClient.readData(group+"/"+s);
+                if(null != d) {
+                    String startTime = (String) new String(d);
+                    if (StringUtils.isNotBlank(startTime)) {
+                        long l = Long.parseLong(startTime);
+                        if (minstarttime == 0 || minstarttime > l) {
+                            minstarttime = l;
+                            String[] tm = s.split("\\|");
+                                ip = tm[0];
+                                pid = tm[1];
+
+                        }
+                    }
+                }
+            }
+            String lip = NetUtils.getip();
+            String lpid = JVMUtil.getPid();
+            if(ip.equals(lip) && pid.equals(lpid)){
+                return true;
+            }else{
+                return false;
+            }
+        }else {
+            return true;
         }
     }
     public Object doSomeThing(String xmlid,XMLParameter env, Map input, Map output,Map config) throws Exception {
@@ -565,6 +602,10 @@ public class ZkClientListen extends XMLLogic {
             } else if (null != zkClient && null != input && "onlySetData".equals(op)) {
                 String p = (String) input.get("path");
                 String data = (String) input.get("data");
+                String isLeaderDo = (String)input.get("isLeaderDo");
+                if(StringUtils.isNotBlank(isLeaderDo) && StringUtils.isTrue(isLeaderDo)){
+                    if(!isLeader()) return false;
+                }
                 createParent(p);
                 if (!zkClient.exists(p)) {
                     zkClient.createPersistent(p);

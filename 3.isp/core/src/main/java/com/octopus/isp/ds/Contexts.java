@@ -21,6 +21,7 @@ import java.util.Map;
  */
 public class Contexts extends XMLObject {
     I18N i18n;
+    Context def = null;
     public Contexts(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
     }
@@ -46,10 +47,19 @@ public class Contexts extends XMLObject {
     }
 
 
+
+    public Context getDefaultContext() throws ISPException {
+        if(null ==def) {
+            XMLMakeup[] dx = getXML().getByProperty("default","true");
+            if (null != dx && dx.length > 0 && null != dx[0])
+                def = (Context) XMLParameter.newInstance(dx[0], Context.class, null, true, this);
+        }
+        return def;
+    }
+
     public Context getContext(RequestParameters requestData)throws ISPException {
         //find a context by user requestData or sessionUserData
         XMLMakeup xs=null;
-        XMLMakeup[] dx = getXML().getByProperty("default","true");
         if(null !=requestData && null !=requestData.getSession()){
             Map i8 = (Map)requestData.getSession().get("I18N");
             xs = getOwnXml(getXML().getChild("context"),i8);
@@ -59,13 +69,15 @@ public class Contexts extends XMLObject {
             //to generator a Context
         }
         Context c = (Context) XMLParameter.newInstance(xs, Context.class, requestData.getRequestData(), true, this);
-        Context def = null;
 
-        if(null != dx && dx.length>0 && null != dx[0])
-            def = (Context) XMLParameter.newInstance(dx[0], Context.class, requestData.getRequestData(), true, this);
+        if(null ==def) {
+            XMLMakeup[] dx = getXML().getByProperty("default","true");
+            if (null != dx && dx.length > 0 && null != dx[0])
+                def = (Context) XMLParameter.newInstance(dx[0], Context.class, requestData.getRequestData(), true, this);
+        }
         c.setI18n(i18n);
         if(null != def)
-        c.setDefaultContext(def);
+            c.setDefaultContext(def);
         c.setRootXMLMakeup(xs);
         return c;
     }

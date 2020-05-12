@@ -20,6 +20,7 @@ public class Security {
     RC2 r = new RC2();
       String s = r.encrypt("9ol.(OL>");
       System.out.println(s);
+      System.out.println(encryptMD5_2("UmobilepraAlternate2020"));
   }
 
   public String getRealStr( String code ) throws Exception{

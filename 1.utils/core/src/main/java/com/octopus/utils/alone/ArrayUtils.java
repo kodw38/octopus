@@ -5062,7 +5062,8 @@ public class ArrayUtils {
                 sb.append(its.next().toString());
                 sb.append(",");
             }
-            sb.delete(sb.length()-1,sb.length());
+            if(sb.length()>0)
+                sb.delete(sb.length()-1,sb.length());
             return sb.toString();
         }
         return "";

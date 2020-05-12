@@ -444,8 +444,11 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
             url = (String)env.getValueFromExpress(url,this);
             log.debug("remote url 3:"+url);
             if(url.startsWith("https")){
-
-                Protocol myhttps = new Protocol("https", new MySSLProtocolSocketFactory(), 443);
+                Map sslcfg = null;
+                if(null != cfg && null!=cfg.get("ssl") && cfg.get("ssl") instanceof Map){
+                    sslcfg=(Map)cfg.get("ssl");
+                }
+                Protocol myhttps = new Protocol("https", new MySSLProtocolSocketFactory(sslcfg), 443);
                 Protocol.registerProtocol("https", myhttps);
             }
             isSendCookie = StringUtils.isTrue((String)input.get("issendcookie"));
@@ -491,6 +494,9 @@ public class HttpClient3 extends XMLDoObject implements IHttpClient {
             }
         }else
             ds = new HttpDS();
+        if(null != cfg && null != cfg.get("ssl") && cfg.get("ssl") instanceof Map && ((Map)cfg.get("ssl")).size()>0){
+            ds.setSSLCacert((Map)cfg.get("ssl"));
+        }
         if(null!=addRequestHeaders){
             Iterator<String> its = addRequestHeaders.keySet().iterator();
             while(its.hasNext()){

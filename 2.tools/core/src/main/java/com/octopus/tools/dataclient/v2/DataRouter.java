@@ -87,6 +87,7 @@ public class DataRouter extends XMLObject {
                 }
                 RouteResultBean rr = new RouteResultBean();
                 rr.setDataSource(ds);
+                rr.setOp((String)input.get("op"));
                 rr.setSqls((List)input.get("sqls"));
                 List<RouteResultBean> rs = new ArrayList();
                 rs.add(rr);

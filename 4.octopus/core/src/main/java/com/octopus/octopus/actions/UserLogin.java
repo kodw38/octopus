@@ -35,9 +35,14 @@ public class UserLogin extends XMLDoObject {
     }
 
 
-    XMLDoObject getConfigUserAuth(){
+    XMLDoObject getConfigUserAuth()throws Exception{
+        log.debug("UserLogin configuserauth is "+configuserauth);
         if(StringUtils.isNotBlank(configuserauth)){
-            return  (XMLDoObject) getObjectById(configuserauth);
+            XMLDoObject ret=  (XMLDoObject) getObjectById(configuserauth);
+            if(null == ret){
+                throw new Exception("can't find Object "+configuserauth);
+            }
+            return ret;
         }
         return null;
     }
@@ -138,10 +143,18 @@ public class UserLogin extends XMLDoObject {
                     map.put("SessionId",par.getRequestHeaders().get("sessionID"));
                     par.addParameter("^${input}",map);
                     par.addParameter("${session}",env.get("${session}"));
-                    if(null != getConfigUserAuth())
-                        getConfigUserAuth().doThing(par,null);
-                    else
-                        userauth.doThing(par,null);
+                    XMLDoObject auth = getConfigUserAuth();
+                    if(null == auth){
+                        auth=userauth;
+                    }
+                    log.debug("get UserInfo from Object "+auth.getXML().getId());
+                    auth.doThing(par, null);
+                    /*if(null != getConfigUserAuth()) {
+
+                        getConfigUserAuth().doThing(par, null);
+                    }else {
+                        userauth.doThing(par, null);
+                    }*/
                     Object r = par.getResult();
                     if(null != r && null != ((ResultCheck)r).getRet()){
                         Object ret=null;
@@ -246,7 +259,9 @@ public class UserLogin extends XMLDoObject {
                 }
             }
         }catch (Exception e){
-
+            log.error("",e);
+        }finally {
+            log.debug("UserLogin hava a config "+configuserauth);
         }
     }
 

@@ -60,12 +60,12 @@ public class SingleThreadExeProperty implements IObjectInvokeProperty {
                     log.info("globalsingle begin doing action lockKey:" + lockKey + ",oneTimeInSameLockKey:" + oneTimeInSameLockKey + ",waitTimeout:" + waitTimeout);
                     try {
                         long n = j.rpush(lockKey, id);
+                        j.expire(lockKey, waitTimeout / 1000);
                         if (n == 1) {
                             isOwner = true;
                             if (null != oneTimeInSameLockKey && "global".equals(oneTimeInSameLockKey)) {
                                 j.set("GLOBAL_" + lockKey, NetUtils.getip() + "," + JVMUtil.getPid() + "," + xml.getId());
                             }
-                            j.expire(lockKey, waitTimeout / 1000);
                         }
                         long t = System.currentTimeMillis();
                         while (true) {
@@ -80,6 +80,9 @@ public class SingleThreadExeProperty implements IObjectInvokeProperty {
                             }
                             Thread.sleep(1);
                             String curid = j.lindex(lockKey, 0);
+                            if(curid==null){
+                                throw new Exception("wait timeout");
+                            }
                             if (curid.equals(id)) {
                                 if (isOwner || null == oneTimeInSameLockKey) {
                                     if ((null != oneTimeInSameLockKey && "global".equals(oneTimeInSameLockKey) && j.exists("GLOBAL_" + lockKey))) {
@@ -90,56 +93,6 @@ public class SingleThreadExeProperty implements IObjectInvokeProperty {
                                 break;
                             }
                         }
-
-                        //judge other wf instance working the custId,if exit and not create then waiting
-                    /*String v = j.get(tempKey);
-                    if (null != v) {
-                        long l = Long.parseLong(v);
-                        long t = System.currentTimeMillis();
-                        try {
-                            while (l < setFlag) {
-                                Thread.sleep(5);
-                                l = j.incrBy(tempKey, 0);
-                                if (System.currentTimeMillis() - t > timeout) {
-                                    throw new Exception("wait timeout");
-                                }
-                            }
-                        } catch (Exception e) {
-                            log.error("lock single thread execute error", e);
-                        }
-                        return true;
-                    } else {
-                        boolean isExist = false;
-                        long oldCount = j.incrBy(tempKey, 1);
-                        j.expire(tempKey, timeout);
-//                j.decr(custId);
-                        if (oldCount == 1) {
-                            //do thing
-                            try {
-                                System.out.println("0000000000000000000000"+obj+"\n"+input);
-                                obj.doCheckThing(xml.getId(), parameter, input, output, config, xml);
-                                System.out.println("1111111111111111111111");
-                            } catch (Exception e) {
-                                log.error("single thread execute doCheckThing error", e);
-                            }
-                        } else {
-                            long l = j.incrBy(tempKey, 0);
-                            long t = System.currentTimeMillis();
-                            try {
-                                while (l < setFlag) {
-                                    Thread.sleep(5);
-                                    l = j.incrBy(tempKey, 0);
-                                    if (System.currentTimeMillis() - t > timeout) {
-                                        throw new Exception("wait timeout");
-                                    }
-                                }
-                            } catch (Exception e) {
-                                log.error("lock single thread execute error", e);
-                            }
-                            isExist = true;
-                        }
-                        return isExist;
-                    }*/
                     }catch (Exception e){
                         throw e;
                     }finally {

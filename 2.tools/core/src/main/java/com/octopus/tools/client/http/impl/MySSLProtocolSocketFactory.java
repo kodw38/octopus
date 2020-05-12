@@ -1,5 +1,6 @@
 package com.octopus.tools.client.http.impl;
 
+import com.octopus.utils.alone.StringUtils;
 import org.apache.commons.httpclient.ConnectTimeoutException;
 import org.apache.commons.httpclient.params.HttpConnectionParams;
 import org.apache.commons.httpclient.protocol.ProtocolSocketFactory;
@@ -14,19 +15,29 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Map;
 
 /**
  * Created by Administrator on 2018/7/4.
  */
 public class MySSLProtocolSocketFactory  implements ProtocolSocketFactory {
-
+    Map sslcfg=null;
+    public MySSLProtocolSocketFactory(){}
+    public MySSLProtocolSocketFactory(Map sslcfg){
+        this.sslcfg=sslcfg;
+    }
     private SSLContext sslcontext = null;
 
     private SSLContext createSSLContext() {
         SSLContext sslcontext = null;
         try {
             // sslcontext = SSLContext.getInstance("SSL");
-            sslcontext = SSLContext.getInstance("TLS");
+            if(null!=sslcfg && sslcfg.containsKey("tls_version") && StringUtils.isNotBlank(sslcfg.get("tls_version"))){
+                sslcontext = SSLContext.getInstance((String)sslcfg.get("tls_version"));
+            }else {
+                sslcontext = SSLContext.getInstance("TLS");
+            }
+            //sslcontext = SSLContext.getDefault();
             sslcontext.init(null,
                     new TrustManager[] { new TrustAnyTrustManager() },
                     new java.security.SecureRandom());
