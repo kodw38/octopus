@@ -2423,9 +2423,12 @@ return false;
                     }
                     return fs;
                 }else if("addServiceByDesc".equals(op)){
-                    Map m = (Map)input.get("desc");
+                    Object m = input.get("desc");
                     if(null != m){
-                        addUpdateSerivce(m,env);
+                        if(m instanceof String){
+                            m = StringUtils.convert2MapJSONObject((String)m);
+                        }
+                        addUpdateSerivce((Map)m,env);
                     }
                 }else if("isExistService".equals(op)){
                     String s = (String)input.get("name");
