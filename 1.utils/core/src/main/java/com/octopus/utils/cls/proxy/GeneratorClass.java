@@ -291,9 +291,9 @@ public class GeneratorClass {
         }catch (Exception e){
             String fname=null;
             try {
-                log.info("start generator class:"+className + " to "+compildPath);
+                log.debug("start generator class:"+className + " to "+compildPath);
                 JavaCompiler javaCompiler = ToolProvider.getSystemJavaCompiler();
-                String classpath = getClassPath(GeneratorClass.class.getClassLoader());
+                String classpath = compildPath.replaceAll("\\\\","/")+getClassPath(GeneratorClass.class.getClassLoader());
                 if(log.isDebugEnabled()){
                     log.debug("classpath:"+classpath);
                 }
@@ -309,9 +309,10 @@ public class GeneratorClass {
                     throw new Exception("not input compildPath:"+compildPath);
                 }
                 FileUtil.mkdir(compildPath);
-                log.info("compildPath:"+compildPath);
+                log.debug("compildPath:"+compildPath);
                 List<String> optionList = new ArrayList<String>();
                 optionList.add("-g:lines,vars,source");
+                optionList.add("-Xlint:unchecked");
                 optionList.addAll(Arrays.asList("-classpath",classpath));
                 optionList.addAll(Arrays.asList("-d",compildPath));
 
@@ -328,7 +329,7 @@ public class GeneratorClass {
                     log.error("compile "+fname+" fault.");
                     return null;
                 }else {
-                    log.info("compile "+fname+" successful.");
+                    log.debug("compile "+fname+" successful.");
                     FileInputStream classfile = new FileInputStream(fname);
                     cc = pool.makeClass(classfile);
                     //cc.writeFile();

@@ -645,15 +645,15 @@ public class Desc extends XMLDoObject{
                                 pv += ",";
                                 pn += ",";
                             }
-                            pv += k;
+                            pv += chgRemain(k);
                             pn += k;
                             Map nt = (Map)ObjectUtils.getValueByPath(des,"original.nspInputMapping."+k);
                             String type;
                             if(null!=nt) {
                                 //type = POJOUtil.convertUSDLParameterDesc2Class(pars.get(k), packg + "." + name + "_Input_" + k, compilepath, isDate);
-                                type = POJOUtil.convertUSDLParameterDesc2ClassWithAnnotation(pars.get(k), packg + "." + name + "_Input_" + k, compilepath, isDate,nt,nss,true,clss);
+                                type = POJOUtil.convertUSDLParameterDesc2ClassWithAnnotation(pars.get(k), getSubPackage(packg,srvname) + "." + name + "_Input_" + k, compilepath, isDate,nt,nss,true,clss);
                             }else{
-                                type = POJOUtil.convertUSDLParameterDesc2Class(pars.get(k), packg + "." + name + "_Input_" + k, compilepath, isDate,true,clss);
+                                type = POJOUtil.convertUSDLParameterDesc2Class(pars.get(k), getSubPackage(packg,srvname) + "." + name + "_Input_" + k, compilepath, isDate,true,clss);
                             }
                             if (StringUtils.isNotBlank(type)) {
                                 String wpn = WSDLParse.getAnnotationWebParam(type,k,des);
@@ -662,7 +662,7 @@ public class Desc extends XMLDoObject{
                                 }else {
                                     type = "@WebParam(name=\"" + k + "\") " + type;
                                 }
-                                par.append(type).append(" ").append(k);
+                                par.append(type).append(" ").append(chgRemain(k));
                             } else {
                                 log.info("getServiceWrapClassByDesc get a parameter type is null [" + name + "]:\n" + pars.get(k));
                                 return null;
@@ -681,9 +681,9 @@ public class Desc extends XMLDoObject{
                         Map nt = (Map)ObjectUtils.getValueByPath(des,"original.nspOutputMapping");//tb_nsp
                         if(null!=nt) {
                             //ret = POJOUtil.convertUSDLParameterDesc2Class(out, packg + "." + name + "_Output", compilepath,isDate);
-                            ret = POJOUtil.convertUSDLParameterDesc2ClassWithAnnotation(out, packg + "." + name + "_Output", compilepath, isDate,nt,nss,true,clss);
+                            ret = POJOUtil.convertUSDLParameterDesc2ClassWithAnnotation(out, getSubPackage(packg,srvname) + "." + name + "_Output", compilepath, isDate,nt,nss,true,clss);
                         }else{
-                            ret = POJOUtil.convertUSDLParameterDesc2Class(out, packg + "." + name + "_Output", compilepath,isDate,true,clss);
+                            ret = POJOUtil.convertUSDLParameterDesc2Class(out,  getSubPackage(packg,srvname)  + "." + name + "_Output", compilepath,isDate,true,clss);
                         }
 
                     }
@@ -737,6 +737,23 @@ public class Desc extends XMLDoObject{
             return null;
         }
     }
+
+    //如果parName是保留字符需要变换
+    static String chgRemain(String parName){
+        if(ArrayUtils.isInStringArray(POJOUtil.RemainStrings,parName)){
+            return "_"+parName;
+        }else{
+            return parName;
+        }
+    }
+
+    //根据类生成参数的类package
+    static String getSubPackage(String parentPackage,String className){
+        String name  = className.replaceAll("\\.","_");
+
+        return parentPackage+"."+ name;
+    }
+
     static void mkclass(List<Map> clss){
 
         if(clss.size()>0){
@@ -1938,10 +1955,12 @@ public class Desc extends XMLDoObject{
                 String txt = (String)input.get("txt");
                 if(StringUtils.isNotBlank(txt)){
                     Map desc = StringUtils.convert2MapJSONObject(txt);
-                    if(!desc.containsKey("body")){
-                        log.error("parse to desc service error\n orginal txt :"+txt+"\n json:"+desc);
+                    if(null != desc) {
+                        if (!desc.containsKey("body")) {
+                            log.error("parse to desc [" + input.get("frome") + "] service error\n orginal txt :" + txt + "\n json:" + desc);
+                        }
+                        return getInvokeStructure(desc);
                     }
-                    return getInvokeStructure(desc);
                 }
             }else if("getDesc".equals(input.get("op"))){
                 String[] os = (String[])input.get("${targetNames}");

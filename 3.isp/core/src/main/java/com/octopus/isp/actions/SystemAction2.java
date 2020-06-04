@@ -2,8 +2,8 @@ package com.octopus.isp.actions;
 
 import com.octopus.isp.bridge.impl.Bridge;
 import com.octopus.isp.ds.RequestParameters;
+import com.octopus.tools.dataclient.v2.DataClient2;
 import com.octopus.tools.dataclient.v2.ds.TableContainer;
-import com.octopus.tools.deploy.property.ExcelPropertiesGetter;
 import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
@@ -25,55 +25,38 @@ import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
 import com.octopus.utils.xml.desc.Desc;
 import com.octopus.utils.zip.ZipUtil;
-import com.sun.tools.javac.code.Attribute;
-import com.sun.xml.internal.stream.writers.XMLDOMWriterImpl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarOutputStream;
-import java.util.zip.ZipOutputStream;
 
 /**
  * User: wfgao_000
  * Date: 16-3-20
  * Time: 下午8:56
  */
-public class SystemAction extends XMLDoObject {
+public class SystemAction2 extends XMLDoObject {
     private static transient Log log = LogFactory.getLog(SystemAction.class);
     static String INSID_SRVNAME_SPLITCHAR=".";
-    XMLDoObject srvhandler;
-    XMLDoObject srvstat;
     XMLDoObject tracelog;
     XMLDoObject command;
     XMLDoObject resource;
     XMLDoObject auth;
     XMLDoObject remote;
-    String servicepath; //{op_type.package.name:service desc map}  published services
-    String statpath;    //statistic srv
-    String statuspath;
-    String statusstorepath;
-    String traceFlagPath;
-    String serverspath;
+    XMLDoObject dataclient;
     String simreturndir;
-    String sipath;
     List<String> servicesearch;
     Map<String,List<Map>> srvIdRelIns = new ConcurrentHashMap<String, List<Map>>(); //Key is SrvId, Map is Ins info
     Map<String,List<Map>> srvInfoInCenter = new ConcurrentHashMap<String, List<Map>>(); //Key is SrvId, Map is srv info in each ins
     List<String> initpublish;
-    public SystemAction(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
+    public SystemAction2(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
-        servicepath = xml.getProperties().getProperty("servicepath");  //store service desc of publish service
-        statpath = xml.getProperties().getProperty("statpath");        //for statistic data
-        statuspath = xml.getProperties().getProperty("statusoppath");  //publish op  for notify other instances
-        statusstorepath = xml.getProperties().getProperty("statuspath");   //for service status , active is true, suspend or delete is false
-        traceFlagPath = xml.getProperties().getProperty("traceflagpath");
-        serverspath = xml.getProperties().getProperty("serverspath");   //root path of instance in zookeeper
-        sipath = xml.getProperties().getProperty("sipath");
         String s = xml.getProperties().getProperty("servicesearch");   //search package
         if(StringUtils.isNotBlank(s)){
             servicesearch=Arrays.asList(s.split("\\,"));
@@ -89,315 +72,21 @@ public class SystemAction extends XMLDoObject {
     }
     public void init(){
         try {
-            if (StringUtils.isNotBlank(traceFlagPath)) {
-                HashMap map = new HashMap();
-                map.put("op", "addPathDataListener");
-                map.put("path", traceFlagPath);
-                srvhandler.doSomeThing(null, null, map, null, null);
-            }
-            //register server infor to zk
-            //initRegInfo(false);
 
-            //if there are published services need to update
             updatePublishedSrvs();
             //load all services to local
-            //refreshSrvInfo();
-            String s = getXML().getProperties().getProperty("refreshIntervalTime");
-            String d = getXML().getProperties().getProperty("refreshDelayTime");
-            if(StringUtils.isBlank(s)) s="600000";
-            if(StringUtils.isBlank(d)) s="10000";
-            Timer t = new Timer();
-            t.schedule(new TimerTask() {
-                @Override
-                public void run() {
 
-                    try{
-                        log.error("start to reload services status from zk......");
-                        //because server info in zk is temporary, so it may happen session timeout and lost , so need to register
-                        initRegInfo(true);
-                        //load all services to local
-                        refreshSrvInfo();
-                    }catch (Exception e){
-                        log.error("",e);
-                    }
-                }
-            },Integer.valueOf(d),Integer.valueOf(s));
         }catch (Exception x){
             log.error("",x);
         }
     }
     //update published srvs in zk
     void updatePublishedSrvs()throws Exception{
-        if (StringUtils.isNotBlank(getXML().getProperties().getProperty("initpublish"))) {
-            Object o = getEmptyParameter().getValueFromExpress(getXML().getProperties().getProperty("initpublish"), this);
-            if (o instanceof List) {
-                initpublish = (List) o;
-            }
-        }
-        if (null != initpublish) {
-            for (String s : initpublish) {
-                try {
-                    Map m = getDescStructure(s);
-                    if (null != m) {
-                        String p = getServicePath((String)m.get("opType"),(String)m.get("package"),(String)m.get("name"));
-                        Map map = new HashMap();
-                        map.put("op","isExist");
-                        map.put("path",p);
-                        Object o = srvhandler.doSomeThing(null, null, map, null, null);
-                        if(null != o && o instanceof Boolean && (Boolean)o) {
-                            map.put("op", "getData");
-                            String txt = (String)srvhandler.doSomeThing(null, null, map, null, null);
-                            Map body = StringUtils.convert2MapJSONObject((String) txt);
-                            //if local service is after zk services , zk service will be updated
-                            if(DateTimeUtil.getDate((String)body.get("date")).before(DateTimeUtil.getDate((String)m.get("date")))){
-                                publishAddUpdateService(null, m);
-                                log.info("init publish " + s);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-
-                }
-            }
-        }
-    }
-    //re get all services related with instance name
-    void refreshSrvInfo()throws Exception{
-        Map<String, List<Map>> srvs = new HashMap();
-        Map<String, List<Map>> li = getSrvInfoRelIns(srvs);// when ins remove or srv add delete will notification this store
-        if (null != li) {
-            if (null != srvIdRelIns) {
-                synchronized (srvIdRelIns) {
-                    srvIdRelIns = li;
-                }
-            } else {
-                srvIdRelIns = li;
-            }
-        }
-        if (null != srvInfoInCenter) {
-            synchronized (srvInfoInCenter) {
-                srvInfoInCenter = srvs;
-            }
-        } else {
-            srvInfoInCenter = srvs;
-        }
-    }
-    //register this server to zk
-    void initRegInfo(boolean isReCon){
-        try {
-            if(srvhandler==null)return ;
-            log.debug("java.library.path\n"+System.getProperty("java.library.path"));
-
-
-            //register this instance info to zk
-            if(StringUtils.isNotBlank(serverspath)){
-                XMLObject rt = getRoot();
-                Bridge root=null;
-                if(null != rt && rt instanceof Bridge){
-                    root = (Bridge) rt;
-                }
-                if(null == root) {
-                    root = (Bridge) getObjectById("bridge");
-                }
-                if(null != root){
-                    HashMap map = new HashMap();
-                    String id = root.getInstanceId();
-                    map.put("op", "isExist");
-                    map.put("path", serverspath+"/"+id);
-                    Boolean b = (Boolean)srvhandler.doSomeThing(null, null, map, null, null);
-                    XMLParameter env = getEmptyParameter();
-                    if(null != b && !b) {
-                        //if this instance name did not exist in zk, reg this server
-                        if (!b || id.contains("CONSOLE") || isReCon) {
-                            //if did not exist in zk ,or name is CONSILE or reconnection
-                            if(id.contains("CONSOLE")){
-                                try {
-                                    Thread.sleep(2000);
-                                }catch (Exception e){}
-                            }
-                            map.put("op", "addPathListener");
-                            map.put("path", serverspath);
-                            srvhandler.doSomeThing(null, env, map, null, null);
-                            map.clear();
-                            map.put("op", "addPath");
-                            map.put("path", serverspath + "/" + id);
-                            map.put("type", "temp");
-                            srvhandler.doSomeThing(null, null, map, null, null);
-                            map.put("op", "onlyWriteData");
-                            String logpath=(String)((Map)env.get("${env}")).get("logDir")+"cur";
-                            if(logpath.startsWith("./") || logpath.startsWith("../")){
-                                File f = new File("");
-                                logpath = f.getAbsolutePath()+"/"+logpath;
-                                log.info("log path is "+logpath);
-                            }
-                            Map properties = getEnvProperties();
-                            String webport= (String)properties.get("webport");
-                            String wshost = (String)properties.get("ws_host");
-                            //if web port from system.property
-                            String twp = System.getProperty("tb-webport");
-                            if(StringUtils.isNotBlank(twp)){
-                                webport =twp;
-                            }
-                            String twsp = System.getProperty("tb-wsaddress");
-                            if(StringUtils.isNotBlank(twsp)){
-                                wshost =twsp;
-                            }
-                            String startTime = "";
-                            if(null !=root){
-                                startTime = root.getStartTime();
-                            }
-                            map.put("data", "{\"insId\":\""+id+"\",\"ip\":\"" + NetUtils.getip() +"\",\"port\":\""+webport+"\",\"ws_host\":\""+wshost+"\",\"loginuser\":\""+properties.get("logUserName")+"\",\"loginpwd\":\""+properties.get("logPassword")+"\",\"jmxRemotePort\":\""+System.getProperty("com.sun.management.jmxremote.port")+"\",\"pid\":\"" + JVMUtil.getPid() + "\",\"startTime\":\""+startTime+"\",\"timestamp\":\""+System.currentTimeMillis()+"\",\"logPath\":\""+logpath+"\"}");
-                            srvhandler.doSomeThing(null, null, map, null, null);
-                            log.info("syn center info,register ins:" + map.get("data"));
-
-                        } else {
-                            throw new Exception("syn center info,the server has exist [" + id + "] in cluster");
-                        }
-                    }
-
-                }
-
-            }
-
-
-        }catch (Exception e){
-            log.error("systemAction init error",e);
-        }
-    }
-    //init rel by srvlist, key is service name, map is ins info
-    Map<String,List<Map>> getSrvInfoRelIns(Map<String,List<Map>> getSrvs) throws Exception{
-        try {
-            //service inovke info in zk, all service init will sync the info
-            if(null != srvhandler) {
-                HashMap in = new HashMap();
-                in.put("op", "getChildrenData");
-                in.put("path", statpath);
-                //all service stat data
-                Map<String, String> servicesStatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-                if (log.isDebugEnabled()) {
-                    log.debug("all services of stat data\n" + servicesStatus);
-                }
-                if (null != servicesStatus) {
-                    List<Map> activeIns = getInsList();//获取活动的实例名称
-                    Map<String, Map> insNames = new HashMap();
-                    if (null != activeIns) {
-                        for (Map n : activeIns) {
-                            if (log.isInfoEnabled()) {
-                                log.info("get active instance :" + n);
-                            }
-                            if (StringUtils.isNotBlank(n.get("insId"))) {
-                                insNames.put((String) n.get("insId"), n);
-                                n.put("INS_ID", n.get("insId"));
-                            }
-                        }
-                    }
-                    HashMap tempLocalCache = new HashMap();
-                    Map<String, List<Map>> ret = new ConcurrentHashMap();
-                    Iterator<String> its = servicesStatus.keySet().iterator();
-                    Bridge thisroot = (Bridge) getObjectById("bridge");
-                    while (its.hasNext()) {
-                        String k = its.next();//.INS-NJ_115.ProvisioningDomainV1.0Op.
-                        String kk = k.substring(0, k.length() - 1);
-                        //String na = kk.substring(kk.lastIndexOf(".")+1,kk.length());//0Op
-                        String name = kk.substring(kk.indexOf(".", 2) + 1, kk.length());//0Op
-                        String v = servicesStatus.get(k);
-                        Map m = StringUtils.convert2MapJSONObject(v);
-                        if (null != m) {
-                            if (insNames.containsKey(m.get("INS_ID")) && StringUtils.isTrue((String) m.get("isable"))
-                                    && StringUtils.isNotBlank(m.get("PID"))
-                            ) {
-                                if (!ret.containsKey(name)) ret.put(name, new ArrayList());
-                                ret.get(name).add(insNames.get(m.get("INS_ID")));
-
-                                if (!getSrvs.containsKey(name)) getSrvs.put(name, new ArrayList());
-                                getSrvs.get(name).add(m);
-                                updateLocalCacheOfRemoteDesc(tempLocalCache,name,(String)m.get("INS_ID"),"ADD");
-
-                            }
-                        }
-
-                    }
-                    synchronized (localCacheOfRemoteDesc){
-                        localCacheOfRemoteDesc.clear();
-                        localCacheOfRemoteDesc.putAll(tempLocalCache);
-                    }
-                    if (log.isDebugEnabled()) {
-                        log.debug("load service in instances\n" + ret);
-                    }
-                    return ret;
-                } else {
-                    log.info("load zero stat service from zk path:" + statpath);
-                }
-            }
-
-        }catch (Exception e){
-            throw e;
-        }
-
-        return null;
-
-        /*List<Map> ls = findServicesByCenter(null);
-        if (null != ls) {
-            Map<String, List<Map>> ret = new ConcurrentHashMap();
-            List<Map> activeIns = getInsList();//获取活动的实例名称
-            List<String> insNames = new ArrayList();
-            if (null != activeIns) {
-                for (Map n : activeIns) {
-                    if (StringUtils.isNotBlank(n.get("insId"))) {
-                        insNames.add((String) n.get("insId"));
-                    }
-                }
-                String srvName, insId;
-                for (Map a : ls) {
-                    srvName = (String) a.get("NAME");
-                    //if(StringUtils.isTrue((String)a.get("IS_PUBLISH"))) {
-                        List<Map> cs = (List) a.get("CHILDREN");
-                        if (null != cs) {
-                            for (Map c : cs) {
-                                insId = (String) c.get("INS_ID");
-                                if (insNames.contains(insId) && StringUtils.isNotBlank(c.get("PID"))) {
-                                    if (!ret.containsKey(srvName)) ret.put(srvName, new LinkedList<Map>());
-                                    HashMap t = new HashMap();
-                                    t.put("INS_ID", insId);
-                                    ret.get(srvName).add(t);
-                                }
-                            }
-                        }
-                    //}
-                }
-            }
-
-            return ret;
-        }else{
-            return new ConcurrentHashMap();
-        }*/
 
     }
-    void notifyByAddSrv(String srvName,String[] insId){
-        if(log.isDebugEnabled()) {
-            log.debug("syn center info, notifyByAddSrv " + srvName + " " + ArrayUtils.toJoinString(insId));
-        }
-        addInsInBySrv(srvName, insId);
-    }
+
     String[] getInsNameBySrvId(String srvName){
-        /*List<Map> ret = findServicesByCenter(srvName);
-        if(null != ret){
-            List<String> tt = new ArrayList();
-            for(Map m:ret){
-                if(m.get("NAME").equals(srvName)){
-                    List<Map> ls = (List)m.get("CHILDREN");
-                    if(null != ls){
-                        for(Map t:ls){
-                            if(!tt.contains(t.get("INS_ID"))){
-                                tt.add((String)t.get("INS_ID"));
-                            }
-                        }
-                    }
-                }
-            }
-            return (String[])tt.toArray(new String[0]);
-        }
-        return null;*/
+
         List<Map> list = srvIdRelIns.get(srvName);
         if(null != list){
             List ret = new ArrayList();
@@ -408,36 +97,7 @@ public class SystemAction extends XMLDoObject {
         }
         return null;
     }
-    void notifyByActiveSrv(String srvName,String[] insId){
-        if(null == insId){
-            insId = getInsNameBySrvId(srvName);
-        }
 
-        addInsInBySrv(srvName,insId);
-        if(log.isInfoEnabled()) {
-            log.info("syn center info, notifyByActiveSrv " + srvName + " " + ArrayUtils.toJoinString(insId));
-        }
-    }
-    void notifyByRemoveSrv(String srvName,String insId){
-        if(log.isInfoEnabled()) {
-            log.info("syn center info, notifyByRemoveSrv " + srvName + " " + insId);
-        }
-        synchronized (srvIdRelIns) {
-            if (StringUtils.isBlank(insId)) {//if insId is null means remove srv in all instances
-                srvIdRelIns.remove(srvName);
-                srvInfoInCenter.remove(srvName);
-            } else {
-                removeInsInBySrv(srvName, insId);
-                removeSrvInfoFromCache(srvName, insId);
-            }
-        }
-        if(addressmap.size()>0){
-            String k = getAddressMapKey(insId,srvName);
-            if(addressmap.containsKey(k)){
-                addressmap.remove(k);
-            }
-        }
-    }
     void notifyBySuspendSrv(String srvName,String insId){
         if(log.isInfoEnabled()) {
             log.info("syn center info, removeSrv " +srvName+ " from " + insId);
@@ -522,44 +182,7 @@ public class SystemAction extends XMLDoObject {
             }
         }
     }
-    void addSrvInfoToCacheByAddSrv(XMLParameter env,Map desc){
-        if(null != desc) {
-            if (!srvInfoInCenter.containsKey(desc.get("name"))) {
-                srvInfoInCenter.put((String) desc.get("name"), new LinkedList<Map>());
-            }
-            Map t = getStatMap(env,desc);
-            String selfid = getSelfInstanceId();
-            List<Map> m = srvInfoInCenter.get(desc.get("name"));
-            if(null != m && m.size()>0){
-                for(int i=m.size()-1;i>=0;i--){
-                    if(m.get(i).get("INS_ID").equals(selfid)){
-                        m.remove(i);
-                    }
-                }
-            }
-            if(null != t) {
-                srvInfoInCenter.get(desc.get("name")).add(t);
-            }
-        }
-    }
-    Map getStatMap(XMLParameter env,Map desc){
-        if(null != desc) {
-            HashMap ret = new HashMap();
-            ret.put("INS_ID",getSelfInstanceId());
-            ret.put("IP",((Map)env.get("${env}")).get("${ip}"));
-            ret.put("PID",((Map)env.get("${env}")).get("${pid}"));
-            ret.put("name",desc.get("name"));
-            ret.put("opType",desc.get("opType"));
-            ret.put("path",desc.get("path"));
-            ret.put("alarm",desc.get("alarm"));
-            ret.put("redo",getRedoFlag(desc.get("redo")));
-            ret.put("share",desc.get("share"));
-            ret.put("package",desc.get("package"));
-            ret.put("author",desc.get("author"));
-            return ret;
-        }
-        return null;
-    }
+
     String getRedoFlag(Object o){
         if(null != o) {
             if (o instanceof String) {
@@ -570,33 +193,7 @@ public class SystemAction extends XMLDoObject {
         }
         return "false";
     }
-    void addInsInBySrv(String srvName,String[] insId){
-        if(log.isDebugEnabled()) {
-            if(null != insId) {
-                log.info("syn center info, addInsInBySrv " + srvName + " to ins " + ArrayUtils.toJoinString(insId));
-            }
-        }
-        if(null != srvIdRelIns) {
-            synchronized (srvIdRelIns) {
-                List<Map> t = srvIdRelIns.get(srvName);
-                if (null == t) {
-                    srvIdRelIns.put(srvName, new LinkedList());
-                    t = srvIdRelIns.get(srvName);
-                }
 
-                if (null != t) {
-                    if (null != insId && insId.length > 0) {
-                        for (String id : insId) {
-                            putIns(id, t);
-                        }
-                    } else {
-                        putIns(getSelfInstanceId(), t);
-                    }
-                }
-            }
-        }
-
-    }
 
     void putIns(String id,List<Map> t){
         if(null != t && null != id) {
@@ -647,7 +244,7 @@ public class SystemAction extends XMLDoObject {
                     String insid = k.substring(1,k.indexOf(".",2));
                     //.INS-NJ_115.ProvisioningDomainV1.0Op.  INS-NJ_115,INS-CONSOLE:INS-NJ_115 result:false
                     log.debug(opTypeOrInsId+" "+name+" query cond "+k+"  " + ArrayUtils.toJoinString(insids) + ":" + insid + " result:"
-                         + ((StringUtils.isBlank(opTypeOrInsId) || !opTypeOrInsId.startsWith("INS-")
+                            + ((StringUtils.isBlank(opTypeOrInsId) || !opTypeOrInsId.startsWith("INS-")
                             || (opTypeOrInsId.startsWith("INS-") && k.startsWith("." + opTypeOrInsId + "."))) && k.contains("." + name + ".")));
                     if(ArrayUtils.isInStringArray(insids,insid)) {
                         if ((StringUtils.isBlank(opTypeOrInsId) || !opTypeOrInsId.startsWith("INS-") || (opTypeOrInsId.startsWith("INS-") && k.startsWith("." + opTypeOrInsId + "."))) && k.contains("." + name + ".")) {
@@ -707,12 +304,12 @@ public class SystemAction extends XMLDoObject {
                     }
                 }
                 if(null == map.get("STATUS")) {
-                    boolean isaa = isPublishActive((String) st.get("opType"), (String) st.get("package"), id);
+                    boolean isaa = false;//isPublishActive((String) st.get("opType"), (String) st.get("package"), id);
                     map.put("STATUS", isaa);
                 }
             }
         } catch (Exception e) {
-           // map.put("STATUS", "NOT EXIST");
+            // map.put("STATUS", "NOT EXIST");
         }
         //map.put("IS_LOCAL", "No");
         if (null != cs) {
@@ -743,11 +340,11 @@ public class SystemAction extends XMLDoObject {
                     if(null != servicesStatus && servicesStatus.containsKey(r)){
                         c.put("STATUS", servicesStatus.get(r));
                     }else {
-                        boolean isa = isPublishOneActive((String) c.get("INS_ID"), id);
+                        boolean isa = false;//isPublishOneActive((String) c.get("INS_ID"), id);
                         c.put("STATUS", isa);
                     }
                 } catch (Exception e) {
-                   // map.put("STATUS","NOT EXIST");
+                    // map.put("STATUS","NOT EXIST");
                 }
 
             }
@@ -777,149 +374,7 @@ public class SystemAction extends XMLDoObject {
         }
         return 0;
     }
-    void appendFindServiceByPublish(String opTypeOrInsId,String desc,List<Map> ret,List retName,String name,String[] insids,Map<String,String> servicesStat,Map<String,Boolean> servicesStatus,List<String> usedList)throws Exception{
-        if(StringUtils.isNotBlank(desc)) {
-            String s = desc;
-            Map st = com.octopus.utils.alone.StringUtils.convert2MapJSONObject(s);
-            if(null == st) st = new HashMap();
-            String id = (String) st.get("name");
 
-            if(StringUtils.isNotBlank(id)) {
-                if ((StringUtils.isBlank(name) || ismatch(name,id,s))) {
-                    List<Map> cs = getStatByCenter(opTypeOrInsId,id,insids,servicesStat,usedList);// find instance by this service name
-                    if(log.isDebugEnabled()) {
-                        log.debug("find publish srv list:" + cs);
-                        log.debug("find like package:" + servicesearch);
-                    }
-                    Map map = getServiceInfoAndStatus(id,st,cs,servicesStatus);// assemble show data
-                    if(!retName.contains(id)) {
-                        if(null != servicesearch && servicesearch.size()>0){
-                            String pk = (String)st.get("package");
-                            if(null ==pk){
-                                pk = (String)st.get("PACKAGE");
-                            }
-                            if(ArrayUtils.isLikeArrayInString(pk,servicesearch)){
-                                ret.add(map);
-                                retName.add(id);
-                            }
-                        }else {
-                            ret.add(map);
-                            retName.add(id);
-                        }
-                    }else{
-                        Map tar = null;
-                        for(Map t:ret){
-                            if(t.get("NAME").equals(id)){
-                                tar = t;
-                                break;
-                            }
-                        }
-                        if(null != tar) {
-                            List<Map> ls = (List) map.get("CHILDREN");
-                            if (null != ls && ls.size() > 0) {
-                                for (Map m : ls) {
-                                    appendCount(tar, m);
-                                }
-                            }
-                        }
-                    }
-
-                }
-            }
-        }
-    }
-
-    List<Map> getStatusServices(String name){
-        try {
-            List usedList = new ArrayList();
-            List<Map> ret = new ArrayList();
-            List retName = new ArrayList();
-            //add other not in zk and exist status service.
-            HashMap in = new HashMap();
-            in.put("op", "getChildrenData");
-            in.put("path", statpath);
-            //all service stat data
-            Map<String, String> servicesStat = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-            in.clear();
-            in.put("op", "getChildrenData");
-            in.put("path", statuspath);
-            //all service stat data
-            Map<String, String> s_servicesStatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-            Map<String,Boolean> serviceStatus = getSrvStatus(s_servicesStatus);
-            if (null != servicesStat && servicesStat.size() > 0) {
-                Map<String, Map<String, String>> tem = new HashMap();
-                Iterator<String> its = servicesStat.keySet().iterator();
-                Bridge thisroot = (Bridge) getObjectById("bridge");
-                while (its.hasNext()) {
-                    String k = its.next();//.INS-NJ_115.ProvisioningDomainV1.0Op.
-                    if (!usedList.contains(k) && !k.contains("." + thisroot.getInstanceId() + ".")) {
-                        String kk = k.substring(0, k.length() - 1);
-                        //String na = kk.substring(kk.lastIndexOf(".")+1,kk.length());//0Op
-                        String na = kk.substring(kk.indexOf(".", 2) + 1, kk.length());//0Op
-
-                        if ((StringUtils.isBlank(name) || (StringUtils.isNotBlank(name) && na.contains(name)))) {
-                            if (!tem.containsKey(na)) tem.put(na, new HashMap());
-                            tem.get(na).put(k, servicesStat.get(k));
-                            if (log.isDebugEnabled()) {
-                                log.debug("search service in status info:" + k + " " + servicesStat.get(k));
-                            }
-                        }
-                    }
-                }
-                String[] insids = getInsListIds();
-                Iterator<String> is = tem.keySet().iterator();
-                while (is.hasNext()) {
-                    String id = is.next();
-                    if (log.isDebugEnabled()) {
-                        log.debug("query srv not zk prepare stat :" + id + "\n" + tem.get(id));
-                    }
-                    List<Map> tt = getStatByCenter(null, id, insids, tem.get(id), null);
-                    log.debug("get stat by center " + id + " " + tt);
-                    Map m = getServiceInfoAndStatus(id, null, tt,serviceStatus);
-                    log.debug("get service info and status " + id + " " + m);
-                    if (null != m) {
-                        m.put("IS_PUBLISH", "N");
-                        //m.put("IS_LOCAL", "Yes");
-                        if (!retName.contains(id)) {
-                            if (null != servicesearch && servicesearch.size() > 0) {
-                                String pk = (String) m.get("package");
-                                if (null == pk) {
-                                    pk = (String) m.get("PACKAGE");
-                                }
-                                if (ArrayUtils.isLikeArrayInString(pk, servicesearch)) {
-                                    ret.add(m);
-                                    retName.add(id);
-                                }
-                            } else {
-                                ret.add(m);
-                                retName.add(id);
-                            }
-                        }
-                        if (log.isDebugEnabled()) {
-                            log.debug("query srv not in zk:" + m);
-                        }
-                    }
-                }
-            }
-            return ret;
-        }catch(Exception e){
-            log.error(e);
-        }
-        return null;
-    }
-
-    Map<String ,Boolean> getSrvStatus(Map<String,String> data){
-        if(null != data){
-            HashMap<String,Boolean> ret = new HashMap<String, Boolean>();
-            Iterator<String> its = data.keySet().iterator();
-            while(its.hasNext()){
-                String s = its.next();
-                ret.put(s,StringUtils.isTrue(data.get(s)));
-            }
-            return ret;
-        }
-        return null;
-    }
 
     /**
      * get all srv info list for showing in srv flow page
@@ -927,53 +382,36 @@ public class SystemAction extends XMLDoObject {
      */
     List<Map> getServiceListFromZk(){
         try {
-            if (null != servicepath) {
-                HashMap<String,Map> ret = new HashMap();
-                HashMap in = new HashMap();
-                in.put("op", "getChildrenData");
-                in.put("path", statpath);
-                Map<String, String> servicesStat = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-                String[] insids = getInsListIds();
-                if(null != servicesStat){
-                    Iterator<String> its = servicesStat.keySet().iterator();
-                    while(its.hasNext()){
-                        String k = its.next();
-                        String name = k.substring(0,k.length()-1);
-                        name = name.substring(name.lastIndexOf(".")+1);
-                        if(!ret.containsKey(name)) {
-                            Map d = StringUtils.convert2MapJSONObject(servicesStat.get(k));
-                            if ("RUNNING".equals(d.get("INS_STATUS"))) {
-                                HashMap m = new HashMap();
-                                m.put("name",name);
-                                Map ds = getDescStructure(name);
-                                if(null == ds){
-                                    ds = getRemoteDesc(name);
-                                }
-                                if(null != ds) {
-                                    Object r = ds.get("desc");
-                                    if(null != r) {
-                                        String remark ="";
-                                        if(r instanceof String){
-                                            remark=r.toString();
-                                        }
-                                        if(r instanceof Map){
-                                            remark=ObjectUtils.convertMap2String((Map)r);
-                                        }
-                                        m.put("desc", remark);
-                                    }
-                                }
-                                ret.put(name,m);
-                            }
-                        }
-                    }
-                }
-                if(ret.size()>0){
-                    return new ArrayList(ret.values());
-                }
-            }
+
 
         }catch (Exception e){
 
+        }
+        return null;
+    }
+
+    Map<String,Integer[]> getSrvTotalStatFromDB(){
+        if(null != dataclient && dataclient instanceof DataClient2){
+            try {
+                Map map = new HashMap();
+                map.put("op", "query");
+                map.put("sqls", Arrays.asList("SELECT srv_name ,SUM(invoke_count) invoke_count,SUM(invoke_cost_time) invoke_cost_time,SUM(invoke_error_count) invoke_error_count,SUM(invoke_size) invoke_size FROM isp_srv_stat_log GROUP BY srv_name"));
+                List<Map> ls = (List)dataclient.doSomeThing(null, null, map, null, null);
+                if(null != ls){
+                    Map<String,Integer[]> ret  = new HashMap<>();
+                    for(Map m:ls){
+                        Integer[] c = new Integer[4];
+                        c[0]=((BigDecimal) m.get("INVOKE_COUNT")).intValue();
+                        c[1]=((BigDecimal) m.get("INVOKE_COST_TIME")).intValue();
+                        c[2]=((BigDecimal) m.get("INVOKE_ERROR_COUNT")).intValue();
+                        c[3]=((BigDecimal) m.get("INVOKE_SIZE")).intValue();
+                        ret.put((String)m.get("SRV_NAME"),c);
+                    }
+                    return ret;
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
         }
         return null;
     }
@@ -982,167 +420,28 @@ public class SystemAction extends XMLDoObject {
      * @param name
      * @return
      */
-    List<Map> findServicesByCenter(XMLParameter env,String name){
+    List<Map> findServicesByCenter(Map<String,List<Map>> othersInsServices,Map<String,Map> services,XMLParameter env,String name){
         try {
-            if(null != servicepath) {
-                //service inovke info in zk
-                HashMap in = new HashMap();
-                in.put("op", "getChildrenData");
-                in.put("path", statpath);
-                //all service stat data
-                Map<String, String> servicesStat = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-                if(log.isDebugEnabled()){
-                    if(null != servicesStat){
-                        Iterator<String> lo = servicesStat.keySet().iterator();
-                        while(lo.hasNext()){
-                            String k = lo.next();
-                            log.debug("query srv stat:"+k+"\n"+servicesStat.get(k));
-                        }
-                    }
-
-                }
-                String[] insids = getInsListIds();
-                if(log.isDebugEnabled()){
-                    log.debug("query srv insids"+ArrayUtils.toJoinString(insids));
-                }
-                //services info in zk
-                in = new HashMap();
-                in.put("op", "getChildren");
-                in.put("path", servicepath);
-                List<String> ll = (List) srvhandler.doSomeThing(null, null, in, null, null);
-                if(log.isDebugEnabled()){
-                    log.debug("query srv list :"+ArrayUtils.toJoinString(ll));
-                }
-                List<Map> ret = new ArrayList(); // list contains result
-                List<String> retName = new ArrayList(); //list contains result service name
-                List<String> usedList = new ArrayList(); //list contains instance name in each result map
-                in.clear();
-                in.put("op", "getChildrenData");
-                in.put("path", statusstorepath);
-                Map<String, String> s_srvstatus = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-                Map<String,Boolean> srvstatus = getSrvStatus(s_srvstatus);
-                if(null != ll) {
-                    for(String l:ll) {
-                        in.put("op", "getChildrenData");
-                        in.put("path", servicepath+"/"+l);
-                        Map<String, String> ls = (Map) srvhandler.doSomeThing(null, null, in, null, null);
-                        if (null != ls && ls.size()>0) {
-                            Iterator<String> its = ls.keySet().iterator();
-                            while (its.hasNext()) {
-                                String k = its.next();
-                                if(log.isDebugEnabled()){
-                                    log.debug("query srv item:"+l);
-                                }
-                                appendFindServiceByPublish(l,ls.get(k), ret, retName, name,insids, servicesStat,srvstatus, usedList);
-                            }
-
-                        }else{
-                            in.put("op", "getData");
-                            in.put("path", servicepath+"/"+l);
-                            String s =  (String)srvhandler.doSomeThing(null, null, in, null, null);
-                            if(log.isDebugEnabled()){
-                                log.debug("query srv item:"+l);
-                            }
-                            appendFindServiceByPublish(null,s,ret,retName,name,insids,servicesStat,srvstatus,usedList);
-                        }
-                    }
-                }
-                if(log.isDebugEnabled()){
-                    log.debug("publish search services "+ret);
-                }
-                //add other not in zk and exist status service.
-                if(null !=servicesStat && servicesStat.size()>0){
-                    Map<String,Map<String,String>> tem = new HashMap();
-                    Iterator<String> its = servicesStat.keySet().iterator();
-                    Bridge thisroot = (Bridge)getObjectById("bridge");
-                    while(its.hasNext()){
-                        String k = its.next();//.INS-NJ_115.ProvisioningDomainV1.0Op.
-                        if(!usedList.contains(k) && !k.contains("."+thisroot.getInstanceId()+".")){
-                            String kk = k.substring(0,k.length()-1);
-                            //String na = kk.substring(kk.lastIndexOf(".")+1,kk.length());//0Op
-                            String na = kk.substring(kk.indexOf(".",2)+1,kk.length());//0Op
-                            String insid = null;
-                            if(k.length()>1 && k.indexOf(".",1)>0) {
-                                insid = k.substring(1, k.indexOf(".", 1));
-                            }
-                            if((StringUtils.isBlank(name) || ismatch(name,na,(Map)getLocalCacheOfRemoteDesc(na,insid)))) {
-                                if (!tem.containsKey(na)) tem.put(na, new HashMap());
-                                tem.get(na).put(k, servicesStat.get(k));
-                                if(log.isDebugEnabled()){
-                                    log.debug("search service in status info:"+k+" "+servicesStat.get(k));
-                                }
-                            }
-                        }
-                    }
-
-                    Iterator<String> is = tem.keySet().iterator();
-                    while(is.hasNext()) {
-                        String id = is.next();
-                        if(log.isDebugEnabled()){
-                            log.debug("query srv not zk prepare stat :"+id+"\n"+tem.get(id));
-                        }
-                        List<Map> tt = getStatByCenter(null,id,insids, tem.get(id), null);
-                        if(log.isDebugEnabled())
-                        log.debug("get stat by center "+id+" "+tt);
-                        Map m = getServiceInfoAndStatus(id, null, tt,srvstatus);
-                        if(log.isDebugEnabled())
-                        log.debug("get service info and status "+id+" "+m);
-                        if (null != m) {
-                            m.put("IS_PUBLISH","N");
-                            //m.put("IS_LOCAL", "Yes");
-                            if(!retName.contains(id)) {
-                                /*if(null != tt && tt.size()>0 && "RUNNING".equals((String)tt.get(0).get("INS_STATUS")) && StringUtils.isNotBlank(tt.get(0).get("PID"))) {
-                                    Object o = getObjectById("restfulClient");
-                                    if (null != o && o instanceof XMLDoObject && tt.size() > 0 && tt.get(0) instanceof Map && querytype==QUERY_SERVICE_FOR_PAGE) {
-                                        try {
-                                            BFParameters p = new BFParameters();
-                                            Map map = new HashMap();
-                                            map.put("insid", tt.get(0).get("INS_ID"));
-                                            map.put("srvid", "getActionPackage");
-                                            map.put("method", "POST");
-                                            map.put("data", "{name:'" + id + "'}");
-                                            p.put("^${input}", map);
-                                            ((XMLDoObject) o).doThing(p, null);
-                                            Object rm = p.getResult();
-                                            if (null != rm && rm instanceof ResultCheck) {
-                                                rm = ((ResultCheck) rm).getRet();
-                                            }
-                                            if (null != rm && rm instanceof String) {
-                                                m.put("PACKAGE", rm);
-                                            }
-                                        }catch(Exception e){
-
-                                        }
-                                    }
-                                }*/
-                                if(null != servicesearch && servicesearch.size()>0){
-                                    String pk = (String)m.get("package");
-                                    if(null ==pk){
-                                        pk = (String)m.get("PACKAGE");
-                                    }
-                                    if(ArrayUtils.isLikeArrayInString(pk,servicesearch)){
-                                        ret.add(m);
-                                        retName.add(id);
-                                    }
-                                }else {
-                                    ret.add(m);
-                                    retName.add(id);
-                                }
-                            }
-                            if(log.isDebugEnabled()){
-                                log.debug("query srv not in zk:"+m);
-                            }
-                        }
-                    }
-                }
-                if(log.isDebugEnabled()){
-                    log.debug("after stat search services "+ret);
-                }
-                //find local service
-                List<Map> ls = findServices(env,name);
+            if(null != othersInsServices) {
+                List<Map> ret = new ArrayList();
+                Map<String,Integer[]> totalStat = getSrvTotalStatFromDB();
+                List<Map> ls = findServices(name,totalStat);
+                List<String> temp = new ArrayList();
                 if(null != ls){
                     for(Map m:ls){
-                        if(!retName.contains(m.get("NAME"))){
+                        temp.add((String)m.get("NAME"));
+                        //匹配查找的路径
+                        if(null != servicesearch && servicesearch.size()>0){
+                            String pk = (String)m.get("package");
+                            if(null ==pk){
+                                pk = (String)m.get("PACKAGE");
+                            }
+                            if(!ArrayUtils.isLikeArrayInString(pk,servicesearch)){
+                                continue;
+                            }
+                        }
+                        if(null== othersInsServices || !othersInsServices.containsKey(m.get("NAME"))){
+                            //本实例独有的服务
                             m.put("IS_PUBLISH","N");
                             List<Map> lt = (List)m.get("CHILDREN");
                             if(null != lt){
@@ -1150,57 +449,25 @@ public class SystemAction extends XMLDoObject {
                                     s.put("IS_PUBLISH","N");
                                 }
                             }
-                            if(null != servicesearch && servicesearch.size()>0){
-                                String pk = (String)m.get("package");
-                                if(null ==pk){
-                                    pk = (String)m.get("PACKAGE");
-                                }
-                                if(ArrayUtils.isLikeArrayInString(pk,servicesearch)){
-                                    ret.add(m);
-                                }
-                            }else {
-                                ret.add(m);
-                            }
-                            /*String s = servicesStatus.get(m.get("NAME"));
+                            //加入到返回列表中
+                            ret.add(m);
 
-                            if(StringUtils.isNotBlank(s)){
-                                appendCount(m,ot);
-                            }*/
-                            if(log.isDebugEnabled()){
-                                log.debug("query srv self:"+m);
-                            }
                         }else{
-                            for(Map t:ret){
-                                if(t.get("NAME").equals(m.get("NAME"))){
-                                    if(null != m.get("CHILDREN")) {
-                                        Map self = (Map) ((List) m.get("CHILDREN")).get(0);
-                                        if (null != self) {
-                                            boolean isin = false;
-                                            if (null != ((List) t.get("CHILDREN"))) {
-                                                for (int j = 0; j < ((List) t.get("CHILDREN")).size(); j++) {
-                                                    if (((Map) ((List) t.get("CHILDREN")).get(j)).get("INS_ID").equals(self.get("INS_ID"))) {
-                                                        isin = true;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                            if (!isin) {
-                                                self.put("IS_PUBLISH", "N");
-                                                //self.put("IS_LOCAL", "Yes");
-                                                appendCount(t, self);
-                                                t.put("REDO", getRedoFlag(m.get("REDO")));
-                                                t.put("SHARE", m.get("SHARE"));
-                                                if (log.isDebugEnabled()) {
-                                                    log.debug("query srv self:" + self);
-                                                }
-                                            }
-                                        }
+                            //othersInsServices中也含有该服务
+                            List<Map> ins= othersInsServices.get(m.get("NAME"));
+                            if(null != ins) {
+                                for (Map mx : ins) {
+                                    if (null != ((List) m.get("CHILDREN"))) {
+                                        ((List)m.get("CHILDREN")).add(ConvertToPage(mx,m));
                                     }
+
                                 }
                             }
+                            ret.add(m);
                         }
                     }
                 }
+                appendOthers(temp,othersInsServices,services,ret,totalStat,name);
                 if(log.isDebugEnabled()){
                     log.debug("after self search services "+ret);
                 }
@@ -1227,7 +494,7 @@ public class SystemAction extends XMLDoObject {
     boolean ismatch(String searchKey,String name,Map desc){
         try {
             if(log.isDebugEnabled())
-            log.debug("find service by "+searchKey+" name:"+name+" desc:"+desc);
+                log.debug("find service by "+searchKey+" name:"+name+" desc:"+desc);
             if (StringUtils.isNotBlank(name) && name.contains(searchKey)) return true;
             if(null != desc) {
                 String n = ObjectUtils.convertMap2String((Map)desc);
@@ -1242,19 +509,7 @@ public class SystemAction extends XMLDoObject {
             return false;
         }
     }
-    boolean ismatch(String searchKey,String name,String desc){
-        try {
-            if (StringUtils.isNotBlank(name) && name.contains(searchKey)) return true;
 
-            if(StringUtils.isNotBlank(desc)) {
-                desc = desc.replaceAll("\"","");
-                return desc.indexOf(searchKey) > 0;
-            }
-            return false;
-        }catch (Exception e){
-            return false;
-        }
-    }
 
     public List getTreeServices(List<Map> ss){
         if(null != ss){
@@ -1330,16 +585,7 @@ public class SystemAction extends XMLDoObject {
         }
     }
 
-    public Map getTreeServices2(List<Map> ss){
-        if(null != ss){
-            Map ret = new LinkedHashMap();
-            for(Map s:ss){
-                putTreeNode2((String) s.get("PACKAGE"), (String) s.get("NAME"), ret);
-            }
-            return ret;
-        }
-        return null;
-    }
+
     void putTreeNode2(String pk,String name,Map ret){
         if(StringUtils.isNotBlank(pk)){
             if(pk.contains(".")) {
@@ -1411,96 +657,160 @@ public class SystemAction extends XMLDoObject {
         if(null != tt)
             tt.add(s);
     }
-    /* 本来想把服务信息缓存在本地，每次共页面查询方便的，但是想到每次服务的调用变更信息太多就不缓存了。以后如果服务太多，把服务归类，每种类型起一个Console Center各自管理。Center和Center之间沟通通过服务目录查询获取。服务目录需要时增加。
-    List<Map> findCacheLocal(String name){
-        List<Map> ret = new LinkedList();
-        if(null !=srvInfoList){
-            for(Map m:srvInfoList){
-                if(((String)m.get("NAME")).contains(name)){
-                    ret.add(m);
+
+    void appendOthers(List<String> exists,Map<String,List<Map>> othersrvins,Map<String,Map> services,List<Map> ret,Map totalStat,String name){
+        Iterator<String> its = othersrvins.keySet().iterator();
+        while(its.hasNext()){
+            String k = its.next();
+            if(null== exists || !exists.contains(k)) {
+                if(services.get(k)!=null && (StringUtils.isBlank(name)||(null != name && k.contains(name)))) {
+                    List<Map> ins = othersrvins.get(k);
+                    Map map = new HashMap();
+                    Integer[] stats = getSrvTotalStat(k, totalStat);
+                    convertPageServiceInfo(map, services.get(k), stats, true, false, false);
+                    map.put("CHILDREN", new ArrayList());
+                    for (Map in : ins)
+                        ((List) map.get("CHILDREN")).add(ConvertToPage(in, services.get(k)));
+                    ret.add(map);
                 }
             }
         }
+    }
+    Map ConvertToPage(Map insInfo,Map srvInfo){
+        Map ret = new HashMap();
+        ObjectUtils.appendDeepMapNotReplaceKey(insInfo,ret);
+        ret.put("IP",ret.get("ip"));
+        ret.put("INS_ID",ret.get("insId"));
+        ret.put("INS_STATUS","Running");
+        if(srvInfo.get("isable")!=null)
+        ret.put("STATUS",StringUtils.isTrue((String)srvInfo.get("isable")));
+        if(srvInfo.get("STATUS")!=null)
+            ret.put("STATUS",srvInfo.get("STATUS"));
+        ret.put("PID",ret.get("pid"));
+        convertPageInsInfo(ret,null,null,null,null,null);
         return ret;
-    }*/
+    }
+
     /**
      * find service info, the service must has description file
      * 服务名称、包路径、操作类型、存储路径
      * @param linkename
      * @return
+     * [
+     *  {"IS_WORKTIME":false,"PATH":"file:../data/sv/","INVOKE_COST_TIME":0,"OP_TYPE":"business","AUTHOR":"LiGS","SHARE":""
+     *  ,"INVOKE_SIZE":0,"NAME":"ViewCustomerInfo4NewCRM","IS_PUBLISH":"Y"
+     *  ,"CHILDREN":[
+     *      {"IP":"10.11.20.115","package":"com.test","isable":"true","redo":{"overTime":"11111","count":"1","duringTime":"111","message":"sfsfs"}
+     *      ,"share":"","author":"LiGS","isalarm":"false","path":"file:../data/sv/","opType":"business","date":"2018-08-09 11:34:26"
+     *      ,"INS_ID":"INS-CONSOLE","INS_STATUS":"STOPPED","PID":""
+     *      ,"INVOKE_COUNT":"","INVOKE_ERROR_COUNT":"","INVOKE_COST_TIME":"","INVOKE_SIZE":"","IS_PUBLISH":"Y","STATUS":true}]
      */
-    List<Map> findServices(XMLParameter env,String linkename) throws IOException {
+    List<Map> findServices(String linkename,Map totalStat) throws IOException {
         LinkedList<Map> ls = new LinkedList<Map>();
         Map<String,XMLObject> objs = getXMLObjectContainer();
-
+        String ip = NetUtils.getip();
+        String pid = JVMUtil.getPid();
+        String insId = "";
+        XMLObject root = getRoot();
+        if(null != root){
+            if(root instanceof Bridge){
+                insId=((Bridge)root).getInstanceId();
+            }
+        }
         if(null!=objs && objs.size()>0){
-                Iterator<String> aname = objs.keySet().iterator();
-                while (aname.hasNext()) {
-                    String name = aname.next();
-                    XMLObject m = objs.get(name);
-                    if (null == linkename || ismatch(linkename, name, m.getDescStructure())) {
-                        XMLObject o = objs.get(name);
-                        try {
+            Iterator<String> aname = objs.keySet().iterator();
+            while (aname.hasNext()) {
+                String name = aname.next();
+                XMLObject m = objs.get(name);
+                if (null == linkename || ismatch(linkename, name, m.getDescStructure())) {
+                    XMLObject o = objs.get(name);
+                    try {
 
-                            Map st = o.getInvokeDescStructure();
-                            HashMap d = new HashMap();
-                            if (null != st && StringUtils.isNotBlank(st.get("name"))) {
-                                if (null != st.get("name") && st.get("name") instanceof String) {
-                                    d.put("NAME", name);
-                                    d.put("PACKAGE", st.get("package"));
-                                    d.put("REDO", getRedoFlag(st.get("redo")));
-                                    d.put("SHARE", st.get("share"));
-                                    d.put("IS_ALARM",isAlarm(st));
-                                    d.put("IS_WORKTIME",isWorktime(st));
-                                    d.put("PATH", st.get("path"));
-                                    d.put("CREATE_BY", st.get("createby"));
-                                    d.put("OP_TYPE", st.get("opType"));
-                                    d.put("DATE", st.get("date"));
-                                    d.put("AUTHOR",st.get("author"));
-                                    d.put("STATUS", o.isActive());
-                                    d.put("IS_LOCAL", true);
-                                    log.debug("local service:"+name);
-                                    if (null != srvstat) {
-                                        HashMap map = new HashMap();
-                                        map.put("srvId", name);
-                                        map.put("op", "getStatInfo");
-                                        Object rr = srvstat.doSomeThing(null, null, map, null, null);
-                                        log.debug("stat local service:"+name);
-                                        if (null != rr && rr instanceof Map) {
-                                            ((Map) rr).put("STATUS", o.isActive());
-                                           // ((Map) rr).put("IS_LOCAL", "Yes");
+                        Map st = o.getInvokeDescStructure();
+                        HashMap d = new HashMap();
+                        if (null != st && StringUtils.isNotBlank(st.get("name"))) {
+                            if (null != st.get("name") && st.get("name") instanceof String) {
+                                //set service to page
+                                Integer[] stats=getSrvTotalStat((String)st.get("name"),totalStat);
+                                convertPageServiceInfo(d,st,stats,o.isActive(),true,false);
 
-                                            List li = new ArrayList();
+                                List chl = new ArrayList();
+                                Map ins = new HashMap();
+                                convertPageInsInfo(ins,ip,insId,pid,o.isActive(),(String)st.get("package"));
+                                chl.add(ins);
+                                d.put("CHILDREN",chl);
 
-                                            li.add(rr);
-                                            d.put("CHILDREN", li);
-                                        }
-                                        if (null != rr && rr instanceof Map) {
-                                            d.put("INVOKE_COUNT", ((Map) rr).get("INVOKE_COUNT"));
-                                            d.put("INVOKE_ERROR_COUNT", ((Map) rr).get("INVOKE_ERROR_COUNT"));
-                                            d.put("INVOKE_COST_TIME", ((Map) rr).get("INVOKE_COST_TIME"));
-                                            d.put("INVOKE_SIZE", ((Map) rr).get("INVOKE_SIZE"));
-
-                                        }
-                                    }
-
-                                } else {
-                                    log.error("find [" + name + "] desc incorrect please check:\n" + st);
-                                }
+                            } else {
+                                log.error("find [" + name + "] desc incorrect please check:\n" + st);
                             }
-                            if (d.size() > 0)
-                                ls.add(d);
-                        } catch (Exception e) {
-                            log.error("findServices error:", e);
                         }
+                        if (d.size() > 0)
+                            ls.add(d);
+                    } catch (Exception e) {
+                        log.error("findServices error:", e);
                     }
                 }
+            }
 
 
         }
 
         log.debug("findServices ["+linkename+"] \n"+ls);
         return ls ;
+    }
+
+    Integer[] getSrvTotalStat(String srv,Map totalStat){
+        Integer[] stats=null;
+        if(null != totalStat){
+            stats = (Integer[])totalStat.get(srv);
+        }
+        if(null == stats){
+            stats=new Integer[4];
+            stats[0]=0;
+            stats[1]=0;
+            stats[2]=0;
+            stats[3]=0;
+        }
+        return stats;
+    }
+
+    void convertPageServiceInfo(Map target,Map src,Integer[] stats,boolean isactive,boolean islocal,boolean ispublish){
+        target.put("NAME", src.get("name"));
+        target.put("PATH", src.get("path"));
+        target.put("PACKAGE", src.get("package"));
+        target.put("REDO", getRedoFlag(src.get("redo")));
+        target.put("SHARE", src.get("share"));
+        target.put("IS_ALARM",isAlarm(src));
+        target.put("IS_WORKTIME",isWorktime(src));
+        target.put("PATH", src.get("path"));
+        target.put("CREATE_BY", src.get("createby"));
+        target.put("OP_TYPE", src.get("opType"));
+        target.put("DATE", src.get("date"));
+        target.put("AUTHOR",src.get("author"));
+        target.put("STATUS", isactive);
+        target.put("IS_LOCAL", islocal);
+        target.put("IS_PUBLISH", (ispublish?"Y":"N"));
+        target.put("INVOKE_COUNT", stats[0]);
+        target.put("INVOKE_COST_TIME", stats[1]);
+        target.put("INVOKE_ERROR_COUNT", stats[2]);
+        target.put("INVOKE_SIZE", stats[3]);
+    }
+    void convertPageInsInfo(Map target,String ip,String insId,String pid,Boolean isactive,String pak){
+        if(StringUtils.isNotBlank(ip))
+        target.put("IP",ip);
+        if(StringUtils.isNotBlank(pak))
+        target.put("package",pak);
+        if(StringUtils.isNotBlank(insId))
+        target.put("INS_ID",insId);
+        target.put("INS_STATUS","Running");
+        if(null != isactive)
+        target.put("STATUS",isactive);
+        target.put("INVOKE_COST_TIME", 0);
+        target.put("INVOKE_ERROR_COUNT", 0);
+        target.put("INVOKE_COUNT", 0);
+        target.put("INVOKE_SIZE", 0);
+        if(StringUtils.isNotBlank(pid))
+        target.put("PID",pid);
     }
     //get service parameter ,include input ,output,config
     Map getServiceParameters(String name){
@@ -1514,7 +824,7 @@ public class SystemAction extends XMLDoObject {
                     ret.put("OUTPUT", st.get("output"));
                     ret.put("CONFIG",st.get("config"));
                     if(ret.size()>0)
-                    return ret;
+                        return ret;
                 }
             }catch (Exception e){}
         }
@@ -1626,17 +936,8 @@ public class SystemAction extends XMLDoObject {
             if(null != allDesc.get("name") && allDesc.get("name") instanceof String) {
                 if(null == getObjectById((String)allDesc.get("name") )) {
                     Map data = Desc.removeNotServiceProperty(allDesc);
-                    boolean isa = isPublishActive((String)data.get("opType"),(String)data.get("package"),(String)data.get("name"));
+                    boolean isa = false;//isPublishActive((String)data.get("opType"),(String)data.get("package"),(String)data.get("name"));
                     createXMLObjectByDesc(data, this.getClass().getClassLoader(), this, isa,getSingleContainers());
-                    if(null != srvstat){
-                        HashMap map = new HashMap();
-                        map.put("op","initStatInfo");
-                        map.put("name",allDesc.get("name"));
-                        srvstat.doSomeThing(null, null, map, null, null);
-                        log.debug("stat service:"+allDesc.get("name"));
-                        //set the service in instance status
-                        setThisStatus((String) allDesc.get("name"), isa);
-                    }
                     return true;
                 }else{
                     throw new Exception("the service ["+allDesc.get("name") +"] has exist, can not new create.");
@@ -1646,21 +947,12 @@ public class SystemAction extends XMLDoObject {
             log.error("addService error:",e);
             throw e;
         }
-return false;
+        return false;
     }
     boolean deleteService(String name)throws Exception{
         try {
-            boolean is = removeObject(name);
-            if(is) {
-                if (null != srvstat) {
-                    HashMap map = new HashMap();
-                    map.put("op", "deleteStatInfo");
-                    map.put("name", name);
-                    srvstat.doSomeThing(null, null, map, null, null);
-                }
-                setThisStatus(name,false);
-            }
-        return true;
+            removeObject(name);
+            return true;
         }catch (Exception e){
             log.error("remove Service error:",e);
             throw e;
@@ -1697,24 +989,7 @@ return false;
             s = StringUtils.replace(s,"\\n","");
             desc.put("body",s);
             if(null !=oo ){
-                HashMap map = new HashMap();
-                map.put("op","isStatExist");
-                map.put("name",desc.get("name"));
-                if (null != srvstat) {
-                    updateService(desc);
-                    Object o = srvstat.doSomeThing(null, null, map, null, null);
-
-                    if(!(null != o && o instanceof Boolean && (Boolean)o)) {
-                        map.put("op", "initStatInfo");
-                        map.put("name", desc.get("name"));
-                        srvstat.doSomeThing(null, null, map, null, null);
-                        log.debug("stat local service:"+desc.get("name"));
-                        setThisStatus((String) desc.get("name"), oo.isActive());
-                    }
-
-                }else{
-                    updateService(desc);
-                }
+                updateService(desc);
             }else{
                 addService(desc,parameter);
             }
@@ -1727,27 +1002,12 @@ return false;
         if(null != o){
             try {
                 boolean is= o.suspendObject();
-                setThisStatus(name,o.isActive());
-                HashMap in = new HashMap();
-                in.put("op","setSrvDisable");
-                in.put("name",name);
-                srvstat.doSomeThing(null,null,in,null,null);
-                log.info("suspend service "+name);
                 return is;
             }catch (Exception e){}
         }
         return false;
     }
-    void setThisStatus(String name,boolean value)throws Exception{
-        if(null != srvhandler){
-            Bridge b = (Bridge)getPropertyObject("bridge");
-            HashMap map = new HashMap();
-            map.put("path",getPublishStateZkPath(statusstorepath, b.getInstanceId(), name));
-            map.put("data",String.valueOf(value));
-            map.put("op","onlySetData");
-            srvhandler.doSomeThing(null,null,map,null,null);
-        }
-    }
+
 
     /**
      * 设置对象是否在异常经过时是否可以重做。
@@ -1770,9 +1030,7 @@ return false;
             isRedo="true";
         }
         m.put("redo",isRedo);
-        /*publishProperty(svName,"publishSetRedo",m);*/
-        publishUpdateSv(svName,opType,pack,m);
-        //return setRedo(svName,isRedo);
+
         return true;
     }
 
@@ -1791,15 +1049,7 @@ return false;
         boolean ret = o.setProperty("share",isShare);
         return ret;
     }
-    boolean publishSetShare(String svName,String opType,String pack,String isShare)throws Exception{
-        Map m = new HashMap();
-        if(StringUtils.isBlank(isShare)){
-            isShare="true";
-        }
-        m.put("share",isShare);
-        publishUpdateSv(svName,opType,pack,m);
-        return true;
-    }
+
     boolean isWorktime(Map desc){
         String b= (String)desc.get("body");
         if(StringUtils.isNotBlank(b)){
@@ -1821,211 +1071,21 @@ return false;
         }
         return false;
     }
-    boolean publishUpdateSv(String name,String opType,String pack,Map pro)throws Exception{
-        if(null != srvhandler) {
 
-            String p = getServicePath(opType, pack, name);
-            HashMap input = new HashMap();
-            input.put("path", p);
-            input.put("op", "getData");
-            Object o = srvhandler.doSomeThing(null, null, input, null, null);
-            if(null !=o && o instanceof String && null != pro){
-                Map desc = StringUtils.convert2MapJSONObject((String)o);
-                desc.putAll(pro);
-
-                input.put("data", ObjectUtils.convertMap2String(desc));
-                input.put("op", "onlyWriteData");
-                srvhandler.doSomeThing(null, null, input, null, null);
-                return true;
-            }
-        }
-        return false;
-
-    }
-    boolean publishProperty(String name,String op,Map map)throws Exception{
-        if(StringUtils.isNotBlank(name)){
-            XMLObject o = getObjectById(name);
-            String opType = o.getXML().getProperties().getProperty("opType");
-            String pk = o.getXML().getProperties().getProperty("package");
-            String r = getZkPath(statuspath,opType,pk,name);
-            Map input = new HashMap();
-            input.put("path",r);
-
-            map.put("op",op);
-            map.put("name",name);
-            input.put("data",ObjectUtils.convertMap2String(map));
-            input.put("op",op);
-            srvhandler.doSomeThing(null, null, input, null, null);
-            return true;
-        }
-        return false;
-    }
     boolean activeService(String name){
         XMLObject o = getXMLObjectContainer().get(name);
         if(null != o){
-                try {
-                    boolean is = o.activeObject();
-                    setThisStatus(name,o.isActive());
-                    HashMap in = new HashMap();
-                    in.put("op","setSrvAble");
-                    in.put("name",name);
-                    srvstat.doSomeThing(null,null,in,null,null);
-                    log.info("active service " + name);
-                    return is;
-
-                } catch (Exception e) {
-                }
-
-        }
-        return false;
-    }
-    String getServicePath(String opType,String pck,String name){
-        String r = servicepath;
-        if (StringUtils.isNotBlank(opType)) {
-            r += "/" + opType;
-        }
-
-        boolean is = false;
-        if (StringUtils.isNotBlank(pck)) {
-            r += "/" + pck;
-            is = true;
-        }
-
-        if (is) {
-            r += "." + name;
-
-        } else {
-            r += name;
-        }
-        return r;
-    }
-    boolean publishAddUpdateService(String insids,Map desc){
-        if(null != srvhandler && null != desc){
             try {
-                boolean isa = false;
-                if(null != getObjectById((String)desc.get("name"))){
-                    isa =getObjectById((String)desc.get("name")).isActive();
-                }
-                if(StringUtils.isNotBlank(desc.get("name")) && null == desc.get("body")){
-                    String name = (String)desc.get("name");
-                    desc = getStoreDescStructure(name);
-                    if(null == desc){
-                        throw new Exception("not find service ["+name+"] description in location ");
-                    }
-                }
-                desc.put("op","publishAddUpdateService");
-                List<String> spl = new ArrayList();
-                String r;
-                if(StringUtils.isNotBlank(insids)){
-                    String[] ids = insids.split(",");
-                    String sid = getSelfInstanceId();
-                    boolean isinself = false;
-                    for(String id:ids) {
-                        if(id.equals(sid)){
-                            isinself=true;
-                        }
-                        r = getServicePath(id, (String) desc.get("package"), (String) desc.get("name"));
-                        spl.add(r);
-                    }
-                    if(!isinself){
-                        r = getServicePath(sid, (String) desc.get("package"), (String) desc.get("name"));
-                        spl.add(r);
-                    }
-                    if(StringUtils.isNotBlank(desc.get("opType"))) {
-                        r = getServicePath((String) desc.get("opType"), (String) desc.get("package"), (String) desc.get("name"));
-                        spl.add(r);
-                    }
-                }else{
-                    r = getServicePath((String) desc.get("opType"), (String) desc.get("package"), (String) desc.get("name"));
-                    spl.add(r);
-                }
-                Map input = new HashMap();
-                for(String p:spl) {
-                    input.put("path", p);
-                    input.put("data", ObjectUtils.convertMap2String(desc));
-                    input.put("op", desc.get("op"));
-                    log.info("publishupdateservice "+input);
-                    srvhandler.doSomeThing(null, null, input, null, null);
-                }
-                setPublishStatus((String)desc.get("opType"),(String)desc.get("package"),(String)desc.get("name"),isa);
-                log.info("publish service [" + desc.get("name") + "] successful");
-                return true;
+                boolean is = o.activeObject();
+                return is;
 
-            }catch (Exception e){
-                log.error("publish service ["+desc.get("name")+"] fault",e);
-                return false;
+            } catch (Exception e) {
             }
-        }else{
-            return false;
-        }
-    }
-    boolean publishDeleteService(String name)throws Exception{
-        if(StringUtils.isNotBlank(name)){
-            XMLObject o = getObjectById(name);
-            String opType = o.getXML().getProperties().getProperty("opType");
-            String pk = o.getXML().getProperties().getProperty("package");
-            String r = getZkPath(servicepath,opType,pk, name);
-            Map input = new HashMap();
-            input.put("path",r);
 
-            HashMap map = new HashMap();
-            map.put("op","publishDeleteService");
-            map.put("name",name);
-            input.put("data",ObjectUtils.convertMap2String(map));
-            input.put("op","publishDeleteService");
-            srvhandler.doSomeThing(null, null, input, null, null);
-            //delete status
-            r = getZkPath(statusstorepath,opType,pk,name);
-            input.put("path",r);
-            input.put("op","delete");
-            srvhandler.doSomeThing(null,null,input,null,null);
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * get publish active statusd
-     * @param name
-     * @return
-     * @throws Exception
-     */
-    boolean isPublishOneActive(String insid,String name)throws Exception{
-        if(StringUtils.isNotBlank(name)){
-            String r = getPublishStateZkPath(statusstorepath, insid, name);
-            Map input = new HashMap();
-            input.put("path",r);
-            input.put("op","getData");
-            Object s = srvhandler.doSomeThing(null, null, input, null, null);
-            if(s instanceof String){
-                return StringUtils.isTrue((String)s);
-            }
         }
         return false;
     }
 
-    boolean isPublishActive(String opType,String pk,String name)throws Exception{
-        try {
-            if (StringUtils.isNotBlank(name)) {
-                String r = getZkPath(statusstorepath,opType,pk, name);
-                if(StringUtils.isNotBlank(r)) {
-                    Map input = new HashMap();
-                    input.put("path", r);
-                    input.put("op", "getData");
-                    String s = (String) srvhandler.doSomeThing(null, null, input, null, null);
-
-                    return StringUtils.isTrue(s);
-                }else{
-                    return false;
-                }
-            }
-        }catch (Exception e){
-            log.error("",e);
-        }
-
-        return false;
-    }
     boolean activeThisService(String localip,String name,String ip,String insid){
         Bridge b = (Bridge)getObjectById("bridge");
         if(localip.equals(ip) && b.getInstanceId().equals(insid)){
@@ -2082,120 +1142,7 @@ return false;
         }
         return r;
     }
-    //get service path in zk
-    /*String getZkPath(String zktype,String name)throws Exception{
-        XMLObject obj = getObjectById(name);
-        if(null == obj){
-            return null;
-        }
-        XMLMakeup x = obj.getXML();
-        String r=zktype;
-        if(StringUtils.isNotBlank(x.getProperties().getProperty("opType"))){
-            r+="/"+x.getProperties().getProperty("opType");
-        }
-        boolean is=false;
-        if(StringUtils.isNotBlank( x.getProperties().getProperty("package"))){
-            r+="/"+x.getProperties().getProperty("package");
-            is=true;
-        }
-        if(is){
-            r += "." + x.getId();
-        }else {
-            r +=  x.getId();
-        }
-        return r;
-    }*/
-    void setPublishStatus(String opType,String pk,String name,boolean activeStatus)throws Exception{
-        String r = getZkPath(statusstorepath,opType,pk,name);
-        HashMap input = new HashMap();
-        input.put("path",r);
-        input.put("op","onlySetData");
-        input.put("data",String.valueOf(activeStatus));
-        srvhandler.doSomeThing(null,null,input,null,null);
-    }
-    boolean publishActiveService(String name)throws Exception{
-        if(StringUtils.isNotBlank(name)){
-            XMLObject o = getObjectById(name);
-            String opType = o.getXML().getProperties().getProperty("opType");
-            String pk = o.getXML().getProperties().getProperty("package");
-            String r = getZkPath(statuspath,opType,pk, name);
-            Map input = new HashMap();
-            input.put("path",r);
 
-            HashMap map = new HashMap();
-            map.put("op","publishActiveService");
-            map.put("name",name);
-            input.put("data",ObjectUtils.convertMap2String(map));
-            input.put("op","publishActiveService");
-            srvhandler.doSomeThing(null, null, input, null, null);
-            setPublishStatus(opType,pk,name,true);
-            return true;
-        }
-
-        return false;
-    }
-    boolean publishActiveOneService(String ip,String insid,String opType,String pkg,String name)throws Exception{
-        if(StringUtils.isNotBlank(name)){
-            String r = getPublishStateZkPath(statuspath,insid, name);
-            Map input = new HashMap();
-            input.put("path",r);
-            HashMap map = new HashMap();
-            map.put("op","publishActiveOneService");
-            map.put("name",name);
-            map.put("ip",ip);
-            map.put("insid",insid);
-            input.put("data",ObjectUtils.convertMap2String(map));
-            input.put("op","publishActiveOneService");
-            srvhandler.doSomeThing(null, null, input, null, null);
-            return true;
-        }
-
-        return false;
-    }
-
-    boolean publishSuspendService(String name)throws Exception{
-        if(StringUtils.isNotBlank(name)){
-            XMLObject o = getObjectById(name);
-            String opType = o.getXML().getProperties().getProperty("opType");
-            String pk = o.getXML().getProperties().getProperty("package");
-            String r = getZkPath(statuspath,opType,pk,name);
-            Map input = new HashMap();
-            input.put("path",r);
-
-            HashMap map = new HashMap();
-            map.put("op","publishSuspendService");
-            map.put("name",name);
-            input.put("data",ObjectUtils.convertMap2String(map));
-            input.put("op","publishSuspendService");
-            srvhandler.doSomeThing(null, null, input, null, null);
-
-            setPublishStatus(opType,pk,name,false);
-            return true;
-        }
-
-        return false;
-    }
-    boolean publishSuspendOneService(String ip,String insid,String optype,String pkg,String name)throws Exception{
-        if(StringUtils.isNotBlank(name)){
-            String r = getPublishStateZkPath(statuspath,insid, name);
-            Map input = new HashMap();
-            input.put("path",r);
-
-            HashMap map = new HashMap();
-            map.put("op","publishSuspendOneService");
-            map.put("name",name);
-            map.put("ip",ip);
-            map.put("insid",insid);
-            input.put("data",ObjectUtils.convertMap2String(map));
-            input.put("op","publishSuspendOneService");
-            srvhandler.doSomeThing(null, null, input, null, null);
-
-
-            return true;
-        }
-
-        return false;
-    }
     @Override
     public Object doSomeThing(String xmlid, XMLParameter env, Map input, Map output, Map config) throws Exception {
         if(null != input){
@@ -2213,18 +1160,13 @@ return false;
 
                 }else if("getServices".equals(op)){
                     //获取查询的服务列表，包括：服务名称、包路径、操作类型、存储路径
-                    if(null != srvhandler){
-                        return findServicesByCenter(env,(String) input.get("name"));
-                    }else {
-                        //查询当前服务实例的服务信息
-                        List<Map> ret= findServices(env,(String) input.get("name"));
-                        filterAuth(env,ret);
-                        return ret;
-                    }
+
+                    return findServicesByCenter((Map)config.get("othersInsServices"),(Map)config.get("serviceStatusMap"),env,(String) input.get("name"));
+
                 }else if("getServiceInfoList".equals(op)){
                     return getServiceListFromZk();
                 }else if("getTreeServices".equals(op)){
-                    List<Map> ls = findServicesByCenter(env,null);
+                    List<Map> ls = findServicesByCenter((Map)config.get("othersInsServices"),(Map)config.get("serviceStatusMap"),env,null);
                     return getTreeServices(ls);
                 }else if("getServiceParameters".equals(op)){
                     //获取一个服务的参数，包括：入参，配置参数，出参
@@ -2248,8 +1190,8 @@ return false;
                     //增加服务
                     Map desc = (Map)input.get("data");
                     boolean b = addService(desc,env);
-                    notifyByAddSrv((String)desc.get("name"),null);
-                    addSrvInfoToCacheByAddSrv(env,desc);
+                    //notifyByAddSrv((String)desc.get("name"),null);
+                    //addSrvInfoToCacheByAddSrv(env,desc);
 
                     return b;
                 }else if("copyService".equals(op)){//add service description
@@ -2262,8 +1204,8 @@ return false;
                     if(StringUtils.isNotBlank(name)){
                         Map nmap= copyDesc(name,nname,pros);
                         boolean b = addService(nmap,env);
-                        notifyByAddSrv(name,null);
-                        addSrvInfoToCacheByAddSrv(env,nmap);
+                        //notifyByAddSrv(name,null);
+                        //addSrvInfoToCacheByAddSrv(env,nmap);
                         return b;
                     }
 
@@ -2290,7 +1232,7 @@ return false;
                     return false;
                 }else if("deleteService".equals(op)){
                     //删除服务
-                    notifyByRemoveSrv((String) input.get("name"),null);
+                    //notifyByRemoveSrv((String) input.get("name"),null);
                     return deleteService((String) input.get("name"));
                 }else if("updateService".equals(op)){
                     //修改服务
@@ -2299,55 +1241,46 @@ return false;
                     return addUpdateSerivce(m,env);
                 }else if("addUpdateService".equals(op)){
                     addUpdateSerivce((Map)input.get("data"),env);
-                    /*String ids = (String)input.get("insIds");
-                    if(StringUtils.isNotBlank(ids)){
-                        String[] insIds = ids.split(",");
-                        if(ArrayUtils.isInStringArray(insIds,getSelfInstanceId())){
-                            addUpdateSerivce(input);
-                            notifyByAddSrv((String)input.get("name"),insIds);
-                        }
-                    }else {
-                        if(!(null != input.get("srcInsId") && input.get("srcInsId").equals(getSelfInstanceId()))) {
-                            addUpdateSerivce(input);
-                            notifyByAddSrv((String) input.get("name"), getInsListIds());
-                        }
-                    }*/
+
                 }else if("suspendService".equals(op)){
                     //暂停服务
-                    notifyBySuspendSrv((String) input.get("name"),null);
+                    //notifyBySuspendSrv((String) input.get("name"),null);
                     return suspendService((String) input.get("name"));
                 }else if("activeService".equals(op)) {
                     //激活服务
-                    notifyByActiveSrv((String) input.get("name"),null);
+                    //notifyByActiveSrv((String) input.get("name"),null);
                     return activeService((String) input.get("name"));
                 }else if("activeThisService".equals(op)){
-                    notifyByActiveSrv((String) input.get("name"),new String[]{(String) input.get("insid")});
+                    //notifyByActiveSrv((String) input.get("name"),new String[]{(String) input.get("insid")});
                     return activeThisService(((String)((Map)env.get("${env}")).get("${ip}")),(String) input.get("name"),(String) input.get("ip"),(String) input.get("insid"));
                 }else if("suspendThisService".equals(op)) {
                     notifyBySuspendSrv((String) input.get("name"),(String) input.get("insid"));
                     return suspendThisService(((String)((Map)env.get("${env}")).get("${ip}")),(String) input.get("name"), (String) input.get("ip"), (String) input.get("insid"));
                 }else if("publishAddUpdateService".equals(op)){
                     //集群服务的话，只用使用这个方法发布发布就可以
-                    return publishAddUpdateService((String)input.get("insIds"),(Map)input);
+                    return null;//publishAddUpdateService((String)input.get("insIds"),(Map)input);
                 }else if("publishService".equals(op)){
                     //集群服务的话，只用使用这个方法发布发布就可以
-                    String ids = (String)input.get("insIds");
-                    return publishAddUpdateService(ids,input);
+                    String srvName = (String)input.get("name");
+                    if(StringUtils.isNotBlank(srvName)){
+
+                    }
+                    return null;//publishAddUpdateService(ids,input);
                 }else if("publishDeleteService".equals(op)){
                     //集群服务的话，只用使用这个方法发布发布就可以
-                    return publishDeleteService((String) input.get("name"));
+                    return null;//publishDeleteService((String) input.get("name"));
                 }else if("publishSuspendService".equals(op)){
                     //集群服务的话，只用使用这个方法发布发布就可以
-                    return publishSuspendService((String) input.get("name"));
+                    return null;//publishSuspendService((String) input.get("name"));
                 }else if("publishActiveService".equals(op)){
                     //集群服务的话，只用使用这个方法发布发布就可以
-                    return publishActiveService((String) input.get("name"));
+                    return null;//publishActiveService((String) input.get("name"));
                 }else if("publishSuspendOneService".equals(op)){
                     //集群服务的话，只用使用这个方法发布发布就可以
-                    return publishSuspendOneService((String) input.get("ip"), (String) input.get("insid"),(String)input.get("opType"),(String)input.get("package"), (String) input.get("name"));
+                    return null;//publishSuspendOneService((String) input.get("ip"), (String) input.get("insid"),(String)input.get("opType"),(String)input.get("package"), (String) input.get("name"));
                 }else if("publishActiveOneService".equals(op)){
                     //集群服务的话，只用使用这个方法发布发布就可以
-                    return publishActiveOneService((String) input.get("ip"), (String) input.get("insid"), (String)input.get("opType"),(String)input.get("package"),(String) input.get("name"));
+                    return null;//publishActiveOneService((String) input.get("ip"), (String) input.get("insid"), (String)input.get("opType"),(String)input.get("package"),(String) input.get("name"));
                 }
 
                 else if("getUpdateDesc".equals(op)){
@@ -2378,9 +1311,9 @@ return false;
                 }else if("getNewDesc".equals(op)){
                     return Desc.getEnptyDescStructure();
                 }else if("publishStartTrace".equals(op)){
-                    return startTrace();
+                    return null;//startTrace();
                 }else if("publishStopTrace".equals(op)){
-                    return stopTrace();
+                    return null;//stopTrace();
                 }else if("getTraceList".equals(op)){
                     HashMap map = new HashMap();
                     map.put("op","getTraceList");
@@ -2396,23 +1329,7 @@ return false;
                     HashMap map = new HashMap();
                     String p = (String)input.get("path");
                     log.info("remove path:"+p);
-                    if (p.startsWith(serverspath)) {
-                        log.info("will remove path:" + p);
-                        String id = p.substring(p.lastIndexOf("/") + 1);
-                        map.put("op", "setInsStatusStopped");
-                        map.put("insId", id);
-                        srvstat.doSomeThing(null, null, map, null, null);
-                        //remove insid from invoke ins list
-                        notifyByRemoveIns(id);
-                    }else if(p.startsWith(statuspath)){
-                        //add a service etc: /tb/SRV_STATUS/INS-NJ-DROP2.getTest100
-                        String id = p.substring(p.lastIndexOf("/") + 1);
-                        String[] inn = id.split("\\.");
-                        if(null != inn && inn.length==2) {
-                            notifyByRemoveSrv(inn[1], inn[0]);
-                            log.info("remove srv " + inn[1] + " of " + inn[0] + " into local cache");
-                        }
-                    }
+
                 }else if("saveUploadFile".equals(op)){
                     String s = (String)input.get("savepath");
                     String fs = null;
@@ -2478,25 +1395,7 @@ return false;
                     HashMap map = new HashMap();
                     String p = (String)input.get("path");
                     log.info("will update path srv to RUNNING:" + p);
-                    if(StringUtils.isNotBlank(p)) {
-                        if (p.startsWith(serverspath)) {
-                            //add instance /tb/SERVERS/INS-NJ-BALANCE_DROP2
-                            String id = p.substring(p.lastIndexOf("/") + 1);//instance name
-                            map.put("op", "setInsStatusRunning");
-                            map.put("insId", id);
-                            srvstat.doSomeThing(null, null, map, null, null);
-                            //add insid from invoke ins list
-                        }/*else if(p.startsWith(statuspath)){
-                            //add a service etc: /tb/SRV_STATUS/INS-NJ-DROP2.getTest100
-                            String id = p.substring(p.lastIndexOf("/") + 1);
-                            String[] inn = id.split("\\.");
-                            if(null != inn && inn.length==2) {
 
-                                notifyByAddSrv(inn[1], new String[]{inn[0]});
-                                log.info("add remote srv " + inn[1] + " of " + inn[0] + " into local cache");
-                            }
-                        }*/
-                    }
 
 
                 }else if("getServicesFileRel".equals(op)){
@@ -2504,23 +1403,23 @@ return false;
                     if(null != fs){
                         Map<String,List<String>> map = new HashMap();
                         for(String s:fs){
-                           Map<String,XMLObject> all = getXMLObjectContainer();
-                               Iterator<String> its = all.keySet().iterator();
-                               while(its.hasNext()){
-                                   XMLObject o = all.get(its.next());
-                                   Map desc = o.getDescStructure();
-                                   if(null != desc){
-                                       Map org = (Map)desc.get("original");
-                                       if(null != org){
-                                           if(s.equals(org.get("src"))){
-                                               if(!map.containsKey(s)){
-                                                   map.put(s,new ArrayList());
-                                               }
-                                               map.get(s).add(o.getXML().getId());
-                                           }
-                                       }
-                                   }
-                               }
+                            Map<String,XMLObject> all = getXMLObjectContainer();
+                            Iterator<String> its = all.keySet().iterator();
+                            while(its.hasNext()){
+                                XMLObject o = all.get(its.next());
+                                Map desc = o.getDescStructure();
+                                if(null != desc){
+                                    Map org = (Map)desc.get("original");
+                                    if(null != org){
+                                        if(s.equals(org.get("src"))){
+                                            if(!map.containsKey(s)){
+                                                map.put(s,new ArrayList());
+                                            }
+                                            map.get(s).add(o.getXML().getId());
+                                        }
+                                    }
+                                }
+                            }
 
                         }
                         return map;
@@ -2537,29 +1436,41 @@ return false;
                         }
 
                     }
-                    String ret= getAddress(instanceid, port, name);
+                    Map ins = (Map)((Map)config.get("instanceMap")).get(instanceid);
+                    String ret= getAddress(ins,instanceid, port, name);
                     if(log.isDebugEnabled()){
                         log.debug("get remote instance address "+ret+" by instance id "+instanceid+" input "+input);
                     }
                     return ret;
                 }else if("getInsList".equals(op)){
-                    return getInsList();
+                    Map instanceMap = (Map)config.get("instanceMap");
+                    if(null != instanceMap) {
+                        return new ArrayList(instanceMap.values());
+                    }else{
+                        return null;
+                    }
                 }else if("getOtherInsList".equals(op)){
-                    List<Map> ms = getInsList();
-                    if(null!= ms){
-                        for(Map m:ms){
-                            if(m.get("insId").equals(getSelfInstanceId())){
-                                ms.remove(m);
-                                break;
+                    Map instanceMap = (Map)config.get("instanceMap");
+                    if(null != instanceMap) {
+                        List<Map> ms = new ArrayList(instanceMap.values());
+                        if (null != ms) {
+                            for (Map m : ms) {
+                                if (m.get("insId").equals(getSelfInstanceId())) {
+                                    ms.remove(m);
+                                    break;
+                                }
                             }
                         }
+                        return ms;
+                    }else{
+                        return null;
                     }
-                    return ms;
                 }else if("getInsListBySrvId".equals(op)){
+                    Map<String,List<Map>> maping = (Map)config.get("othersInsServices");
                     String srv = (String)input.get("srvId");
                     List limitIn = (List)input.get("limitIn");
                     if(StringUtils.isNotBlank(srv)){
-                        List<Map> ret= srvIdRelIns.get(srv);
+                        List<Map> ret= maping.get(srv);
                         if(null != limitIn && limitIn.size()>0){
                             ret = ArrayUtils.innerList(ret,limitIn);
                         }
@@ -2571,7 +1482,8 @@ return false;
                 }else if("getInstanceInfo".equals(op)){
                     String instanceid = (String)input.get("instanceid");
                     if(StringUtils.isNotBlank(instanceid)){
-                        return getInstanceInfo(instanceid);
+                        return ((Map)config.get("instanceMap")).get(instanceid);
+                        //return getInstanceInfo(instanceid);
                     }
                 }else if("getErrorMessage".equals(op)){
                     int lines = 200;
@@ -2580,7 +1492,7 @@ return false;
                             lines = Integer.parseInt((String) input.get("lineNum"));
                         }
                     }
-                    return getErrorMessage((String)input.get("srvid"),(String)((Map)env.get("${env}")).get("logUserName"),(String)((Map)env.get("${env}")).get("logPassword"),(String)input.get("date"),lines);
+                    return getErrorMessage((Map)config.get("instanceMap"),(String)input.get("srvid"),(String)((Map)env.get("${env}")).get("logUserName"),(String)((Map)env.get("${env}")).get("logPassword"),(String)input.get("date"),lines);
                 }else if("init".equals(op)){
                     log.info("reInit system");
                     doInitial();
@@ -2591,7 +1503,7 @@ return false;
                         ret= getDescStructure(srvName);
                     }
                     if(log.isDebugEnabled())
-                    log.debug("get desc "+srvName+" desc:"+ret);
+                        log.debug("get desc "+srvName+" desc:"+ret);
                     return ret;
                 }else if("getRemoteDesc".equals(op)){
                     String name = (String)input.get("name");
@@ -2624,30 +1536,7 @@ return false;
 
                     Object data = input.get("data");
                     if(StringUtils.isNotBlank(path) && null != data){
-                        if(path.startsWith(statusstorepath)){
-                            int n = path.indexOf("INS-");
-                            if(n>0) {
-                                int l = path.indexOf(INSID_SRVNAME_SPLITCHAR);
-                                int nn = path.lastIndexOf("/");
-                                if (l > nn) {
-                                    insid = path.substring(nn+ 1, l);
-                                }
-                            }
-                            if("true".equals(data) && StringUtils.isNotBlank(srvid)){
-                                String[] insids=null;
-                                if(StringUtils.isNotBlank(insid)){
-                                    insids = new String[]{insid};
-                                }
-                                notifyByActiveSrv(srvid,insids);
-                            }
-                            if("false".equals(data) && StringUtils.isNotBlank(srvid)){
-                                String insids=null;
-                                if(StringUtils.isNotBlank(insid)){
-                                    insids =insid;
-                                }
-                                notifyBySuspendSrv(srvid,insids);
-                            }
-                        }
+
                     }
                 }else if("getEnv".equals(op)){
                     if(null != getPropertyObject("env")) {
@@ -2759,13 +1648,13 @@ return false;
                             deployIns=(List) input.get("DeployIns");
                         List<Map> deployReq = null;
                         if(null != input.get("DeployReq") && input.get("DeployReq") instanceof List)
-                        deployReq=(List) input.get("DeployReq");
+                            deployReq=(List) input.get("DeployReq");
                         List<Map> deployTools = null;
                         if(null != input.get("DeployTools") && input.get("DeployTools") instanceof List)
                             deployTools=(List) input.get("DeployTools");
                         List<Map> webs = null;
                         if(null != input.get("Webs") && input.get("Webs") instanceof List)
-                        webs = (List) input.get("Webs");
+                            webs = (List) input.get("Webs");
                         List<Map> component = null;
                         if(null != input.get("Component") && input.get("Component") instanceof List)
                             component=(List) input.get("Component");
@@ -2887,7 +1776,7 @@ return false;
     }
     Object generatorApplication2(String buildroot,String userCode,XMLParameter env,Map appInfo,List<Map> pty3,List<Map> contexts,List<Map> tables,List<Map> dbaccts
             ,List<Map> deployIns,List<Map> deployReq,List<Map> deployTools
-    ,List<Map> pars,List<Map> srvs,Map<String,String> svnSrvs,List<Map> webs,List<Map> component,List<Map> adminUser,List<String> configFiles) throws Exception {
+            ,List<Map> pars,List<Map> srvs,Map<String,String> svnSrvs,List<Map> webs,List<Map> component,List<Map> adminUser,List<String> configFiles) throws Exception {
         if(null != appInfo) {
             String appName = (String) appInfo.get("APP_NAME");
             if (StringUtils.isNotBlank(appName)) {
@@ -3035,7 +1924,7 @@ return false;
                     File tar = new File(buildpath + "/web");
                     if(!tar.exists()) tar.mkdirs();
                     FileUtils.copyDict(new File(buildRoot + "/define/webs/"+insInfo.get("INSTANCE_NAME")),tar,null,null,null,null);
-                //generator server version jar from isp_user_app_services
+                    //generator server version jar from isp_user_app_services
                 }else
                     generatorServiceJar(buildpath+"/lib/",appName+"_services.jar",env,srvs,svnSrvs);
             }
@@ -3047,7 +1936,7 @@ return false;
                     ,buildpath+"/web",buildpath+"/components",buildpath+"/doc"});
         else
             ZipUtil.zipFiles(targetFileName,new String[]{buildpath+"/lib",buildpath+"/bin",buildpath+"/classes",buildpath+"/data",buildpath+"/logs"
-                ,buildpath+"/web",buildpath+"/doc"});
+                    ,buildpath+"/web",buildpath+"/doc"});
         cleanDirs(new String[]{buildpath+"/bin",buildpath+"/classes",buildpath+"/components",buildpath+"/lib",buildpath+"/data",buildpath+"/logs",buildpath+"/web",buildpath+"/doc"});
     }
 
@@ -3659,9 +2548,9 @@ return false;
     Map<String,String> getServiceAuthors(XMLParameter env,String name) throws Exception {
         String s = getServiceDescString(name,env);
         if(StringUtils.isNotBlank(s)) {
-                HashMap tm = new HashMap();
-                tm.put(name,s);
-                return getServiceCreateUsers(env,tm);
+            HashMap tm = new HashMap();
+            tm.put(name,s);
+            return getServiceCreateUsers(env,tm);
         }
         return null;
     }
@@ -3742,11 +2631,11 @@ return false;
         }
     }
 
-    String getErrorMessage(String srvid,String username,String pwd,String yyyymmddhh,int linenum){
+    String getErrorMessage(Map instanceMap , String srvid,String username,String pwd,String yyyymmddhh,int linenum){
         if(linenum==0)linenum=200;
         if(StringUtils.isBlank(yyyymmddhh)) yyyymmddhh=DateTimeUtils.getStringDateByPattern("yyyyMMddhh",null);
         String f = "SRV_ERROR_LOG_"+srvid.trim()+"."+ yyyymmddhh;
-        List<Map> ls = getInsList();
+        List<Map> ls = new ArrayList(instanceMap.values());
         if(log.isDebugEnabled()) {
             log.debug("getErrorMessage:" + ls);
         }
@@ -3785,74 +2674,7 @@ return false;
         }
         return null;
     }
-    Map getInstanceInfo(String insid){
-        try {
-            HashMap map = new HashMap();
-            map.put("op", "getData");
-            map.put("path", serverspath + "/" + insid);
-            String d = (String) srvhandler.doSomeThing(null, null, map, null, null);
-            return StringUtils.convert2MapJSONObject(d);
-        }catch (Exception e){
 
-        }
-        return null;
-    }
-
-    List<Map> getInsList(){
-        try {
-            /*HashMap map = new HashMap();
-            map.put("op", "getChildren");
-            map.put("path", serverspath);
-            List<String> d = (List<String>) srvhandler.doSomeThing(null, null, map, null, null);
-            if(null !=d && d.size()>0){
-                List<Map> ret = new ArrayList();
-                map.clear();
-                for(String m:d){
-                    map.put("op", "getData");
-                    map.put("path", serverspath + "/" + m);
-                    String t = (String) srvhandler.doSomeThing(null, null, map, null, null);
-                    if(log.isDebugEnabled()){
-                        log.debug("get instance from zk path ["+map.get("path")+"] data ["+t+"]");
-                    }
-                    if(StringUtils.isNotBlank(t)){
-                        ret.add(StringUtils.convert2MapJSONObject(t));
-                    }
-                }
-                //return ret;
-                System.out.println();
-            }*/
-            HashMap in = new HashMap();
-            in.put("op", "getChildrenData");
-            in.put("path", serverspath);
-            Map<String, String> map2 = (Map)srvhandler.doSomeThing(null, null, in, null, null);
-            if(null != map2 && map2.size()>0){
-                List<Map> ret = new ArrayList();
-                Iterator<String> its = map2.keySet().iterator();
-                while(its.hasNext()){
-                    String k = its.next();
-                    ret.add(StringUtils.convert2MapJSONObject(map2.get(k)));
-                }
-                return ret;
-            }
-        }catch (Exception e){
-
-        }
-        return null;
-    }
-
-    String[] getInsListIds(){
-        List<Map> ls = getInsList();
-        if(null != ls){
-            List<String> ret = new ArrayList();
-            for(Map m:ls){
-                if(!ret.contains(m.get("insId"))){
-                    ret.add((String)m.get("insId"));
-                }
-            }
-            return (String[])ret.toArray(new String[0]);
-        }
-        return null;
-    }
 
     ConcurrentHashMap addressmap = new ConcurrentHashMap();
     String getAddressMapKey(String insid,String name){
@@ -3880,7 +2702,7 @@ return false;
         }
         return null;
     }
-    String getAddress(String insid,String port,String name){
+    String getAddress(Map insinfo,String insid,String port,String name){
         if(addressmap.containsKey(getAddressMapKey(insid,name))){
             String ad = (String)addressmap.get(getAddressMapKey(insid,name));
             if(log.isDebugEnabled()) {
@@ -3889,7 +2711,6 @@ return false;
             return ad;
         }
         try {
-            Map insinfo = getInstanceInfo(insid);
             String ad =getCacheInsAddress(insinfo,name);
             if(StringUtils.isNotBlank(ad)){
                 return ad;
@@ -3907,49 +2728,8 @@ return false;
             return null;
         }
     }
-    boolean startTrace()throws Exception{
-        HashMap map = new HashMap();
-        map.put("path",traceFlagPath);
-        map.put("op","publishStartTrace");
-        map.put("data","{op:'publishStartTrace'}");
-        srvhandler.doSomeThing(null, null, map, null, null);
-        return true;
-    }
-    boolean stopTrace()throws Exception{
-        HashMap map = new HashMap();
-        map.put("op","publishStopTrace");
-        map.put("data","{op:'publishStopTrace'}");
-        map.put("path",traceFlagPath);
-        srvhandler.doSomeThing(null, null, map, null, null);
-        return true;
-    }
-    static HashMap localCacheOfRemoteDesc = new HashMap();
-    Map getLocalCacheOfRemoteDesc(String serviceName,String instanceId){
-        if(StringUtils.isNotBlank(serviceName) && StringUtils.isNotBlank(instanceId)) {
-            return (Map)localCacheOfRemoteDesc.get(instanceId+"."+serviceName);
-        }
-        return null;
-    }
-    void updateLocalCacheOfRemoteDesc(HashMap cache,String name,String instanceId,String op){
-        if(getSelfInstanceId().contains("CONSOLE") && StringUtils.isNotBlank(instanceId) && StringUtils.isNotBlank(name)) {
-            if ("DEL".equals(op)) {
-                cache.remove(instanceId + "." + name);
-            } else if ("ADD".equals(op)) {
-                boolean is = false;
-                Map desc = getRemoteDesc(name, instanceId);
-                if(null != desc) {
-                    cache.put(instanceId + "." + name, desc);
-                    is = true;
-                }
-                if(log.isDebugEnabled())
-                log.debug("add LocalCache :"+name+" ins:"+instanceId+" status:"+is);
-            } else if ("UPD".equals(op)) {
-                Map desc = getRemoteDesc(name, instanceId);
-                if(null != desc)
-                cache.put(instanceId + "." + name, desc);
-            }
-        }
-    }
+
+
     Map getRemoteDesc(String name){
         String[] insname = getInsNameBySrvId(name);
         if(null != insname && insname.length>0){
@@ -3964,7 +2744,7 @@ return false;
             Object o = doRemoteAction(insId,"getDesc",in);
             if(null != o){
                 if(o instanceof Map)
-                return (Map)o;
+                    return (Map)o;
                 if(o instanceof String){
                     Map t = StringUtils.convert2MapJSONObject((String)o);
                     if(null != t){

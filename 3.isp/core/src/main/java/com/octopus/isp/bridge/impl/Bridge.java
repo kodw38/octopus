@@ -160,14 +160,18 @@ public class Bridge extends XMLDoObject implements IBridge {
         startTime = new Date();
     }
     public String getStartTime(){
+        return getDefaultFormatDate(startTime);
+    }
+
+    public String getDefaultFormatDate(Date date){
         try {
             if (null != contexts) {
-                return contexts.getDefaultContext().getSystemDate(startTime.getTime());
+                return contexts.getDefaultContext().getSystemDate(date.getTime());
             }else {
-                return DateTimeUtils.date2String(startTime);
+                return DateTimeUtils.date2String(date);
             }
         }catch (Exception e) {
-            return DateTimeUtils.date2String(startTime);
+            return DateTimeUtils.date2String(date);
         }
     }
 

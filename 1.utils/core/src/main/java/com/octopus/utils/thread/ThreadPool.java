@@ -178,7 +178,7 @@ public class ThreadPool {
         return ret;
     }
 
-    public synchronized ExecutorService getExecutorService(int count){
+    public synchronized static ExecutorService getExecutorService(int count){
         return Executors.newFixedThreadPool(count);
     }
 

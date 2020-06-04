@@ -2,6 +2,7 @@ package com.octopus.isp.bridge.launchers.impl.wsext;
 
 import com.octopus.isp.bridge.launchers.impl.CXFWebServiceLauncher;
 import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.thread.ExecutorUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
@@ -12,6 +13,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by Administrator on 2019/1/21.
@@ -21,7 +23,7 @@ public class GeneratorWSClass extends XMLDoObject {
     boolean isThrowException;
     boolean isdevelop = true;
     String compilepath = null;
-    static Map<String,Class> cache = new HashMap();
+    static Map<String,Class> cache = new ConcurrentHashMap();
 
     public GeneratorWSClass(XMLMakeup xml, XMLObject parent, Object[] containers) throws Exception {
         super(xml, parent, containers);
@@ -38,7 +40,7 @@ public class GeneratorWSClass extends XMLDoObject {
     Map<String,Class> initGenerator(Map config){
         try {
             if(null != config) {
-                Map<String,Class> ret = new HashMap();
+                Map<String,Class> ret = new ConcurrentHashMap();
                 List<String> list = (List) config.get("generatorpackage");
                 List<XMLDoObject> sers = getDeployServices(list);
                 String develop = (String) config.get("isdevelop");
@@ -50,44 +52,11 @@ public class GeneratorWSClass extends XMLDoObject {
                     compilepath = (String) config.get("compilepath");
                 }
                 if (null != sers && sers.size() > 0) {
-                    for (XMLDoObject ser : sers) {
-                        try {
-                            String pack = ser.getXML().getProperties().getProperty("package");
-                            if (ser.getXML().getId().startsWith("("))
-                                continue;// if tenant server , do not create cxf api
-                            if (StringUtils.isNotBlank(pack) && pack.lastIndexOf(".") > 0) {
-                                pack = pack.substring(0, pack.lastIndexOf("."));
-                            }
-                            Class serClass = null;
-                            if (isdevelop) {
-                                serClass = Desc.getServiceWrapClassByDesc(ser.getXML().getId(), ser.getInvokeDescStructure(), compilepath, CXFWebServiceLauncher.class.getName(), "invoke", isThrowException);
-                            } else {
-                                if (null != pack) {
-                                    try {
-                                        serClass = Class.forName(pack + "." + "proxy_" + ser.getXML().getId());
-                                    } catch (Exception e) {
-                                        log.error("not find class [" + pack + "." + "proxy_" + ser.getXML().getId() + "]", e);
-                                    }
-                                } else {
-                                    try {
-                                        serClass = Class.forName("proxy_" + ser.getXML().getId());
-                                    } catch (Exception e) {
-                                        log.error("not find class [" + "proxy_" + ser.getXML().getId() + "]", e);
-                                    }
-                                }
-                            }
-                            if(null !=serClass) {
-                                ret.put(ser.getXML().getId(), serClass);
-                                cache.put(ser.getXML().getId(), serClass);
-                            }
-                        }catch (NoClassDefFoundError e){
-                            log.error("generator class by desc["+ser.getXML().getId()+"] error",e);
-                        }catch (Exception e){
-                            log.error("generator class by desc["+ser.getXML().getId()+"] error",e);
-                        }
-
+                    ArrayList ls = new ArrayList();
+                    for(XMLDoObject ser:sers){
+                        generator(ser,ret);
                     }
-
+                    System.out.println("generator class count:"+ret.size());
                 }
                 return ret;
             }
@@ -98,7 +67,42 @@ public class GeneratorWSClass extends XMLDoObject {
 
     }
 
-
+    void generator(XMLDoObject ser,Map<String,Class> ret){
+        try {
+            String pack = ser.getXML().getProperties().getProperty("package");
+            if (ser.getXML().getId().startsWith("("))
+                return ;
+            if (StringUtils.isNotBlank(pack) && pack.lastIndexOf(".") > 0) {
+                pack = pack.substring(0, pack.lastIndexOf("."));
+            }
+            Class serClass = null;
+            if (isdevelop) {
+                serClass = Desc.getServiceWrapClassByDesc(ser.getXML().getId(), ser.getInvokeDescStructure(), compilepath, CXFWebServiceLauncher.class.getName(), "invoke", isThrowException);
+            } else {
+                if (null != pack) {
+                    try {
+                        serClass = Class.forName(pack + "." + "proxy_" + ser.getXML().getId());
+                    } catch (Exception e) {
+                        log.error("not find class [" + pack + "." + "proxy_" + ser.getXML().getId() + "]", e);
+                    }
+                } else {
+                    try {
+                        serClass = Class.forName("proxy_" + ser.getXML().getId());
+                    } catch (Exception e) {
+                        log.error("not find class [" + "proxy_" + ser.getXML().getId() + "]", e);
+                    }
+                }
+            }
+            if(null !=serClass) {
+                ret.put(ser.getXML().getId(), serClass);
+                cache.put(ser.getXML().getId(), serClass);
+            }
+        }catch (NoClassDefFoundError e){
+            log.error("generator class by desc["+ser.getXML().getId()+"] error",e);
+        }catch (Exception e){
+            log.error("generator class by desc["+ser.getXML().getId()+"] error",e);
+        }
+    }
 
     //filter loaded xmldoobject by path
     List<XMLDoObject> getDeployServices(List<String> name) {

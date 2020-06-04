@@ -214,9 +214,6 @@ public class ISPDictionary extends XMLDoObject{
                         Map id=null;
                         if(null != input.get("desc")){
                             Map d = StringUtils.convert2MapJSONObject((String)input.get("desc"));
-                            if(d.get("name").equals("HallQueue")){
-                                System.out.println();
-                            }
                             id = Desc.getInvokeDescStructure(d);
                         }
                         if(log.isDebugEnabled())
@@ -224,12 +221,20 @@ public class ISPDictionary extends XMLDoObject{
 
                         addService(m,id);
                     }
+                }else if(null != input.get("desc")){
+                    Map desc = (Map)input.get("desc");
+                    XMLMakeup body = Desc.getInvokeStructure(desc);
+                    if(null != desc && null != body){
+                        addService(body,desc);
+                    }
                 }
             }
             return null;
         }
         return null;
     }
+
+    //will overwrite pre object,将覆盖之前加入的相同对象
     void addService(XMLMakeup s,Map desc){
         String path = s.getProperties().getProperty("package");
         String name = s.getProperties().getProperty("key");

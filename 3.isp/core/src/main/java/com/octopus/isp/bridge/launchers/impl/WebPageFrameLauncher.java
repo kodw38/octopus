@@ -17,6 +17,7 @@ import com.octopus.utils.exception.Logger;
 import com.octopus.utils.file.FileUtils;
 import com.octopus.utils.img.ImageUtils;
 import com.octopus.utils.net.NetUtils;
+import com.octopus.utils.thread.ds.InvokeTask;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
@@ -63,6 +64,22 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
     List fromAccessIps=null;
     public WebPageFrameLauncher(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
+
+        addApplicationFinishedAction(new InvokeTask(this,"start",null,null));
+    }
+
+    public void doInitial()throws Exception{
+        if(null != properties.getProperty("limit_from_access_ips")){
+            String ips = properties.getProperty("limit_from_access_ips");
+            if(StringUtils.isNotBlank(ips)) {
+                fromAccessIps = Arrays.asList(ips.split(","));
+            }
+        }
+    }
+
+    public void start(){
+        waitReady();
+        XMLMakeup xml = getXML();
         env = (DataEnv)getPropertyObject("env");
 
         XMLMakeup uns = (XMLMakeup)ArrayUtils.getFirst(xml.getByTagProperty("property","name","LoginUserNameKey"));
@@ -96,22 +113,8 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             if(StringUtils.isNotBlank(tsslport)){
                 sslport =Integer.parseInt(tsslport);
             }
-            start((String) env.getEnv().get("webcontextpath"), (String) env.getEnv().get("webcontentpath"), port,isUsedWebSocket, sslport, (String) env.getEnv().get("ishttps"), (String) env.getEnv().get("ssl_keystoretype"), (String) env.getEnv().get("ssl_keystore"), (String) env.getEnv().get("ssl_password"), (String) env.getEnv().get("ssl_mgr_password"));
+            startApp((String) env.getEnv().get("webcontextpath"), (String) env.getEnv().get("webcontentpath"), port,isUsedWebSocket, sslport, (String) env.getEnv().get("ishttps"), (String) env.getEnv().get("ssl_keystoretype"), (String) env.getEnv().get("ssl_keystore"), (String) env.getEnv().get("ssl_password"), (String) env.getEnv().get("ssl_mgr_password"));
         }
-
-    }
-
-    public void doInitial()throws Exception{
-        if(null != properties.getProperty("limit_from_access_ips")){
-            String ips = properties.getProperty("limit_from_access_ips");
-            if(StringUtils.isNotBlank(ips)) {
-                fromAccessIps = Arrays.asList(ips.split(","));
-            }
-        }
-    }
-
-    public void start(){
-        //System.out.println();
     }
 
     @Override
@@ -632,7 +635,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
 
 
     //jetty 6.1
-    public void start(String contenxt,String baseResource,int port,boolean isUsedWebSocket,int sslport,String ishttps,String keyStoreType,String kstorePath,String storePassword,String managerPassword){
+    public void startApp(String contenxt,String baseResource,int port,boolean isUsedWebSocket,int sslport,String ishttps,String keyStoreType,String kstorePath,String storePassword,String managerPassword){
         //web.xml路径
 //        String serverWebXml = web+"WEB-INF" +"/web.xml";
         //startHttpWeb
@@ -661,7 +664,6 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             try {
 
                 org.eclipse.jetty.server.Server server = new org.eclipse.jetty.server.Server(sslport);
-                ServerConnector httpConnector = null;
                 // Setup SSL
                 org.eclipse.jetty.util.ssl.SslContextFactory sslContextFactory = new org.eclipse.jetty.util.ssl.SslContextFactory();
                 sslContextFactory.setKeyStorePath(System.getProperty("jetty.keystore.path", ksStorePath));
@@ -675,7 +677,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 httpConf.setSecurePort(sslport);
                 httpConf.setSecureScheme("https");
                 //httpConf.setRequestHeaderSize(8192);//default 8k
-                httpConnector = new ServerConnector(server, new HttpConnectionFactory(httpConf));
+                ServerConnector  httpConnector = new ServerConnector(server, new HttpConnectionFactory(httpConf));
                 // Setup HTTPS Configuration
                 HttpConfiguration httpsConf = new HttpConfiguration(httpConf);
                 httpsConf.addCustomizer(new SecureRequestCustomizer());
@@ -685,12 +687,12 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 httpsConnector.setName("secured"); // named connector
                 httpsConnector.setPort(sslport);
                 // Add connectors
-                server.setConnectors(new Connector[]{httpConnector, httpsConnector});
+                server.setConnectors(new Connector[]{httpConnector,httpsConnector});
 
 
                 getWebContexts(contextPath,baseResource,server,isUsedWebSocket);
                 server.start();
-                System.out.println("web Server [https://"+ NetUtils.getip()+":"+sslport + baseResource + "] is started!");
+                System.out.println("web Server [https://"+ NetUtils.getip()+":"+sslport+" content path:" + baseResource + "] is started!");
                 //server.join();
                 // Wire up contexts for secure handling to named connector
                 //String secureHosts[] = new String[]{"@secured"};
@@ -812,7 +814,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 server.setHandler(context);*/
                 getWebContexts(contextPath,resourcePath,server,isUsedWebSocket);
                 server.start();
-                System.out.println("web Server [http://" + NetUtils.getip() + ":" + port + resourcePath + "] is started!");
+                System.out.println("web Server [http://" + NetUtils.getip() + ":" + port +" content path:"+ resourcePath + "] is started!");
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();

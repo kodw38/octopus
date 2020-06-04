@@ -7180,6 +7180,7 @@ public class StringUtils {
         }
         return ret;
     }
+
     public static boolean regExpress(String str,String exp){
         Pattern pattern = Pattern.compile(exp);
         Matcher isNum = pattern.matcher(str);

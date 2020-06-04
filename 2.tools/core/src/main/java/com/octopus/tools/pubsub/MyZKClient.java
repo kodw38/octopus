@@ -14,14 +14,17 @@ import org.I0Itec.zkclient.serialize.ZkSerializer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.data.ACL;
 
 import java.io.DataInput;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -30,7 +33,6 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class MyZKClient extends ZkClient {
     static transient Log log = LogFactory.getLog(MyZKClient.class);
-    String instancesPath=null;
     //add path watch path
     private List<String> watchPathList = new ArrayList();
 
@@ -82,10 +84,10 @@ public abstract class MyZKClient extends ZkClient {
 
     public void process(WatchedEvent event) {
         super.process(event);
+        //System.out.println("---------"+event.getType().name()+":"+event.getPath());
     }
 
     void init()throws Exception{
-        instancesPath = registerInstance();
 
         subscribeStateChanges(new IZkStateListener() {
             @Override
@@ -99,13 +101,14 @@ public abstract class MyZKClient extends ZkClient {
                         log.error("zkClient disconnectioned and wait 30 seconds will reconnect");
                     }*/
                 }else if(keeperState.getIntValue()==-112){//session expire
-                    log.error("zkClient session expired, reconnecting");
+                    log.info("zkClient session expired, reconnecting");
                     doSessionExpired();
-                    log.error("reconnected successfully");
+                    log.info("reconnected successfully");
 
                 }else if(keeperState.getIntValue()== 3) {//SyncConnected
-                    log.error("zkClient SyncConnected,redo register instance");
-                    instancesPath = registerInstance();
+                    log.info("zkClient SyncConnected,redo register instance");
+                    doSyncConnected();
+                    //instancesPath = registerInstance();
                 }
                 //System.out.println(keeperState.getIntValue());
 
@@ -125,6 +128,7 @@ public abstract class MyZKClient extends ZkClient {
     }
 
     public List<String> getAllInstances(){
+        String instancesPath=getServersPath();
         if(StringUtils.isNotBlank(instancesPath)){
             List<String> pl =  getChildren(instancesPath);
             if(null != pl){
@@ -139,6 +143,47 @@ public abstract class MyZKClient extends ZkClient {
             return null;
         }
     }
+
+    /**
+     *@Description  get children data of path
+     *@auther Kod Wong
+     *@Date 2020/5/28 11:02
+     *@Param
+     *@return
+     *@Version 1.0
+     */
+    public void getChildData(String path,Map map){
+        if (exists(path)) {
+            List<String> cl = getChildren(path);
+            if (null != cl) {
+                for (String c : cl) {
+                    if(exists(path + "/" + c)) {
+                        String s = readData(path + "/" + c);
+                        if (null != s) {
+                            map.put(c, s);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void getAllChildrenData(String path,Map map){
+        if (exists(path)) {
+            List<String> cl = getChildren(path);
+            if (null != cl && cl.size()>0) {
+                for (String c : cl) {
+                    String p = path + "/" + c;
+                    String s = readData(p);
+                    if (StringUtils.isNotBlank(s)) {
+                        map.put(p, s);
+                    }
+                    getAllChildrenData(p,map);
+                }
+            }
+        }
+    }
+
     /**
      * monitor a path , any child path or data changed will occur do things
      * @param path
@@ -298,24 +343,60 @@ public abstract class MyZKClient extends ZkClient {
         }
     }
 
-    public String registerInstance()throws Exception{
-            String[] data = getInstanceInfo();
-            String path = getGroupPath();
-            if (null == path) path = "/ids";
-            if(!exists(path)){
-                createPersistent(path,true);
+    //设置一个临时目录数据
+    public synchronized void setEphemeralData(String path,String data){
+        if(!exists(path)){
+            //Ephemeral上级目录需要创建为Persistent
+            String pp = path.substring(0,path.lastIndexOf("/"));
+            if(pp.length()>1){
+                if(!exists(pp))
+                    createPersistent(pp,true);
             }
-            String srp = path + "/" + data[0];
-            createEphemeral(srp, data[1]);
-            monitorAllPathFrom(path);
-            return path;
+            if(!exists(path))
+                createEphemeral(path);
+            try {
+
+                Thread.sleep(30);
+            }catch (Exception e){}
+        }
+        writeData(path,data);
     }
+
+    //设置一个临时目录数据
+    public synchronized void setPersistentData(String path,String data){
+        if(!exists(path)){
+            if(!exists(path)) {
+                String[] ss = path.split("/");
+                String p = "";
+                for(int i=1;i<ss.length;i++){
+                    if(p.equals(""))
+                        p = "/"+ss[i];
+                    else
+                        p = p+"/"+ss[i];
+                    if(!exists(p)){
+                        createPersistent(p);
+                        try {
+                            Thread.sleep(30);
+                        }catch (Exception e){log.error("",e);}
+                    }
+                }
+            }
+            try {
+                Thread.sleep(30);
+            }catch (Exception e){log.error("",e);}
+        }
+        writeData(path,data);
+    }
+
+
+
     public abstract void doDataDeleted(String s);
     public abstract void doDataChanged(String s,Object o);
     public abstract void doAddPath(String s);
     public abstract void doRemovePath(String s);
     public abstract void doSessionExpired();
-    public abstract String[] getInstanceInfo();
-    public abstract String getGroupPath();
+    public abstract void doSyncConnected();
+    public abstract String getServersPath();
+
 
 }

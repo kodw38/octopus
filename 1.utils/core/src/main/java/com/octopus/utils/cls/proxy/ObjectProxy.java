@@ -3,6 +3,7 @@ package com.octopus.utils.cls.proxy;
 import com.octopus.utils.cls.ClassUtils;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -74,7 +75,6 @@ public class ObjectProxy {
             num = nextUniqueNumber++;
         }
         String proxyName = proxyPkg + proxyClassNamePrefix + num;
-
         try {
             Class proxyClass = GeneratorClass.generatorClass(impl,ms,proxyName,constructorClass);
             if(null != proxyClass){

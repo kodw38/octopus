@@ -11,6 +11,7 @@ import com.octopus.utils.cls.proxy.IMethodAddition;
 import com.octopus.utils.file.FileInfo;
 import com.octopus.utils.file.FileUtils;
 import com.octopus.utils.thread.ExecutorUtils;
+import com.octopus.utils.thread.ThreadPool;
 import com.octopus.utils.thread.ds.InvokeTask;
 import com.octopus.utils.thread.ds.InvokeTaskByObjName;
 import com.octopus.utils.xml.auto.XMLDoObject;
@@ -26,7 +27,8 @@ import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 用于自动根据xml配置文件生成对象的类。
@@ -45,19 +47,17 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class XMLObject implements Serializable,Comparable{
     static transient Log log = LogFactory.getLog(XMLObject.class);
-    //xml配置文本中与之匹配的id
-    //protected String xmlId;
 
-    //构造对象时忽略的标签
+    //构造对象时忽略的标签,遇到这些标签不进行实例化处理
     private static String[] ignoreNames={"defs","def"};
 
-    //xml可以是绝对路径也可以是classpath
+    //xml中定义的一些固定属性
     private static String[] FIX_PROPERTIES={"xmlid","xml","seq","key","clazz","isenable","classloader","xmlExtProperties","xmlExtFields"};
 
-    //代理类的标签
+    //代理类的标签<handler> 以这个标签定义的类讲需要实现extends XMLDoObject implements IMethodAddition.是一个代理类，在标签中配置代理的类路径，可以指定具体的方法。
     private static String FIX_TITLE_XMLOBJECT_INVOCATIONHANDLER = "handler";
 
-    //绝对路径
+    //childrendir标签通过path属性指定一个目录，解析目录下的所有xml文件成该对象的孩子。
     private static String FIX_TITLE_CHILDREN_XMLOBJECT_DIRECTORY = "childrendir";
 
     //多版本服务的容器Map<服务名称,<版本号,服务>>
@@ -66,40 +66,72 @@ public abstract class XMLObject implements Serializable,Comparable{
     //实例化类的ClassLoader，默认为该类的ClassLoader
     private ClassLoader classLoader;
 
-    //xml配置文件
+    //该对象的xml配置文件
     private XMLMakeup xml;
 
+    //该对象的父级对象
     private XMLObject parent;
 
+    //序列
     private double seq;
 
     //加载的对象文件路径
     private String path;
 
+    //唯一标识
     String id;
+
+    //状态，激活、休眠
     boolean isactive=true; // 激活的可以被调用
 
+    //存放xml key or tag 为key, text 为value
     private Properties xmlExtProperties= new Properties();
+
+    //存放类field 定义的XMLObject对象
     private Map xmlExtFields= new HashMap();
 
-    static Map<String,XMLObject> XmlObjectContainer = new ConcurrentHashMap<String, XMLObject>(); //主的对象容器空间
+    //主的对象容器空间
+    static Map<String,XMLObject> XmlObjectContainer = new ConcurrentHashMap<String, XMLObject>();
+
+    //所有对象的key列表
     static List<String> objectIds = Collections.synchronizedList(new LinkedList());
+
+    //所有对象的JSON描述文件容器
     static HashMap<String,Map> descCache = new HashMap(); // only store invoke structure desc
+
+    //所有JSON描述文件的容器
     static HashMap<String,Map> descInvokeCache = new HashMap(); // only store invoke structure desc
+
     //系统配置完成后初始化的动作
     static List<Object[]> initActions = new LinkedList<Object[]>();
+
+    //初始化完成后的动作
     static List<Object[]> initAfterActions = new LinkedList<Object[]>();
+
+    static List<Object[]> readyActions = new LinkedList<Object[]>();//系统最后前的Ready操作
+
     //store refer objId and Field list
     static Map<String,List<Object[]>> referRelFieldMap = new HashMap();
 
-    Map<String,XMLObject> singleXmlObjectContainer = null; //独立的容器空间,在有子系统,需要单独运行环境时使用
+    //存放触发的事件
+    static LinkedBlockingQueue eventsQueue = ExecutorUtils.createThreadPoolQueue(2);
+    //存放对象间的事件映射关系
+    static Map<String,List> eventsMapping = new HashMap();
+
+    //独立的容器空间,在有子系统,需要单独运行环境时使用
+    //single一组是为独立容器设置的对象容器，如果是独立容器，需要在对象间通过构造函数others参数专递。独立容器在使用完就需要销毁释放，所以没有用static标记。
+    Map<String,XMLObject> singleXmlObjectContainer = null;
     //系统配置完成后初始化的动作
     List<Object[]> singleInitActions = null;
     List<Object[]> singleInitAfterActions = null;
+    List<Object[]> singleReadyActions = null;//系统ready前的最后操作
     HashMap<String,Map> singleDescCache = null; // only store invoke structure desc
     HashMap<String,Map> singleDescInvokeCache =null; // only store invoke structure desc
-    boolean isSystemReady=false;
 
+    //系统是否已经ready的标志
+    protected static AtomicBoolean isSystemReady=new AtomicBoolean(false);
+
+    //系统ready，异步执行一些动作，有方法addSystemFinishedEvent加入
     static List<Runnable> systemFinishedEnvets = new LinkedList<Runnable>();
 
     public static XMLObject loadApplication(String mainXmlFilePath,ClassLoader classLoader,boolean isUpdateSaveDesc,boolean isShareContainer) throws Exception, ClassNotFoundException, IllegalAccessException, InstantiationException, NoSuchFieldException {
@@ -108,67 +140,97 @@ public abstract class XMLObject implements Serializable,Comparable{
     }
 
     /**
-     *
+     * @desc 根据配置的xml启动一个应用,isUpdateSaveDesc 默认是true，isUpdateSaveDesc默认是true。
+     * 如果已经启了一个容器，需要对之前的一个服务做redo操作，启动一个之前的环境信息时，需要创建一个单独运行的环境，isUpdateSaveDesc，isUpdateSaveDesc属性都是false.
      * @param xml  启动的主应用文件
      * @param classLoader 加载类classloader
-     * @param isUpdateSaveDesc 这个服务容器是否可以变更服务， true可以变更（默认true），false不能变更（如果是copy容器则不能变更服务）
-     * @param isShareContainer 是否共享服务容器，true(使用共享服务容器)，false(该应用将使用单独的服务容器)
+     * @param isUpdateSaveDesc 这个服务容器是否可以变更服务， true可以变更（默认true），false不能变更（如果是copy容器则不能变更服务） 默认是true
+     * @param isShareContainer 是否共享服务容器，true(使用共享服务容器)，false(该应用将使用单独的服务容器) 默认是true
      * @return
      * @throws Exception
      */
     public static XMLObject loadApplication(XMLMakeup xml,ClassLoader classLoader,boolean isUpdateSaveDesc,boolean isShareContainer)throws Exception{
         Object[] others=null;
+        //创建一个单独的容器，用于回复一个之前的环境
         if(!isShareContainer){
             if(isUpdateSaveDesc) {
                 HashMap<String,Map> singleDescCache = new HashMap(); // only store invoke structure desc
                 HashMap<String,Map> singleDescInvokeCache = new HashMap(); // only store invoke structure desc
-                others = new Object[5];
+                others = new Object[6];
                 others[3]=singleDescCache;
                 others[4]=singleDescInvokeCache;
             }else{
-                others = new Object[3];
+                others = new Object[6];
             }
             Map<String,XMLObject> singleXmlObjectContainer = new ConcurrentHashMap<String, XMLObject>();
             //系统配置完成后初始化的动作
             List<Object[]> singleInitActions = new LinkedList<Object[]>();
             List<Object[]> singleInitAfterActions = new LinkedList<Object[]>();
+            List<Object[]> singleReadyActions = new LinkedList<Object[]>();
             others[0]=singleXmlObjectContainer;
             others[1]=singleInitActions;
             others[2]=singleInitAfterActions;
+            others[5]=singleReadyActions;
         }
-        log.info("*********************starting application**************************");
+
+        //load application banner
+        String banner = FileUtils.getProtocolFile("classpath:banner.txt");
+        String title ="*********************starting application**************************";
+        if(banner.indexOf("${name}")>0 && StringUtils.isNotBlank(xml.getProperties().getProperty("desc"))) {
+            title = banner.replace("${name}", xml.getProperties().getProperty("desc"));
+            if(title.indexOf("${version}")>0 && StringUtils.isNotBlank(xml.getProperties().getProperty("version"))){
+                title = title.replace("${version}",xml.getProperties().getProperty("version"));
+            }
+        }
+        log.info("\n"+title);
+
+        //创建对象
         XMLObject ret= createXMLObject(xml,classLoader,null,others);
         log.info("... finished create objects");
         if(null != ret) {
-            ret.doObjectInitial();
+            //同步执行所有对象的setRefer，initial方法
+            ret.doAllObjectsInitial();
             log.info("... finished initial each object");
-            ret.doSystemLoadInit();
+            //同步执行initActions，initAfterActions方法
+            ret.doApplicationInitial();
             log.info("... finished initial application, welcome to use");
         }
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                if(systemFinishedEnvets.size()>0) {
-                    for (Runnable run:systemFinishedEnvets){
-                        run.run();
-                    }
-                }
-            }
-        }).start();
-        ret.isSystemReady=true;
+
+
+        //异步执行系统已经ready后的一些动作
+        doAsynFinishedTasks();
+
+        //执行最后的初始化操作，之后系统就ready
+        ret.doApplicationReady();
+
+        isSystemReady.set(true);
+        synchronized (isSystemReady) {
+            isSystemReady.notifyAll();
+        }
         return ret;
     }
 
 
-    public boolean isSystemReady(){
-        return isSystemReady;
+
+
+    public boolean isApplicationReady(){
+        return isSystemReady.get();
     }
 
-    public void addSystemFinishedEvent(Runnable run){
+    /**
+     *@Description  third all , 系统ready前的一次所有对象异步初始化
+     *@auther Kod Wong
+     *@Date 2020/5/25 17:27
+     *@Param
+     *@return
+     *@Version 1.0
+     */
+    public void addApplicationFinishedAction(Runnable run){
         systemFinishedEnvets.add(run);
     }
 
-    void doObjectInitial(){
+    //do setRefer and initial after create all XMLObject before application ready
+    void doAllObjectsInitial(){
         if(null != objectIds){
             Map<String,XMLObject> m = getXMLObjectContainer();
                 for (int i=0;i<objectIds.size();i++) {
@@ -176,7 +238,8 @@ public abstract class XMLObject implements Serializable,Comparable{
                         if(objectIds.size()>i && null != objectIds.get(i) && null != m.get(objectIds.get(i))) {
                             m.get(objectIds.get(i)).setRefer();
                             m.get(objectIds.get(i)).initial();
-                            log.info("do initial "+objectIds.get(i));
+                            if(log.isDebugEnabled())
+                            log.debug("finished initial "+objectIds.get(i));
                         }
                     } catch (Exception e) {
                         log.error(id + " initial happen error:", e);
@@ -187,7 +250,7 @@ public abstract class XMLObject implements Serializable,Comparable{
         }
     }
 
-    //最上层的描述在List 0位置
+    //获取对象的描述文件，如果有继承，最上层的描述在List 0位置
     static List<String> getDescription(XMLObject o)throws IOException{
         if(null !=o) {
             List<String> os = Desc.getExtendObjsDesc(o.getClass());
@@ -274,6 +337,7 @@ public abstract class XMLObject implements Serializable,Comparable{
             others[2] = singleInitAfterActions;
             others[3] = singleDescCache;
             others[4] = singleDescInvokeCache;
+            others[5] = singleReadyActions;
             return others;
         }
     }
@@ -299,6 +363,7 @@ public abstract class XMLObject implements Serializable,Comparable{
             }
         }
     }
+
     //获取调用的结构，去掉每个属性的说明
     public Map getInvokeDescStructure() throws Exception{
         if(null == singleDescInvokeCache) {
@@ -327,6 +392,7 @@ public abstract class XMLObject implements Serializable,Comparable{
             }
         }
     }
+
     protected void removeDescCache(String name){
         if(singleDescCache==null && singleDescInvokeCache==null) {
             descCache.remove(name);
@@ -336,6 +402,7 @@ public abstract class XMLObject implements Serializable,Comparable{
             singleDescInvokeCache.remove(name);
         }
     }
+
     public void removeDescCache(){
         removeDescCache(id);
     }
@@ -391,6 +458,7 @@ public abstract class XMLObject implements Serializable,Comparable{
         }
         return null;
     }
+
     public Map getStoreDescStructure(String key)throws IOException{
         LinkedHashMap map = new LinkedHashMap();
         Map t = Desc.getEnptyDescStructure();
@@ -417,6 +485,7 @@ public abstract class XMLObject implements Serializable,Comparable{
         }
         return null;
     }
+
     public Map getDescStructure(String key)throws IOException{
         //获取功能描述文件文本内容，0为当前功能文本，1，2，3为继承类功能文本
 
@@ -462,6 +531,23 @@ public abstract class XMLObject implements Serializable,Comparable{
     public XMLObject(XMLMakeup xml,XMLObject parent,Object[] containers) throws Exception {
         initObject(xml,parent,containers);
     }
+
+    /**
+     *@Description
+     *@auther Kod Wong
+     *@Date 2020/5/25 17:36
+     *@Param
+     *  xml  配置文件
+     *  parent 父XMLObject对象，如果没有，输入null
+     *  containers 如果不为null则是创建一个非共享独立的临时容器
+     *    [0] singleXmlObjectContainer
+     *    [1] singleInitActions
+     *    [2] singleInitAfterActions
+     *    [3] singleDescCache
+     *    [4] singleDescInvokeCache
+     *@return
+     *@Version 1.0
+     */
     void initObject(XMLMakeup xml,XMLObject parent,Object[] containers)throws Exception{
         if(null != containers){
             if(null != containers[0]){
@@ -479,6 +565,9 @@ public abstract class XMLObject implements Serializable,Comparable{
             if(containers.length>4 && null != containers[4]){
                 singleDescInvokeCache = (HashMap)containers[4];
             }
+            if(containers.length>5 && null != containers[5]){
+                singleReadyActions = (List)containers[5];
+            }
         }
         if(null != parent)setParent(parent);
         if(null != xml){
@@ -492,7 +581,8 @@ public abstract class XMLObject implements Serializable,Comparable{
                         singleXmlObjectContainer.put(xml.getId(), this);
                     }
                     objectIds.add(xml.getId());
-                    log.info("create XMLObject ok "+xml.getId()+"\n"+xml);
+                    if(log.isDebugEnabled())
+                    log.debug("create XMLObject ok "+xml.getId()+"\n"+xml);
                 }
 
                 /*String version = xml.getProperties().getProperty("version");
@@ -540,14 +630,30 @@ public abstract class XMLObject implements Serializable,Comparable{
             return singleXmlObjectContainer;
         }
     }
-    protected void addSystemLoadInitAction(Object obj,String fu,Class[] cs,Object[] pars){
+    /**
+     *@Description  first all 所有对象创建后，第一次全量对象一个一个初始化
+     *@auther Kod Wong
+     *@Date 2020/5/25 17:25
+     *@Param
+     *@return
+     *@Version 1.0
+     */
+    public void addApplicationInitialAction(Object obj,String fu,Class[] cs,Object[] pars){
         if(singleInitActions==null) {
             initActions.add(new Object[]{obj, fu, cs, pars});
         }else{
             singleInitActions.add(new Object[]{obj, fu, cs, pars});
         }
     }
-    protected void addSystemLoadInitAfterAction(Object obj,String fu,Class[] cs,Object[] pars){
+    /**
+     *@Description second all 所有对象创建后，第二次全量对象一个一个初始化
+     *@auther Kod Wong
+     *@Date 2020/5/25 17:26
+     *@Param
+     *@return
+     *@Version 1.0
+     */
+    public void addAfterApplicationInitialAction(Object obj,String fu,Class[] cs,Object[] pars){
         if(null == singleInitAfterActions) {
             initAfterActions.add(new Object[]{obj, fu, cs, pars});
         }else{
@@ -555,7 +661,16 @@ public abstract class XMLObject implements Serializable,Comparable{
         }
     }
 
-    void doSystemLoadInit(){
+    public void addApplicationReadyAction(Object obj,String fu,Class[] cs,Object[] pars){
+        if(null == singleReadyActions) {
+            readyActions.add(new Object[]{obj, fu, cs, pars});
+        }else{
+            singleReadyActions.add(new Object[]{obj, fu, cs, pars});
+        }
+    }
+
+    //execute initial action and after initial actions
+    void doApplicationInitial(){
         List list = null;
         if(singleInitActions==null){
             list=initActions;
@@ -591,6 +706,43 @@ public abstract class XMLObject implements Serializable,Comparable{
             }
         }
     }
+
+    //execute ready action , after this application will be ready
+    void doApplicationReady(){
+        List list = null;
+        if(singleReadyActions==null){
+            list=readyActions;
+        }else{
+            list = singleReadyActions;
+        }
+        for(int i=0;i<list.size();i++){
+            Object[] o = (Object[])list.get(i) ;
+            try {
+                if(null != o[3] && ((Object[])o[3]).length>=3 && null == ((Object[])o[3])[2]){
+                    ((Object[])o[3])[2]=getSystempar();
+                }
+                ExecutorUtils.synWork(o[0], (String) o[1], (Class[]) o[2], (Object[]) o[3]);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    static void doAsynFinishedTasks(){
+        if(systemFinishedEnvets.size()>0) {
+            final ThreadPool p = ExecutorUtils.getFixedThreadPool("doAsynFinishedTasks", 10);
+            p.getExecutor().execute(new Runnable() {
+                @Override
+                public void run() {
+                    for (Runnable r : systemFinishedEnvets) {
+                        p.getExecutor().execute(r);
+                    }
+                }
+            });
+        }
+    }
+
     protected XMLParameter getSystempar() throws Exception {
         XMLDoObject envobj = (XMLDoObject) getRoot();
         Object o = envobj.getPropertyObject("env");
@@ -862,6 +1014,8 @@ public abstract class XMLObject implements Serializable,Comparable{
             throw new Exception(xml.getId(),e);
         }
     }
+
+    //append refer field
     static void updateRefer(XMLMakeup xml,XMLObject object) throws IllegalAccessException {
         //reset refer
         if(referRelFieldMap.containsKey(xml.getId())){
@@ -908,6 +1062,8 @@ public abstract class XMLObject implements Serializable,Comparable{
      * @param desc
      * @param loader
      * @param parent
+     * @param isactive
+     * @param others //如果是独立的容器，带入当前的独立对象容器到新的对象中。
      * @return
      */
     protected XMLObject createXMLObjectByDesc(Map desc,ClassLoader loader,XMLObject parent,boolean isactive,Object[] others) throws Exception {
@@ -939,7 +1095,8 @@ public abstract class XMLObject implements Serializable,Comparable{
                 obj.suspendObject();
             }
             notifyObjectByName("launcher",true, "addService", desc);
-
+            //触发外界订阅了改方法的对象事件
+            reactEvents(null,"createXMLObjectByDesc",new Object[]{desc},null,null);
 
         }
 
@@ -958,6 +1115,8 @@ public abstract class XMLObject implements Serializable,Comparable{
                 o.removeXMLObjectById(o.getXML().getId());
                 Desc.removeDesc((String)o.getXML().getProperties().get("package"),id);
             }
+            //触发外界订阅了改方法的对象事件
+            reactEvents(null,"removeObject",new Object[]{id},null,true);
             return true;
         }
         return false;
@@ -985,11 +1144,31 @@ public abstract class XMLObject implements Serializable,Comparable{
             Desc.saveDesc(desc);
             Desc.removeDesc("temp_"+name);*/
             log.info("upload XMLObject "+name+" successfully");
-                return true;
             }
+            //触发外界订阅了改方法的对象事件
+            reactEvents(null,"updateObjectByDesc",new Object[]{desc},null,true);
+            return true;
+
         }
         return false;
     }
+
+    /**
+     *@Description 对象执行的方法和参数放入事件响应队列中，待队列异步处理，reactObjectname#reactMethod为其他对象订阅的key
+     *@auther Kod Wong
+     *@Date 2020/6/1 9:07
+     *@param reactObjectName 执行的对象名称
+     *@param reactMethod 执行的方法名称
+     *@param reactInputParams 输入参数
+     *@param exception 抛出的异常
+     *@param ret 返回的结果
+     *@return
+     *@Version 1.0
+     */
+    void reactEvents(String reactObjectName,String reactMethod,Object[] reactInputParams,Exception exception,Object ret){
+        eventsQueue.add(new ReactEvent(this,reactObjectName,reactMethod,id,reactInputParams,exception,ret,eventsMapping));
+    }
+
 
     public synchronized void notifyObjectByName(String action,boolean isAsyn,String op,Object obj){
         XMLObject o=null;
@@ -1043,8 +1222,10 @@ public abstract class XMLObject implements Serializable,Comparable{
     public abstract void initial()throws Exception;
 
 
+    //初始化一个XMLObject
     boolean loadXML(XMLMakeup xml) throws Exception, NoSuchFieldException, IllegalAccessException, InstantiationException {
         this.xml=xml;
+        id = xml.getId();
         //xml property设置到当前实现类
         log.debug("begin init properties "+xml.getId());
         setProperties(xml.getProperties());
@@ -1094,6 +1275,41 @@ public abstract class XMLObject implements Serializable,Comparable{
                 }
             }
 
+        }
+        //parse config events,add relationship to eventsMapping
+        if(null != properties){
+            String config = properties.getProperty("config");
+            if(StringUtils.isNotBlank(config)){
+                Map m = StringUtils.convert2MapJSONObject(config);
+                if(null != m){
+                    Map e = (Map)m.get("events");
+                    if(null != e) {
+                        Iterator<String> its = e.keySet().iterator();
+                        while(its.hasNext()) {
+                            String method = its.next();
+                            String v = id+"#"+method;
+                            Object o = e.get(method);
+                            if(null !=o) {
+                                if (o instanceof String) {
+                                    if (!eventsMapping.containsKey(o)) {
+                                        eventsMapping.put((String) o, new LinkedList());
+                                    }
+                                    if (!eventsMapping.get(o).contains(v))
+                                        eventsMapping.get(o).add(v);
+                                }else if(o instanceof List){
+                                    for(String s:(List<String>)o){
+                                        if (!eventsMapping.containsKey(s)) {
+                                            eventsMapping.put((String) s, new LinkedList());
+                                        }
+                                        if (!eventsMapping.get(s).contains(v))
+                                            eventsMapping.get(s).add(v);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         return ret;
     }
@@ -1205,7 +1421,6 @@ public abstract class XMLObject implements Serializable,Comparable{
                 continue;
             }
 
-            //refer
 
             setRefer(xml,field,array,map,extFields);
 
@@ -1299,6 +1514,7 @@ public abstract class XMLObject implements Serializable,Comparable{
             referRelFieldMap.get(id).add(new Object[]{this.getXML().getId(),f});
         }
     }
+
     void setRefer(XMLMakeup xml,Field field,List array,Map map,Map extFields)throws Exception{
         if(StringUtils.isBlank(xml.getText()) && xml.getChildren().size()==0
                 && !xml.getProperties().containsKey("clazz")
@@ -1893,6 +2109,18 @@ public abstract class XMLObject implements Serializable,Comparable{
         return null;
     }
 
+    //only use with addApplicationFinishedAction
+    protected void waitReady(){
+        try {
+            synchronized (isSystemReady) {
+                if (!isSystemReady.get())
+                    isSystemReady.wait();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
     //比较两个properties是否一样
     boolean sameProperty(Properties p1,Properties p2){
         if(p1.size()==p2.size()){
@@ -2185,6 +2413,7 @@ public abstract class XMLObject implements Serializable,Comparable{
         this.isactive = true;
         try {
             initial();
+            reactEvents(null,"activeObject",null,null,true);
         }catch (Exception e){
             log.error(getXML().getId()+" initial happen error when do active:",e);
         }
@@ -2194,6 +2423,7 @@ public abstract class XMLObject implements Serializable,Comparable{
         this.isactive = false;
         try {
             destroy();
+            reactEvents(null,"suspendObject",null,null,true);
         }catch (Exception e){
             return false;
         }

@@ -11,6 +11,7 @@ import com.octopus.utils.alone.StringUtils;
 import com.octopus.utils.cls.POJOUtil;
 import com.octopus.utils.exception.ErrMsg;
 import com.octopus.utils.exception.ExceptionUtil;
+import com.octopus.utils.thread.ds.InvokeTask;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
@@ -64,8 +65,19 @@ public class CXFWebServiceLauncher extends XMLDoObject{
             compilepath = (String) getEmptyParameter().getExpressValueFromMap((String) m.get("compilepath"),this);
         }
         env = (DataEnv)getPropertyObject("env");
+
+        addApplicationFinishedAction(new InvokeTask(this,"start",null,null));
     }
 
+    public  void start() throws Exception {
+        waitReady();
+        System.out.println("start init CXF WebService");
+        bridge = (IBridge) getObjectById("bridge");
+        String c = getXML().getProperties().getProperty("config");
+        Map config = (Map)getEmptyParameter().getMapValueFromParameter(StringUtils.convert2MapJSONObject(c),this);
+        deployXMLObject2Cxf(null,config);
+        System.out.println("finished init CXF WebService load service count: "+cache.size());
+    }
     @Override
     public void doInitial() throws Exception {
 
@@ -284,8 +296,8 @@ public class CXFWebServiceLauncher extends XMLDoObject{
         }else {
 
             //init deploy to cxf from xmlobject by config path
-            bridge = (IBridge) getObjectById("bridge");
-            deployXMLObject2Cxf(input, config);
+            //bridge = (IBridge) getObjectById("bridge");
+            //deployXMLObject2Cxf(input, config);
         }
         return null;
     }

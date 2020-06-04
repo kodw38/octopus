@@ -175,18 +175,20 @@ public class ExecutorUtils {
 
 
     public static void clearAllWorkTimeTasks(String[] ext) throws SchedulerException {
-        Iterator its = schedulerFactory.getAllSchedulers().iterator();
-        while(its.hasNext()){
-            Scheduler scheduler = (Scheduler)its.next();
-            if(null !=ext){
-                String[] ts = scheduler.getJobNames(JobGroupName);
-                for(String t:ts){
-                    if(!ArrayUtils.isLikeStringArray(ext,t)){
-                        scheduler.deleteJob(t,JobGroupName);
+        if(null != schedulerFactory) {
+            Iterator its = schedulerFactory.getAllSchedulers().iterator();
+            while (its.hasNext()) {
+                Scheduler scheduler = (Scheduler) its.next();
+                if (null != ext) {
+                    String[] ts = scheduler.getJobNames(JobGroupName);
+                    for (String t : ts) {
+                        if (!ArrayUtils.isLikeStringArray(ext, t)) {
+                            scheduler.deleteJob(t, JobGroupName);
+                        }
                     }
+                } else {
+                    scheduler.shutdown();
                 }
-            }else{
-                scheduler.shutdown();
             }
         }
     }
@@ -430,6 +432,12 @@ public class ExecutorUtils {
     public static ThreadPool getFixedThreadPool(String name,int count){
         //throw new RuntimeException("now not support thread pool");
         return ThreadPool.getInstance().getThreadPool(name,count);
+
+    }
+
+    public static LinkedBlockingQueue<Runnable> createThreadPoolQueue(int threadCount){
+        ThreadPoolQueue tq = new ThreadPoolQueue(ThreadPool.getExecutorService(threadCount));
+        return tq.getQueue();
     }
 
     public static Object workEachSamePar(Object[] objects,String name,Class[] pcs,Object[] pars)throws InterruptedException{
@@ -456,6 +464,7 @@ public class ExecutorUtils {
         }
         return null;
     }
+
     public static Object[] multiWorkSameParWaiting(Object[] objs,String name,Class[] parclass,Object[] pars){
         if(null != objs){
             try{
@@ -484,6 +493,16 @@ public class ExecutorUtils {
             }
         }
         return null;
+    }
+
+    public static void multiWorkSameMethodWaiting(Object obj,String name,Class[] parclass,List<Object[]> pars,int threadsCount){
+        ThreadPool p = ThreadPool.getInstance().getThreadPool("multiWorkSameMethodWaiting_"+obj.hashCode(),threadsCount);
+        for(int i=0;i<pars.size();i++){
+            p.getExecutor().execute(new InvokeTask(obj, name, parclass, pars.get(i)));
+        }
+        p.waitfinished();
+        ThreadPool.getInstance().returnThreadPool(p);
+
     }
 
     public static Object[] multiWorkSameParWaitingWithCachePool(Object[] objs,String name,Class[] parclass,Object[] pars){

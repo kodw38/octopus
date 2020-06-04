@@ -372,7 +372,7 @@ public class ZkClientListen extends XMLLogic {
             connzk();
             //执行订阅command节点数据变化和servers节点的列表变化
 
-            addSystemFinishedEvent(new Runnable() {
+            addApplicationFinishedAction(new Runnable() {
                 @Override
                 public void run() {
                     addTriggerWatch();

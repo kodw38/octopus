@@ -44,6 +44,7 @@ public class POJOUtil {
             ,"java.util.Calendar","java.sql.Date","java.sql.Time","java.sql.Timestamp","java.math.BigDecimal","java.math.BigInteger","java.lang.Object"
             ,"java.net.URI","java.util.ArrayList","java.util.Vector","java.util.List","java.util.HashMap","java.util.Hashtable","java.util.Map"};
 
+    public static String[] RemainStrings = new String[]{"extends","implements","class","method","public","protect","private","static"};
     //����Ϊ�յ�����
     static String[] NotNillableType={
             "int","double","long","boolean","short","float"
@@ -1254,9 +1255,11 @@ public class POJOUtil {
 
                     } else if (Collection.class.isAssignableFrom(o.getClass())) {
                         if(((Collection) o).iterator().hasNext()) {
-                            String sub = loopClazzText(pak, "_" + k, ((Collection) o).iterator().next(), list, isDate, ((null != annon && annon instanceof Map) ? ((Map) annon).get(k) : null), nsMapping, tmpObjMap);
+                            String sub = loopClazzText(pak, "_" + firstCharUpcase(k), ((Collection) o).iterator().next(), list, isDate, ((null != annon && annon instanceof Map) ? ((Map) annon).get(k) : null), nsMapping, tmpObjMap);
                             type = "java.util.ArrayList<" + sub + ">";
 
+                        }else{
+                            type = "java.util.ArrayList";
                         }
                     } else if (Map.class.isAssignableFrom(o.getClass())) {
                         loopClazzText(pak, "_" + k, (Map) o, list, isDate, ((null != annon && annon instanceof Map) ? ((Map) annon).get(k) : null), nsMapping, tmpObjMap);

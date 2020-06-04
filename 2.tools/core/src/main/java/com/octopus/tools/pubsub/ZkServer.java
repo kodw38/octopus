@@ -14,11 +14,15 @@ import org.I0Itec.zkclient.serialize.BytesPushThroughSerializer;
 import org.apache.zookeeper.jmx.ManagedUtil;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.ServerConfig;
+import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
+import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 
 import javax.management.JMException;
+import java.io.File;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * User: wfgao_000
@@ -28,9 +32,17 @@ import java.util.Map;
 public class ZkServer extends XMLDoObject{
     private static final String USAGE ="Usage: ZooKeeperServerMain configfile | port datadir [ticktime] [maxcnxns]";
     ZkClient zkClient;
+    AtomicBoolean isRunning = new AtomicBoolean(false);
     private ServerCnxnFactory cnxnFactory;
     public ZkServer(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
+        Map config = StringUtils.convert2MapJSONObject(xml.getProperties().getProperty("config"));
+        ExecutorUtils.work(this,"start",new Class[]{Map.class},new Object[]{config});
+        synchronized (isRunning) {
+            if (!isRunning.get()) {
+                isRunning.wait();
+            }
+        }
     }
 
     @Override
@@ -71,8 +83,8 @@ public class ZkServer extends XMLDoObject{
     }
 
     public void start(Map<String,String> properties){
-        ZooKeeperServerMain main = new ZooKeeperServerMain();
         try {
+            System.out.println("start zookeeper server...");
             try {
                 ManagedUtil.registerLog4jMBeans();
             } catch (JMException e) {
@@ -89,8 +101,36 @@ public class ZkServer extends XMLDoObject{
                 li.add(properties.get("maxClientCnxns"));
 
             config.parse((String[])li.toArray(new String[0]));
-            
-            main.runFromConfig(config);
+
+            FileTxnSnapLog txnLog = null;
+            try {
+                ZooKeeperServer zkServer = new ZooKeeperServer();
+                txnLog = new FileTxnSnapLog(new File(config.getDataLogDir()), new File(config.getDataDir()));
+                zkServer.setTxnLogFactory(txnLog);
+                zkServer.setTickTime(config.getTickTime());
+                zkServer.setMinSessionTimeout(config.getMinSessionTimeout());
+                zkServer.setMaxSessionTimeout(config.getMaxSessionTimeout());
+                this.cnxnFactory = ServerCnxnFactory.createFactory();
+                this.cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns());
+                this.cnxnFactory.startup(zkServer);
+
+                isRunning.set(true);
+                synchronized (isRunning) {
+                    isRunning.notify();
+                }
+
+                this.cnxnFactory.join();
+                if(zkServer.isRunning()) {
+                    zkServer.shutdown();
+                }
+            } catch (InterruptedException var8) {
+                log.warn("Server interrupted", var8);
+            } finally {
+                if(txnLog != null) {
+                    txnLog.close();
+                }
+
+            }
 /*
             ZooKeeperServer zkServer = new ZooKeeperServer();
 

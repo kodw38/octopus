@@ -377,14 +377,7 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
         if(null == xml)xml = getXML();
         boolean b=false;
         //类初始化进来的参数需要根据ENV转化
-        if(isconvert && null != parameter){
-            if(null != input)
-                input=parameter.getMapValueFromParameter(input,this);
-            if(null != output)
-                output=parameter.getMapValueFromParameter(output,this);
-            if(null != config)
-                config=parameter.getMapValueFromParameter(config,this);
-        }
+
         List ret = new LinkedList();
         while(ks.hasNext()){
             String k = (String)ks.next();
@@ -394,6 +387,15 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
             }
             if(null != xml && null!=v && StringUtils.isNotBlank(v)){
                 try{
+                    //初始化参数
+                    if(isconvert && null != parameter){
+                        if(null != input)
+                            input=parameter.getMapValueFromParameter(input,this);
+                        if(null != output)
+                            output=parameter.getMapValueFromParameter(output,this);
+                        if(null != config)
+                            config=parameter.getMapValueFromParameter(config,this);
+                    }
                     //执行前检查
                     if(!isActive()) {
                         log.error(getXML().getId()+" is not active , can not execute properties");
@@ -1783,8 +1785,8 @@ public abstract class XMLDoObject extends XMLObject implements IXMLDoObject {
                         return;
                     }
                     Map v = env.getMapValueFromParameter(o,this);
-                    if(log.isInfoEnabled())
-                    log.info(("["+System.currentTimeMillis()+"] ["+xmlkey+"] "+v.toString()+append+"\n"));
+                    if(log.isDebugEnabled())
+                    log.debug(("["+System.currentTimeMillis()+"] ["+xmlkey+"] "+v.toString()+append+"\n"));
                 }else if(msg instanceof String && ((String)msg).startsWith("${")){
                     Object o = ObjectUtils.getValueByPath(env.getReadOnlyParameter(),(String)msg);
                     if(o instanceof Collection){

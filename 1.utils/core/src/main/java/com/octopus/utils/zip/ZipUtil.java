@@ -300,8 +300,9 @@ public class ZipUtil {
                 while (eu.hasMoreElements()) {
                     InputStream in = null;
                     FileOutputStream out = null;
-                    try {
+
                         java.util.zip.ZipEntry zipEntry = (java.util.zip.ZipEntry) eu.nextElement();
+                    try {
                         String fileName = zipEntry.getName();
                         if (fileName.endsWith("/")) {
                             new File(unZipPath + File.separator + fileName).mkdir();
@@ -309,10 +310,18 @@ public class ZipUtil {
                         }
                         File f = new File(unZipPath + File.separator + fileName);
                         if (!f.getParentFile().isDirectory()) {
-                            f.getParentFile().mkdirs();
+                            boolean b = f.getParentFile().mkdirs();
+                            if(!b){
+                                if(f.getParentFile().isFile() && f.getParentFile().exists()){
+                                    f.getParentFile().delete();
+                                    f.getParentFile().mkdirs();
+                                }
+                                log.error("mkdirs fail:"+f.getParentFile().getPath());
+                            }
                         }
                         in = zipfile.getInputStream(zipEntry);
                         out = new FileOutputStream(f);
+
                         byte[] by = new byte[1024];
                         int c;
                         while ((c = in.read(by)) != -1) {
@@ -321,8 +330,9 @@ public class ZipUtil {
                         out.close();
                         in.close();
 //                    log.info("unzip "+zipFilePath+"�е�"+fileName+"��Ŀ¼:"+f.getPath());
+                    }catch (Exception e){
 
-
+                        log.error("write file fail:"+zipEntry.getName()+" , maybe the file not exist or replace by same name directory.");
                     } finally {
                         if (null != out)
                             out.close();

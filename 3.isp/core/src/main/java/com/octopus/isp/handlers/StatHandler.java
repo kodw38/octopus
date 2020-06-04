@@ -53,7 +53,7 @@ public class StatHandler extends XMLDoObject implements IMethodAddition {
         isNextInvoke= StringUtils.isTrue(xml.getProperties().getProperty("isnextinvoke"));
         logpathparent = xml.getProperties().getProperty("logpathparent");
         serverpath = xml.getProperties().getProperty("serverpath");
-        addSystemLoadInitAfterAction(this,"init",null,null);
+        addAfterApplicationInitialAction(this,"init",null,null);
     }
 
     private void init(){

@@ -554,7 +554,21 @@ public class ObjectUtils {
                 Object o = obj.getObjectById((String)li.get(0));
                 if(null != o){
                     String p = ((String)v).substring(((String)v).lastIndexOf("}")+2);
-                    v = ObjectUtils.getValueByPath(o, p);
+                    Object ov =null;
+                    //如果后面一do开头的一个字符，默认为执行dosomething中的一个方法，没有输入参数。
+                    if(StringUtils.isNotBlank(p) && o instanceof XMLDoObject && p.length()>2 &&  p.startsWith("do")){
+                        try {
+                            Map in = new HashMap();
+                            in.put("op",((char)(p.charAt(2)+32))+p.substring(3));
+                            ov = ((XMLDoObject) o).doSomeThing(null, null, in, null, null);
+                        }catch (Exception e){
+                            log.error("",e);
+                        }
+                    }
+                    if(ov!=null)
+                        v = ov;
+                    else
+                        v = ObjectUtils.getValueByPath(o, p);
                 }
             }
         }else if(((String) v).startsWith("${") || ((String) v).startsWith("^${")){
