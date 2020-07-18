@@ -120,10 +120,12 @@ public class ServiceGuideAction extends XMLDoObject {
                     if(null != system){
                         HashMap in = new HashMap();
                         in.put("op","getServiceInfoList");
-                        return system.doSomeThing("",null,in,null,null);
+                        env.appendParentInputParameter(in);
+                        system.doThing(env,null);
+                        return env.getResult();
                     }
                 }catch (Exception e){
-
+                    log.error("",e);
                 }
             }
 

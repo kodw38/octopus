@@ -943,6 +943,16 @@ public class Desc extends XMLDoObject{
     }
 
     /**
+     * @Desc 把页面配置的流程转换为desc服务文件，支持以下流程节点类型
+     *  条件判断 if
+     *  分叉并行 fork join
+     *  定时 cron一次执行
+     *  人工
+     *  会签
+     *  shell
+     *  循环
+     *  子流程
+     * 另外支持：开始、结束、异常、重做
      * convert flow (draw on page) Structure json to Desc structure json
      * @param flowStruct
      * "title":"newFlow_1",
@@ -965,6 +975,7 @@ public class Desc extends XMLDoObject{
             "alt":true
         },
      * @return
+     *
      */
     public static Map convertFlowStructure2DescMap(Map flowStruct,String flowType,XMLDoObject obj)throws ISPException{
         if(null != flowStruct){
@@ -989,9 +1000,11 @@ public class Desc extends XMLDoObject{
                     String key = (String)m.get("name");
                     String name = (String)m.get("svname");
                     String isend = null;
+                    //是否end节点
                     if(null != m.get("isend")) {
                         isend = (String) m.get("isend").toString();
                     }
+                    //是否人工节点
                     String isInterrupt = null;
                     if(null != m.get("isinterrupt")) {
                         isInterrupt = (String) m.get("isinterrupt").toString();
@@ -1035,17 +1048,21 @@ public class Desc extends XMLDoObject{
                     }
                     StringBuffer a = new StringBuffer("<do ");
                     if("task".equals(type)||"task round".equals(type)){
+                        //人工节点
                         //a.append("key=\"").append(key).append("\"").append(" action=\"suspendTheRequest\"");
                         a.append("key=\"").append(key).append("\"").append(" action=\"interrupt\"");
                     }else if("start round".equals(type)){
+                        //起始节点
                         startId=id;
                         a.append("key=\"").append(key).append("\"").append(" action=\"").append("flowStart").append("\"");
                     }else if("end".equals(type)){
+                        //结束节点
                         a.append("key=\"").append(key).append("\"").append(" action=\"").append("flowEnd").append("\"");
                         //isend="true";
                     }else {
                         a.append("key=\"").append(key).append("\"").append(" action=\"").append(name).append("\"");
                         if(null!=isInterrupt && StringUtils.isTrue(isInterrupt)){
+                            //人工节点
                             a.append(" interruptnotification=\"{isContinueAndNotify:false}\" ");
                         }
                     }
@@ -1103,6 +1120,7 @@ public class Desc extends XMLDoObject{
                 tempNode = ObjectUtils.setMapKeySortByKeySet(tempNode,ls);
             }*/
             StringBuffer sb = new StringBuffer();
+            //根据节点和线组装desc文件
             convertFlow2Desc(mm,tempNode,ms.values(),startId,null,sb,"");
 
             /*Iterator<String> its = tempNode.keySet().iterator();

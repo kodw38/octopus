@@ -6935,9 +6935,10 @@ public class StringUtils {
         }
         return null;
     }
-    public static Object tryString2Map(String str){
-        if(str.startsWith("{") && str.endsWith("}")) {
-            return convert2MapJSONObject(str);
+    public static Object tryString2Map(Object str){
+        if(null == str || str instanceof Map) return str;
+        if(str instanceof String && ((String)str).startsWith("{") && ((String)str).endsWith("}")) {
+            return convert2MapJSONObject((String)str);
         }else{
             return str;
         }
@@ -7215,6 +7216,8 @@ public class StringUtils {
             return null;
         }else {
             try {
+                //base64 http post change + to ' ', so recover back
+                v = StringUtils.replace(v," ","+");
                 InputStream n = ObjectUtils.convertBase64String2InputStream(v);
                 if(null != n){
                     return n;

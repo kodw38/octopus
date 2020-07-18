@@ -4872,7 +4872,7 @@ public class ArrayUtils {
         }
         return false;
     }
-    public static boolean isLikeArrayInString(String s,List<String> likeName){
+    public static boolean isLikeArrayInString(String s,Collection<String> likeName){
         if(null == likeName)return true;
         if(null == s)return false;
         for(String n:likeName){

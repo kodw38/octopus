@@ -489,6 +489,9 @@ public class ZipUtil {
         }
         while (eu.hasMoreElements()) {
             ZipEntry en = (ZipEntry) eu.nextElement();
+            if(en.getName().contains("zip")){
+                System.out.println();
+            }
             if ((null == path || (null != path && en.getName().indexOf(path)>=0)) && (null == endwith||(null != endwith && en.getName().endsWith(endwith)))) {
                 InputStream in = file.getInputStream(en);
                 map.put(en.getName(),in);

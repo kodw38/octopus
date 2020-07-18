@@ -1,5 +1,6 @@
 package com.octopus.utils.img;
 
+import com.octopus.utils.img.impl.ImagePHash;
 import com.sun.image.codec.jpeg.JPEGCodec;
 import com.sun.image.codec.jpeg.JPEGImageEncoder;
 import sun.misc.BASE64Decoder;
@@ -68,27 +69,125 @@ public class ImageUtils {
         return encoder.encode(data);
     }
 
-    public static InputStream toBase64Image(String imgContentStr){
-        BASE64Decoder decoder = new BASE64Decoder();
-        try {
-            // Base64解码
-            byte[] b = decoder.decodeBuffer(imgContentStr);
-            return new ByteArrayInputStream(b);
-        }catch(Exception e){
+    /*public static float compareImage(String imageFile1Path,String imageFile2Path)throws Exception{
+        Binarization b = new Binarization();
+        FileInputStream is = new FileInputStream(new File(imageFile1Path));
+        int a[][] = b.toBinarization(is);
+        Distribution d = new Distribution();
+        ArrayList<Square> s = d.toDistribution(a);
+        System.out.println(s.size());
 
+        FileInputStream is2 = new FileInputStream(new File(imageFile2Path));
+        int a2[][] = b.toBinarization(is2);
+        d = new Distribution();
+        ArrayList<Square> s2 = d.toDistribution(a2);
+        System.out.println(s.size());
+        ImageCompare c= new ImageCompare();
+        double m1 = c.toCompare(s, s2, b.getArea());
+        double m2 = c.toCompare(s2,s, b.getArea());
+        System.out.println("'''''" +m1 + "," +m2 +"," );
+    }*/
+
+    public static float compareImages(String f1,String f2) throws Exception {
+        float percent = compare(getData(f1),
+                getData(f2));
+        if (percent == 0) {
+           throw new Exception("无法比较");
+        } else {
+            return percent;
         }
-        return null;
-
+    }
+    private static int[] getData(String name) {
+        try {
+            BufferedImage img = ImageIO.read(new File(name));
+            BufferedImage slt = new BufferedImage(100, 100,
+                    BufferedImage.TYPE_INT_RGB);
+            slt.getGraphics().drawImage(img, 0, 0, 100, 100, null);
+            // ImageIO.write(slt,"jpeg",new File("slt.jpg"));
+            int[] data = new int[256];
+            for (int x = 0; x < slt.getWidth(); x++) {
+                for (int y = 0; y < slt.getHeight(); y++) {
+                    int rgb = slt.getRGB(x, y);
+                    Color myColor = new Color(rgb);
+                    int r = myColor.getRed();
+                    int g = myColor.getGreen();
+                    int b = myColor.getBlue();
+                    data[(r + g + b) / 3]++;
+                }
+            }
+            // data 就是所谓图形学当中的直方图的概念
+            return data;
+        } catch (Exception exception) {
+            System.out.println("有文件没有找到,请检查文件是否存在或路径是否正确");
+            return null;
+        }
     }
 
+    public static float compare(int[] s, int[] t) {
+        try {
+            float result = 0F;
+            for (int i = 0; i < 256; i++) {
+                int abs = Math.abs(s[i] - t[i]);
+                int max = Math.max(s[i], t[i]);
+                result += (1 - ((float) abs / (max == 0 ? 1 : max)));
+            }
+            return (result / 256) * 100;
+        } catch (Exception exception) {
+            return 0;
+        }
+    }
 
+    //比较两个图片的相似度，如果不相同的数据位不超过5，就说明两张图片很相似；如果大于10，就说明这是两张不同的图片。
+    public static int comparePHash(String f1,String f2)throws Exception{
+        ImagePHash p = new ImagePHash();
+        String image1;
+        String image2;
+        try {
+            image1 = p.getHash(new FileInputStream(new File(
+                    f1)));
+            image2 = p.getHash(new FileInputStream(new File(
+                    f2)));
+            return p.distance(image1, image2);
 
+        } catch (FileNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+           throw e;
+        }
+    }
+    //比较两个图片的相似度，如果不相同的数据位不超过5，就说明两张图片很相似；如果大于10，就说明这是两张不同的图片。
+    public static int comparePHash(String f1,ByteArrayOutputStream f2)throws Exception{
+        ImagePHash p = new ImagePHash();
+        String image1;
+        String image2;
+        FileInputStream fi=null;
+        try {
+            fi = new FileInputStream(new File(
+                    f1));
+            image1 = p.getHash(fi);
+            image2 = p.getHash(new ByteArrayInputStream(f2.toByteArray()));
+            return p.distance(image1, image2);
+
+        } catch (FileNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw e;
+        }finally {
+            if(null != fi)
+            fi.close();
+        }
+    }
     public static void main(String[] args){
 
         try {
             //ImageUtils.addImage("c://log/bg.jpg","c://log/add.jpg",200,400,"c://log/chg.jpg");
             //String s = ImageUtils.getBase64String("C:\\Users\\Administrator\\Pictures\\storage_light_box.png");
-            //System.out.println(s);
+            System.out.println(compareImages("C:\\work\\tb_workspace\\logs\\images\\camera_20200705194008.jpg"
+                    ,"C:\\work\\tb_workspace\\logs\\images\\camera_20200705194010.jpg"));
+            System.out.println(comparePHash("C:\\work\\tb_workspace\\logs\\images\\camera_20200705194008.jpg"
+                    ,"C:\\work\\tb_workspace\\logs\\images\\camera_20200705194010.jpg"));
+            System.out.println(comparePHash("C:\\work\\tb_workspace\\logs\\images\\camera_20200705194008.jpg"
+                    ,"C:\\work\\tb_workspace\\logs\\images\\camera_20200705195833.jpg"));
 
         } catch (Exception e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.

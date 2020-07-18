@@ -6,13 +6,18 @@ import com.octopus.isp.bridge.impl.Bridge;
 import com.octopus.isp.bridge.launchers.IConvert;
 import com.octopus.isp.bridge.launchers.impl.pageframe.SessionManager;
 import com.octopus.isp.bridge.launchers.impl.pageframe.util.HttpUtils;
+import com.octopus.isp.bridge.launchers.impl.wsext.bean.IotData;
+import com.octopus.isp.bridge.launchers.impl.wsext.servlet.AsyncServlet;
 import com.octopus.isp.cell.impl.Cell;
 import com.octopus.isp.ds.*;
 import com.octopus.isp.utils.ISPUtil;
+import com.octopus.tools.dataclient.dataquery.redis.RedisClient;
+import com.octopus.tools.queue.KafkaClient;
 import com.octopus.utils.alone.ArrayUtils;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.SNUtils;
 import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.cls.POJOUtil;
 import com.octopus.utils.exception.Logger;
 import com.octopus.utils.file.FileUtils;
 import com.octopus.utils.img.ImageUtils;
@@ -36,16 +41,22 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
+import redis.clients.jedis.Jedis;
 import sun.misc.BASE64Decoder;
 
 import javax.servlet.*;
 import javax.servlet.DispatcherType;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URLDecoder;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * User: wfgao_000
@@ -246,7 +257,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                     }
                 }
             }
-
+            //if not request action,go to pageframe
             if (null == pars.getTargetNames()) {
                 doThing(pars, getXML());
             }
@@ -269,38 +280,42 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 if (Logger.isDebugEnabled()) {
                     Logger.debug(this.getClass(), pars, (null == getXML() ? "" : getXML().getId()), "do action end" + ArrayUtils.toJoinString(pars.getTargetNames()), null);
                 }
-                HashMap map = new HashMap();
-                map.put("flowid", "output");
-                doCheckThing(getXML().getId(), pars, map, null, null, null);
-                if (!pars.isStop()) {
-                    Object ret = pars.getResult();
-                    if (null != ret) {
-                        if (ret instanceof ResultCheck) {
-                            ret = ((ResultCheck) ret).getRet();
-                        }
-                        if (null != outputconvert) {
-                            ret = outputconvert.convert(pars,ret);
-                        }
+                if(!pars.isStop()) {
+                    HashMap map = new HashMap();
+                    map.put("flowid", "output");
+                    doCheckThing(getXML().getId(), pars, map, null, null, null);
+                    if (!pars.isStop()) {
+                        Object ret = pars.getResult();
+                        if (null != ret) {
+                            if (ret instanceof ResultCheck) {
+                                ret = ((ResultCheck) ret).getRet();
+                            }
+                            if (null != outputconvert) {
+                                ret = outputconvert.convert(pars, ret);
+                            }
 
-                    }
-                    if (null == ret) {
-                        ret = "";
-                    }
-                    addResponseDataSize(pars, ret.toString().length());
-                    if(Logger.isDebugEnabled()) {
-                        Logger.debug(this.getClass(), pars, (null == getXML() ? "" : getXML().getId()), "end" + ArrayUtils.toJoinString(pars.getTargetNames()), null);
-                    }
+                        }
+                        if (null == ret) {
+                            ret = "";
+                        }
+                        addResponseDataSize(pars, ret.toString().length());
+                        if (Logger.isDebugEnabled()) {
+                            Logger.debug(this.getClass(), pars, (null == getXML() ? "" : getXML().getId()), "end" + ArrayUtils.toJoinString(pars.getTargetNames()), null);
+                        }
                 /*if (log.isDebugEnabled()) {
                     pars.printTime("WebPageFrame end");
                 }*/
-                    if("hessian".equals(pars.getProtocol())){
-                        LauncherCommon.setHessianResponse(pars,ret);
-                        return null;
-                    }else {
-                        return ret;
+                        if ("hessian".equals(pars.getProtocol())) {
+                            LauncherCommon.setHessianResponse(pars, ret);
+                            return null;
+                        } else {
+                            return ret;
+                        }
                     }
+                    return null;
+                }else{
+                    return null;
                 }
-                return null;
             } else {
                 if (null != pars.getResult()) {
                     if (pars.getResult() instanceof ResultCheck) {
@@ -482,6 +497,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             }
 
             paramStr = new String(buffer,"UTF-8").trim();
+            paramStr=URLDecoder.decode(paramStr,"UTF-8");
             if(log.isDebugEnabled()){
                 log.debug("receive request data len is "+len+",string is:\n"+paramStr);
             }
@@ -491,7 +507,9 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
 
             Map ret=null;
             if(paramStr.startsWith("{")){
+
                 ret= StringUtils.convert2MapJSONObject(paramStr);
+
             }else if(paramStr.startsWith("[")){
                 List rt = StringUtils.convert2ListJSONObject(paramStr);
                 return rt;
@@ -672,6 +690,9 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 if(StringUtils.isNotBlank(managerPassword)) {
                     sslContextFactory.setKeyManagerPassword(System.getProperty("jetty.keymanager.password", managerPassword));
                 }
+                sslContextFactory.addExcludeCipherSuites(".*NULL.*",".*RC4.*",".*MD5.*",".*DES.*",".*DSS.*");
+                sslContextFactory.addExcludeProtocols("SSL","SSLv2","SSLv3","SSLv2Hello","TLSv1","TLSv1.1");
+                //sslContextFactory.setIncludeProtocols("TLSv1.2");
                 // Setup HTTP Configuration
                 HttpConfiguration httpConf = new HttpConfiguration();
                 httpConf.setSecurePort(sslport);
@@ -693,46 +714,7 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                 getWebContexts(contextPath,baseResource,server,isUsedWebSocket);
                 server.start();
                 System.out.println("web Server [https://"+ NetUtils.getip()+":"+sslport+" content path:" + baseResource + "] is started!");
-                //server.join();
-                // Wire up contexts for secure handling to named connector
-                //String secureHosts[] = new String[]{"@secured"};
 
-                //ContextHandler test1Context = new ContextHandler();
-                //test1Context.setContextPath(contenxt);
-                //test1Context.setHandler(new MyFilter(this,null));
-                //test1Context.setVirtualHosts(secureHosts);
-
-                //ContextHandler test2Context = new ContextHandler();
-                //test2Context.setContextPath("/test2");
-                //test2Context.setHandler(new HelloHandler("Hello2"));
-                //test2Context.setVirtualHosts(secureHosts);
-
-                //ContextHandler rootContext = new ContextHandler();
-                //rootContext.setContextPath("/");
-                //rootContext.setHandler(new RootHandler("/test1", "/test2"));
-                //rootContext.setVirtualHosts(secureHosts);
-
-                // Wire up context for unsecure handling to only
-                // the named 'unsecured' connector
-                //ContextHandler redirectHandler = new ContextHandler();
-                //redirectHandler.setContextPath("/");
-                //redirectHandler.setHandler(new SecureSchemeHandler());
-                //redirectHandler.setVirtualHosts(new String[]{"@unsecured"});
-
-                // Establish all handlers that have a context
-                //ContextHandlerCollection contextHandlers = new ContextHandlerCollection();
-                //contextHandlers.setHandlers(new Handler[]
-                //        {redirectHandler, rootContext, test1Context, test2Context});
-
-                // Create server level handler tree
-                //HandlerList handlers = new HandlerList();
-                //handlers.addHandler(contextHandlers);
-                //handlers.addHandler(new DefaultHandler()); // round things out
-
-                //server.setHandler(handlers);
-
-                //server.start();
-                //server.join();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -779,6 +761,35 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
         if (isUsedWebSocket) {
             webapp.addServlet(new ServletHolder((WebSocketServlet)Class.forName("com.octopus.isp.actions.websocket.jetty.MyWebSocketServlet").newInstance()), "/websocket");
         }
+        //load servelts
+        XMLMakeup[] xms = getXML().find("servlet");
+        if(null != xms && xms.length>0){
+            for(XMLMakeup m:xms){
+                if(m.isEnable()){
+                    String c = m.getProperties().getProperty("class");
+                    if(StringUtils.isNotBlank(c)){
+                        try {
+                            HttpServlet hs = (HttpServlet)Class.forName(c).getConstructor(Properties.class,XMLDoObject.class).newInstance(m.getProperties(),this);
+                            if (null != hs) {
+                                ServletHolder sh = new ServletHolder(hs);
+                                if(m.getProperties().getProperty("mapping").startsWith("[")){
+                                    List<String> ls = StringUtils.convert2ListJSONObject(m.getProperties().getProperty("mapping"));
+                                    for(String l:ls){
+                                        webapp.addServlet(sh, l);
+                                    }
+                                }else {
+                                    webapp.addServlet(sh, m.getProperties().getProperty("mapping"));
+                                }
+
+                            }
+                        }catch (Exception e){
+                            log.error("",e);
+                        }
+                    }
+                }
+            }
+        }
+
         //        webapp.setDescriptor(serverWebXml);
         FilterHolder holder = new FilterHolder(new MyFilter(this, null));
         webapp.addFilter(holder, "/*", EnumSet.of(DispatcherType.REQUEST));
@@ -789,29 +800,6 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
             Server server = new Server(port);
 
             try {
-                /*WebAppContext context = new WebAppContext();
-                if (StringUtils.isBlank(contextPath)) {
-                    contextPath = "/";
-                }else {
-                    context.setContextPath(contextPath);
-                }
-                context.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
-                //context.setInitParameter("org.eclipse.jetty.servlet.Default.useFileMappedBuffer", "false"); //resource can avliable dynamic
-                context.setClassLoader(Thread.currentThread().getContextClassLoader());
-                if (StringUtils.isNotBlank(resourcePath)) {
-                    context.setResourceBase(resourcePath);
-                    File tmpFile = new File(resourcePath + "/web_temp");
-                    context.setTempDirectory(tmpFile);
-                }else{
-                    context.setBaseResource(org.eclipse.jetty.util.resource.Resource.newClassPathResource(""));
-                }
-                FilterHolder holder = new FilterHolder(new MyFilter(this, null));
-                context.addFilter(holder, "*//*",EnumSet.of(DispatcherType.REQUEST));
-                if (isUsedWebSocket) {
-                    context.addServlet(new ServletHolder((WebSocketServlet)Class.forName("com.octopus.isp.actions.websocket.jetty.MyWebSocketServlet").newInstance()), "/websocket");
-                }
-                //context.addServlet(HelloWordService.class,"/hessian/ProxyGetUU");
-                server.setHandler(context);*/
                 getWebContexts(contextPath,resourcePath,server,isUsedWebSocket);
                 server.start();
                 System.out.println("web Server [http://" + NetUtils.getip() + ":" + port +" content path:"+ resourcePath + "] is started!");
@@ -849,19 +837,25 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
                     log.debug(ret);
                 }
                 if(null != ret){
-                    String rsp = ret.toString();
-                    if(rsp.startsWith("{") || rsp.startsWith("["))
-                        response.setContentType("application/json;charset=UTF-8");
-                    else if("".equals(ret)||ret instanceof String && ((String)ret).startsWith("<script")){
-                        response.setContentType("text/html;charset=UTF-8");
-                    }else
-                        response.setContentType("application/text;charset=UTF-8");
-                    byte[] bs = ret.toString().getBytes("UTF-8");
+                    if(ret instanceof InputStream || ret instanceof OutputStream){
+                        if(ret instanceof ByteArrayOutputStream) {
+                            response.getOutputStream().write(((ByteArrayOutputStream)ret).toByteArray());
+                            response.flushBuffer();
+                        }
+                    }else {
+                        String rsp = ret.toString();
+                        if (rsp.startsWith("{") || rsp.startsWith("["))
+                            response.setContentType("application/json;charset=UTF-8");
+                        else if ("".equals(ret) || ret instanceof String && ((String) ret).startsWith("<script")) {
+                            response.setContentType("text/html;charset=UTF-8");
+                        } else
+                            response.setContentType("application/text;charset=UTF-8");
+                        byte[] bs = ret.toString().getBytes("UTF-8");
 
-                    response.setContentLength(bs.length);
-                    response.getOutputStream().write(bs);
-                    response.flushBuffer();
-
+                        response.setContentLength(bs.length);
+                        response.getOutputStream().write(bs);
+                        response.flushBuffer();
+                    }
                 }else if(!response.isCommitted()){
                     //System.out.println("--websocket--");
                     request.getSession().setAttribute("WEB-Launcher",launcher);
@@ -888,4 +882,5 @@ public class WebPageFrameLauncher extends Cell implements ILauncher {
 
         }
     }
+
 }

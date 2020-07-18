@@ -1054,8 +1054,13 @@ public class POJOUtil {
                                 calPrimateSize(obj, calDataSize);
                                 ClassUtils.setFieldValue(o, s, obj, false);
                             } else if (obj instanceof Map) {
-                                Object sub = convertMap2POJO((Map) obj, fc, calDataSize);
-                                ClassUtils.setFieldValue(o, s, sub, false);
+                                if(!"java.lang.Object".equals(fc.getName())){
+                                    Object sub = convertMap2POJO((Map) obj, fc, calDataSize);
+                                    obj = sub;
+                                }
+                                ClassUtils.setFieldValue(o, s, obj, false);
+                            }else if("java.lang.Object".equals(fc.getName())){
+                                ClassUtils.setFieldValue(o, s, obj, false);
                             }
                         }
 

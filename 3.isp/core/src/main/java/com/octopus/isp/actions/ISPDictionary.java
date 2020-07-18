@@ -215,6 +215,7 @@ public class ISPDictionary extends XMLDoObject{
                         if(null != input.get("desc")){
                             Map d = StringUtils.convert2MapJSONObject((String)input.get("desc"));
                             id = Desc.getInvokeDescStructure(d);
+
                         }
                         if(log.isDebugEnabled())
                             log.debug("add server:"+m.getId());

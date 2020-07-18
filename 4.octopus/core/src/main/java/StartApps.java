@@ -14,7 +14,12 @@ public class StartApps {
         try{
             long l = System.currentTimeMillis();
             if(null !=args)
-                XMLObject.loadApplication("classpath:"+args[0], null,true,true);
+                if(args.length==1) {
+                    XMLObject.loadApplication("classpath:" + args[0], null, true, true);
+                }else if(args[0].equals("-f") && args.length==2){
+                    log.info("load from file:"+args[1]);
+                    XMLObject.loadApplication("file:" + args[1], null, true, true);
+                }
             else
                 XMLObject.loadApplication("classpath:" + System.getProperty("app_path"), null,true,true);
             System.out.println("finish cost time:"+(System.currentTimeMillis()-l)+" ms");

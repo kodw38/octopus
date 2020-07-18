@@ -10,10 +10,7 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.net.URL;
+import java.net.*;
 import java.util.*;
 
 public class HttpURLConnectionUtils {
@@ -198,5 +195,39 @@ public class HttpURLConnectionUtils {
             return t;
         }
         return null;
+    }
+
+    public static InputStream getStream(String http) throws Exception {
+        URL url = new URL(http);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+        conn.setRequestProperty("Accept","image/webp,image/apng,image/*,*/*;q=0.8");
+        conn.setRequestProperty("Accept-Encoding","gzip, deflate");
+        conn.setRequestProperty("Connection","keep-alive");
+        conn.setRequestProperty("User-agent","Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.81 Safari/537.36");
+        conn.setDoOutput(true);// 打开写入属性
+        conn.setDoInput(true);// 打开读取属性
+        conn.setRequestMethod("GET");
+        conn.getResponseCode();
+        InputStream in = conn.getInputStream();
+        return in;
+    }
+    public static void main(String[] args){
+        try {
+            long l = System.currentTimeMillis();
+            InputStream m= getStream("http://192.168.1.18:81/stream");
+            FileOutputStream o = new FileOutputStream(new File("c:/logs/mm.mp4"));
+            byte[] b= new byte[1024];
+            while(m.read(b)>=0){
+                o.write(b);
+                if(System.currentTimeMillis()-l>10000){
+                    break;
+                }
+            }
+            o.close();
+            m.close();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }

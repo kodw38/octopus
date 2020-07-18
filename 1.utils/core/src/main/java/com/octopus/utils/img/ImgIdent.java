@@ -24,12 +24,12 @@ public class ImgIdent {
     public static int VALIDATECODE_TYPE_LINE=1;
     static transient Log log = LogFactory.getLog(ImgIdent.class);
 
-    public static String getValidatecode(BufferedImage image,int type){
+    public static String getValidatecode(BufferedImage image,int type) throws Exception {
         if(type==VALIDATECODE_TYPE_BACKGROUND){
-            return new BackgroundValidateCode(image).getValidatecode();
+            return new BackgroundValidateCode().getValidatecode(image,type,"");
         }
         if(type==VALIDATECODE_TYPE_LINE){
-            return new LineValidateCode(image).getValidatecode();
+            return new LineValidateCode(image).getValidatecode(image,type,"");
         }
         return "";
     }

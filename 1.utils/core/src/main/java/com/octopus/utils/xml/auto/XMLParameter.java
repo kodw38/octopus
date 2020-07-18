@@ -844,7 +844,15 @@ public class XMLParameter extends ParameterMap implements Serializable {
     public void setInputParameter(Object par){
         addGlobalParameter("${input_data}",par);
     }
+    public void appendParentInputParameter(Map input){
+        Map m = (Map)getParameter("^${input}");
+        if(null != m){
+            m.putAll(input);
+        }else {
+            put("^${input}", input);
+        }
 
+    }
     public String[] getTargetNames() {
         if(getParameter("${targetNames}") instanceof List){
             return (String[])((List) getParameter("${targetNames}")).toArray(new String[0]);
@@ -854,7 +862,7 @@ public class XMLParameter extends ParameterMap implements Serializable {
     }
 
     public void setTargetNames(String[] targetNames) {
-        addParameter("${targetNames}",targetNames);
+        addGlobalParameter("${targetNames}",targetNames);
     }
 
     public boolean containsParameter(String key){

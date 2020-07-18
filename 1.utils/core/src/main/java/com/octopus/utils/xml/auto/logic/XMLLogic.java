@@ -961,11 +961,7 @@ public class XMLLogic extends XMLDoObject{
                 }
                 //do goto interrupt
                 if(StringUtils.isNotBlank(env.getGoto())){
-                    XMLMakeup x = findSuspendNode(getXML(),env.getGoto(),null,null);
-                    if(null != x){
-                        doGotoAction(env,x);
-                    }
-                    return null;
+                    return doGoto(env,e);
                 }else {
                     throw e;
                 }
@@ -990,6 +986,25 @@ public class XMLLogic extends XMLDoObject{
         }
     }
 
+    Object doGoto(XMLParameter env,Exception e){
+        if(StringUtils.isNotBlank(env.getGoto())) {
+            if(e instanceof ISPException && ((ISPException)e).getCode().equals("FlowGoto")) {
+                XMLMakeup x = findSuspendNode(getXML(), env.getGoto(), null, null);
+                if (null != x) {
+                    try {
+                        doGotoAction(env, x);
+                    } catch (Exception ex) {
+                        doGoto(env,ex);
+                    }
+                } else {
+                    log.error("can not find goto [" + env.getGoto() + "] in " + getXML().getId());
+                }
+            }else{
+                log.error("",e);
+            }
+        }
+        return null;
+    }
     boolean isThisNode(XMLMakeup root,String key,String srvkey,String nodeid){
         if(StringUtils.isBlank(nodeid)|| nodeid.equals("null")) nodeid=null;
         if(

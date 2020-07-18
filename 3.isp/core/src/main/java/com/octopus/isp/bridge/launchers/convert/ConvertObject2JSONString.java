@@ -18,6 +18,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -36,9 +38,13 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
 
     @Override
     public Object convert(XMLParameter env,Object par) throws IOException, ISPException{
+
         if(null != par){
             List ids = new ArrayList();
             String res =null;
+            if(null != par && (par instanceof OutputStream)||(par instanceof InputStream)){
+                return par;
+            }
             if(par instanceof JSONArray){
                 res= ((JSONArray)par).toString();
             }else if(par instanceof JSONObject){
@@ -119,6 +125,7 @@ public class ConvertObject2JSONString extends XMLDoObject implements IConvert {
 
                 }
             }else{
+
                 res= par.toString();
                 if(res.contains("is_error") && res.contains("errorcode") && res.startsWith("{")){
                     Map m= StringUtils.convert2MapJSONObject(res);

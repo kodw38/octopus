@@ -375,21 +375,6 @@ public class SystemAction2 extends XMLDoObject {
         return 0;
     }
 
-
-    /**
-     * get all srv info list for showing in srv flow page
-     * @return map<srvName,srvDesc>
-     */
-    List<Map> getServiceListFromZk(){
-        try {
-
-
-        }catch (Exception e){
-
-        }
-        return null;
-    }
-
     Map<String,Integer[]> getSrvTotalStatFromDB(){
         if(null != dataclient && dataclient instanceof DataClient2){
             try {
@@ -412,6 +397,48 @@ public class SystemAction2 extends XMLDoObject {
             }catch (Exception e){
                 e.printStackTrace();
             }
+        }
+        return null;
+    }
+    Collection<Map> getServicesNameDesc(Map<String,List<Map>> othersInsServices,Map<String,Map> services,XMLParameter env){
+        try {
+            if(null != othersInsServices) {
+                Map ret = new HashMap();
+                Map<String,XMLObject> objs = getXMLObjectContainer();
+                Iterator<String> aname = objs.keySet().iterator();
+                while (aname.hasNext()) {
+                    String name = aname.next();
+                    XMLObject o = objs.get(name);
+                    try {
+                        Map st = o.getInvokeDescStructure();
+                        if(!ret.containsKey(st.get("name"))){
+                            HashMap m = new HashMap();
+                            m.put("name",st.get("name"));
+                            m.put("desc",(null !=st.get("desc")?(st.get("desc")instanceof Map?ObjectUtils.convertMap2String((Map)st.get("desc")):st.get("desc")):""));
+                            ret.put(st.get("name"),m);
+                        }
+                    } catch (Exception e) {
+                    }
+
+                }
+                Iterator its = othersInsServices.keySet().iterator();
+                while(its.hasNext()){
+                    String srvName = (String)its.next();
+                    if(!ret.containsKey(srvName)){
+                        HashMap m = new HashMap();
+                        m.put("name",srvName);
+                        Map st = services.get(srvName);
+                        if(null != st) {
+                            m.put("desc", (null != st.get("desc") ? (st.get("desc") instanceof Map ? ObjectUtils.convertMap2String((Map) st.get("desc")) : st.get("desc")) : ""));
+                        }
+                        ret.put(st.get("name"),m);
+                    }
+                }
+                if(ret.size()>0)
+                return ret.values();
+            }
+        }catch (Exception e){
+            log.error("get service list error",e);
         }
         return null;
     }
@@ -1164,7 +1191,9 @@ public class SystemAction2 extends XMLDoObject {
                     return findServicesByCenter((Map)config.get("othersInsServices"),(Map)config.get("serviceStatusMap"),env,(String) input.get("name"));
 
                 }else if("getServiceInfoList".equals(op)){
-                    return getServiceListFromZk();
+                    return getServicesNameDesc((Map)config.get("othersInsServices"),(Map)config.get("serviceStatusMap"),env);
+
+
                 }else if("getTreeServices".equals(op)){
                     List<Map> ls = findServicesByCenter((Map)config.get("othersInsServices"),(Map)config.get("serviceStatusMap"),env,null);
                     return getTreeServices(ls);

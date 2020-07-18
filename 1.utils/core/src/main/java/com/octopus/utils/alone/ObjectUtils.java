@@ -16,6 +16,7 @@
  */
 package com.octopus.utils.alone;
 
+import com.google.protobuf.ByteString;
 import com.octopus.utils.alone.impl.MappingInfo;
 import com.octopus.utils.alone.impl.StructInfo;
 import com.octopus.utils.cls.ClassUtils;
@@ -39,6 +40,7 @@ import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.bytedeco.javacv.FrameFilter;
 import sun.misc.BASE64Decoder;
 import sun.misc.BASE64Encoder;
 
@@ -1866,6 +1868,21 @@ public class ObjectUtils {
                     isf=false;
             }
             sb.append("]");
+        }else if(v instanceof ByteArrayOutputStream){
+            try {
+                String inv = convertInputStream2Base64String(((ByteArrayOutputStream) v).toByteArray());
+                sb.append(keyv(o, isDoubleYinhao)).append(":").append(inv);
+            }catch (Exception e){
+
+            }
+        }else if(v instanceof ByteArrayInputStream){
+            try {
+
+                String inv = convertInputStream2Base64String((ByteArrayInputStream)v);
+                sb.append(keyv(o, isDoubleYinhao)).append(":").append(inv);
+            }catch (Exception e){
+
+            }
         }else if(null !=o){
             sb.append(keyv(o,isDoubleYinhao)).append(":").append(valuev(v,isDoubleYinhao));
         }else{
@@ -1877,6 +1894,9 @@ public class ObjectUtils {
     public static String convertInputStream2Base64String(InputStream in) throws IOException {
         byte[] b = new byte[in.available()];
         in.read(b);
+        return inputStream2StringHeader+base64Encoder.encode(b);
+    }
+    public static String convertInputStream2Base64String(byte[] b) throws IOException {
         return inputStream2StringHeader+base64Encoder.encode(b);
     }
     static BASE64Decoder base64Decoder = new BASE64Decoder();

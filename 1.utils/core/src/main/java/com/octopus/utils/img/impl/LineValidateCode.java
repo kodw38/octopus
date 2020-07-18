@@ -73,6 +73,10 @@ public class LineValidateCode implements IImgIdent {
             e.printStackTrace();
         }
     }
+
+    public LineValidateCode(BufferedImage image){
+        SINGLE_IMG_POINTLINE.put("",image);
+    }
     boolean isRemoveColor(int rgb){
         int R = (rgb & 0xff0000) >> 16;
         int G = (rgb & 0xff00) >> 8;
@@ -248,6 +252,8 @@ public class LineValidateCode implements IImgIdent {
         }
         return "";
     }
+
+
 
     public static void main(String[] args){
         try{

@@ -25,6 +25,7 @@ public class BackgroundValidateCode implements IImgIdent{
     public BackgroundValidateCode(){
     }
 
+
     boolean isRemoveColor(int rgb){
         int R = (rgb & 0xff0000) >> 16;
         int G = (rgb & 0xff00) >> 8;

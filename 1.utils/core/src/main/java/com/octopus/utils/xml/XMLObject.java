@@ -1074,7 +1074,7 @@ public abstract class XMLObject implements Serializable,Comparable{
             desc.put("date", DateTimeUtil.getCurrDateTime());
         }
         XMLMakeup x = Desc.getInvokeStructure(desc);
-        if(null == x)return null;
+        if(null == x)throw new Exception("can not create new Service "+x.getId()+" , please check desc .");
         if(!desc.get("name").equals(x.getProperties().getProperty("key"))){
             desc.put("body",StringUtils.replace((String)desc.get("body"),"key=\""+x.getProperties().getProperty("key")+"\"","key=\""+(String)desc.get("name")+"\""));
             x.getProperties().put("key",desc.get("name"));
