@@ -19,11 +19,21 @@ public class LogLayout extends PatternLayout {
     public String format(LoggingEvent event)
     {
         try{
-            //String s = StringUtils.trumUTF8(super.format(event));
-            String s = super.format(event);
-            //String ts=new String(s.getBytes("utf-8"),"WINDOWS-1250");
-        //    System.out.println(s+ "    "+ts);
-        return s;
+            Object o = event.getLogger();
+            if(o instanceof MyLogger){
+                Thread.sleep(10);
+                if(((MyLogger)o).isFirstLog()){
+                    return ""+event.getMessage();
+                }else{
+                    return "\r\n"+event.getMessage();
+                }
+            }else {
+                //String s = StringUtils.trumUTF8(super.format(event));
+                String s = super.format(event);
+                //String ts=new String(s.getBytes("utf-8"),"WINDOWS-1250");
+                //    System.out.println(s+ "    "+ts);
+                return s;
+            }
         }catch (Exception e){
             e.printStackTrace();
         }

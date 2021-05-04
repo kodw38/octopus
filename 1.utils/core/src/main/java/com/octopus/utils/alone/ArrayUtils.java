@@ -2,7 +2,9 @@
 package com.octopus.utils.alone;
 
 import com.octopus.utils.cls.POJOUtil;
+import org.apache.commons.collections.map.LinkedMap;
 import org.apache.commons.lang.builder.EqualsBuilder;
+import sun.awt.image.ImageWatched;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -5168,6 +5170,57 @@ public class ArrayUtils {
         }
         return ret;
     }
+    public static Map sortMapByValueLength(Map map,final int type){
+        List<Map.Entry> list = new ArrayList<Map.Entry>(map.entrySet());
+        Collections.sort(list,new Comparator<Map.Entry>() {
+            //升序排序
+            public int compare(Map.Entry o1,Map.Entry o2) {
+                int len1 = o1.getValue().toString().length();
+                int len2 = o2.getValue().toString().length();
+                if(o1.equals(o2)){
+                    return 0;
+                }else{
+                    if(type==DESC){
+                        return (len1>=len2?-1:(1));
+                    }else{
+                        return (len1>=len2?1:(-1));
+                    }
+                }
+            }
+        });
+        Map ret = new LinkedHashMap();
+        for(Map.Entry<String,String> mapping:list){
+            ret.put(mapping.getKey(),mapping.getValue());
+        }
+        return ret;
+    }
+    public static Map sortMapByKeyLength(Map map,final int type){
+        if(null == map)return map;
+        List<Map.Entry> list = new ArrayList<Map.Entry>(map.entrySet());
+        Collections.sort(list,new Comparator<Map.Entry>() {
+            //升序排序
+            public int compare(Map.Entry o1,Map.Entry o2) {
+                if(o1==null||o2==null) return -1;
+                if(o1.getKey()==null || o2.getKey()==null)return -1;
+                int len1 = o1.getKey().toString().length();
+                int len2 = o2.getKey().toString().length();
+                if(o1.equals(o2)){
+                    return 0;
+                }else{
+                    if(type==DESC){
+                        return (len1>=len2?-1:(1));
+                    }else{
+                        return (len1>=len2?1:(-1));
+                    }
+                }
+            }
+        });
+        Map ret = new LinkedHashMap();
+        for(Map.Entry<String,String> mapping:list){
+            ret.put(mapping.getKey(),mapping.getValue());
+        }
+        return ret;
+    }
     public static boolean isNotLikeInStringList(List<String> likeLs,String str){
         if(null != likeLs && null != str){
             for(String s:likeLs){
@@ -5373,11 +5426,77 @@ public class ArrayUtils {
     public static boolean isStartWithHeads(String str,String[] withs){
         if(StringUtils.isNotBlank(str) && null != withs) {
             for (String with : withs) {
-                if (str.startsWith(with)) {
+                if (str.trim().startsWith(with)) {
                     return true;
                 }
             }
         }
         return false;
+    }
+    public static boolean isEndWith(String str,String[] withs){
+        if(StringUtils.isNotBlank(str) && null != withs) {
+            for (String with : withs) {
+                if (str.endsWith(with)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static String indexOfEndWith(String str,String[] endWith){
+        if(null != endWith){
+            for(int i=0;i<endWith.length;i++){
+                if(str.endsWith(endWith[i])){
+                    return endWith[i];
+                }
+            }
+        }
+        return null;
+    }
+
+    public static HashMap.Entry<String,String> getEntryLikeKey(String str,Map<String,String> map){
+        if(null != map){
+            for(HashMap.Entry<String,String> e:map.entrySet()){
+                if(str.indexOf(e.getKey())>=0){
+                    return e;
+                }
+            }
+        }
+        return null;
+    }
+    public static Map dot2separator(Map<String,String> map,String sep){
+        LinkedMap ret=  new LinkedMap();
+        Iterator<String> its = map.keySet().iterator();
+        while(its.hasNext()){
+            String k = its.next();
+            String v= map.get(k);
+            ret.put(StringUtils.replace(k,".",sep),StringUtils.replace(v,".",sep));
+        }
+        return ret;
+    }
+
+    public static boolean isInSuffixs(String[] sufixs,String path){
+        if(null !=sufixs && null != path){
+            for(String s:sufixs){
+                if(null != s && path.endsWith(s)){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    public static int anyOneIndexOf(String[] keys, String path){
+        if(null !=keys && null != path){
+            int n=0;
+            for(String s:keys){
+                if(null != s){
+                    n = path.indexOf(s);
+                    if(n>0)
+                        return n;
+                }
+            }
+        }
+        return -1;
     }
 }

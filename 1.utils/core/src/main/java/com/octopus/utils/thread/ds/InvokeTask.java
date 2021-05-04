@@ -24,8 +24,15 @@ public class InvokeTask implements Runnable{
     Throwable exception;
     boolean istimeout=true;
     Object w = null;
+    Class staticClass=null;
     public InvokeTask(Object impl,String methodName,Class[] parsClass,Object[] pars){
         this.impl=impl;
+        this.methodName=methodName;
+        this.pars=pars;
+        this.parsClass=parsClass;
+    }
+    public InvokeTask(Class staticClass,String methodName,Class[] parsClass,Object[] pars){
+        this.staticClass=staticClass;
         this.methodName=methodName;
         this.pars=pars;
         this.parsClass=parsClass;
@@ -51,7 +58,11 @@ public class InvokeTask implements Runnable{
                     WorkTimeUtil.work(((TimeTask) this.impl).timeExpression,new InvokeTask(((TimeTask)this.impl).getObject(),methodName,parsClass,pars));
                 }
             }else{
-                result=ClassUtils.invokeMethod(this.impl,methodName,parsClass,pars);
+                if(null != staticClass && null == impl){
+                    result=ClassUtils.invokeStaticMethod(staticClass,methodName,parsClass,pars);
+                }else {
+                    result = ClassUtils.invokeMethod(this.impl, methodName, parsClass, pars);
+                }
             }
 
             isSuccess=true;

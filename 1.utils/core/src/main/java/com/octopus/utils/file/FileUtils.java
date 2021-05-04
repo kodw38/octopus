@@ -1,16 +1,19 @@
 package com.octopus.utils.file;
 
 import com.octopus.utils.alone.ArrayUtils;
-import com.octopus.utils.alone.NumberUtils;
-import com.octopus.utils.alone.SNUtils;
 import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.alone.impl.ReplaceItem;
 import com.octopus.utils.file.impl.excel.ExcelReader;
+import com.octopus.utils.thread.ExecutorUtils;
+import com.octopus.utils.thread.ThreadPool;
+import com.octopus.utils.thread.ds.InvokeTask;
 import com.octopus.utils.zip.ReplaceZipItem;
 import com.octopus.utils.zip.ZipUtil;
 import net.sf.json.regexp.RegexpUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import sun.misc.BASE64Encoder;
+import com.google.googlejavaformat.java.Formatter;
 
 import javax.swing.*;
 import java.io.*;
@@ -1069,7 +1072,7 @@ public class FileUtils {
   
     // ����Ŀ¼  
     public static void copyDict(File source, File target,String filterFloderNames[],String[] filterFlodersPath,String filterFilesName,RandomAccessFile log) throws IOException {  
-        File[] file = source.listFiles();// �õ�Դ�ļ��µ��ļ���Ŀ
+        File[] file = source.listFiles();
         if(null != file) {
             for (int i = 0; i < file.length; i++) {
                 if (file[i].isFile()) {// �ж����ļ�
@@ -1225,10 +1228,15 @@ public class FileUtils {
                 fos = new FileOutputStream(out);
             int len = fis.available();
             if (len > 0) {
-                byte[] buf = new byte[len];
+                /*byte[] buf = new byte[len];
                 int i = 0;
                 while ((i = fis.read(buf, 0, len)) != -1) {
                     fos.write(buf);
+                }*/
+                byte[] b = new byte[1024];
+                int ll = 0;
+                while (( ll = fis.read( b ) ) > 0) {
+                    fos.write( b, 0, ll );
                 }
             }
         }finally {
@@ -1358,31 +1366,40 @@ public class FileUtils {
         Collections.sort(li);
         return li;
     }
-    public static List<File> getSortFiles(String dir,String type){
+    public static List<File> getSortFiles(String dir,final String type){
         List<File> fs = new ArrayList();
         getAllFile(new File(dir),null,fs);
-        if("update.desc".equals(type)){
+
         Collections.sort(fs,new Comparator<File>() {
             @Override
             public int compare(File o1, File o2) {
                 if(o1.lastModified()>o2.lastModified())
-                    return 0;
-                else
-                    return 1;  //To change body of implemented methods use File | Settings | File Templates.
+                    if("update.desc".equals(type)||"desc".equals(type)) {
+                        return -1;
+                    }else{
+                        return 1;
+                    }
+                else {
+                    if("update.desc".equals(type)||"desc".equals(type)) {
+                        return 1;  //To change body of implemented methods use File | Settings | File Templates.
+                    }else{
+                        return -1;
+                    }
+                }
             }
         });
-        }
+
         return fs;
     }
     //get all files with suffix file and sort by length of file name, more len and laster
-    public static List<String> getAllFileNames(String dir,String suffix){
+    public static List<String> getAllFileNames(String dir,String[] suffix){
         List<File> fs = new ArrayList();
         getAllFile(new File(dir),null,fs);
         if(null != fs){
             List<String> ret = new ArrayList<String>();
             for(File f:fs) {
                 if(StringUtils.isNotBlank(suffix)){
-                    if(f.getName().endsWith(suffix)){
+                    if(ArrayUtils.isEndWith(f.getName(),suffix)){
                         ret.add(f.getPath());
                     }
                 }else {
@@ -1595,7 +1612,7 @@ public class FileUtils {
         return list;
     }
 
-    public static void getAllDirectoryFiles(File f, String fileName, List list) {
+    public static void getAllDirectoryFiles(File f, String fileName, List<File> list) {
         File[] fs;
         if (null != f && f.isDirectory()) {
             fs = f.listFiles();
@@ -1616,7 +1633,7 @@ public class FileUtils {
         }
     }
     
-    public static void getAllDirectoryMarchFiles(File f, String marchName, List list) {
+    public static void getAllDirectoryMarchFiles(File f, String marchName, List<String> list) {
         File[] fs;
         if (null != f && f.isDirectory()) {
             fs = f.listFiles();
@@ -1684,6 +1701,73 @@ public class FileUtils {
             list.add(f);
         }
 	}
+
+    /**
+     * find directors by endwith path
+     * @param rootDir
+     * @param endWithPath
+     * @param list
+     */
+	public static void findDirEndWithFilesPath(File rootDir,String[] endWithPath,List<String> list){
+        File[] fs;
+        if (null != rootDir && rootDir.isDirectory()) {
+            fs = rootDir.listFiles();
+            for (int i = 0; i < fs.length; i++) {
+                if (fs[i].isDirectory()) {
+                    if(null != endWithPath) {
+                        boolean is=false;
+                        for(String endpath:endWithPath) {
+                            if (fs[i].getPath().endsWith(endpath)) {
+                                    list.add(fs[i].getPath());
+                                    is=true;
+                            }
+                        }
+                        if(!is)
+                            findDirEndWithFilesPath(fs[i], endWithPath, list);
+                    }
+                }
+
+            }
+        }
+    }
+
+    /**
+     * 获取不包含某些子目录的所有文件
+     * @param rootDir
+     * @param withoutDir
+     * @param list
+     */
+    public static void getAllFilesWithOutDirs(File rootDir,String[] withoutDir,String[] ignorFileSuffix,List<String> list){
+        File[] fs;
+        if (null != rootDir && rootDir.isDirectory()) {
+            fs = rootDir.listFiles();
+            for (int i = 0; i < fs.length; i++) {
+                if (fs[i].isDirectory()) {
+                    if(null != withoutDir) {
+                        boolean is=false;
+                        for(String endpath:withoutDir) {
+                            if (fs[i].getPath().endsWith(endpath)) {
+                                is=true;
+                            }
+                        }
+                        if(!is)
+                            getAllFilesWithOutDirs(fs[i], withoutDir,ignorFileSuffix, list);
+                    }else{
+                        getAllFilesWithOutDirs(fs[i],withoutDir,ignorFileSuffix,list);
+                    }
+                }else{
+                    if(null !=ignorFileSuffix){
+                        if(!ArrayUtils.isInSuffixs(ignorFileSuffix,fs[i].getPath())){
+                            list.add(fs[i].getPath());
+                        }
+                    }else {
+                        list.add(fs[i].getPath());
+                    }
+                }
+
+            }
+        }
+    }
 
     public static void delAllDirectory(String path, String directoryName) throws Exception {
         File f = new File(path);
@@ -2380,6 +2464,69 @@ public class FileUtils {
 
  return ((String[])(String[])list.toArray(new String[list.size()]));
 }
+
+public static int countFileInDir(String dir,String[] endwith){
+    List<String> list = new ArrayList();
+    getAllDirectoryMarchFiles(new File(dir),null,list);
+    int count=0;
+    for(String s:list){
+        if(ArrayUtils.isEndWith(s,endwith)){
+            count++;
+        }
+    }
+    return count;
+}
+
+    /**
+     * sum class file number in a dir
+     * @param dir
+     * @param jarNames
+     * @return
+     * @throws Exception
+     */
+    public static int countClassInJarDir(String dir,String[] jarNames,String endwith)throws Exception{
+   List<String> list = new ArrayList();
+   int c=0;
+   getAllDirectoryMarchFiles(new File(dir),null,list);
+   if(null != list){
+       for(String s:list){
+           if(s.endsWith("jar")) {
+
+               if(null != jarNames) {
+                   for (String n : jarNames) {
+                       if (s.indexOf(n) >= 0) {
+                           c += countClassInJar(s, endwith);
+                           break;
+                       }
+                   }
+               }else{
+                   c += countClassInJar(s, endwith);
+               }
+
+           }
+       }
+   }
+   return c;
+}
+
+
+    /**
+     * count class in a jar file
+     * @param jarFilePath
+     * @return
+     * @throws Exception
+     */
+    public static int countClassInJar(String jarFilePath,String endwith)throws Exception{
+    ZipFile zipFile = new ZipFile(jarFilePath);
+    Enumeration e = zipFile.entries();
+    int n=0;
+    while (e.hasMoreElements()) {
+        ZipEntry zipEntry = (ZipEntry)(ZipEntry)e.nextElement();
+        if (zipEntry.getName().endsWith(endwith))
+            n++;
+    }
+    return n;
+}
  
  public static void delFolder(String folderPath) {
      try {
@@ -2596,4 +2743,365 @@ public class FileUtils {
         }
     }
 
+    static boolean isFileNameLikes(String path,Collection likes){
+        String name = getFileName(path);
+        return ArrayUtils.isLikeArrayInString(name,likes);
+    }
+    static String getFileName(String path){
+        String name = null;
+        if(path.lastIndexOf("/")>0){
+            name = path.substring(path.lastIndexOf("/")+1);
+        }else if(path.lastIndexOf("\\")>0){
+            name = path.substring(path.lastIndexOf("\\")+1);
+        }
+        return name;
+    }
+    /**
+     * 重构代码目录
+     * 主要迁移目录和替换包路径，删除某些版本信息
+     * @param fromDir 原代码根目录
+     * @param toDir   新代码根目录
+     * @param ignorDirs  忽略的某些原代码目录
+     * @param subHeadDirsMappingBeforePackagePath  根目录下要变更子目录的映射，改映射要在package的前面，例如从workspace开始到src目录之间的变换
+     * @param chgPackageStartWith   需要变更的package的目录映射关系
+     * @param needChgContextFileSuffix  需要内容修改的文本文件后缀列表
+     */
+    public static void refactor(String fromDir, String toDir, String[] ignorDirs,String[] ignorFileSuffix,String[] pkgParentDirNames, Map<String,String> subHeadDirsMappingBeforePackagePath
+            , Map<String,String> chgPackageStartWith,Map<String,String> chgFileNames, List<ReplaceItem> reps, String[] needChgContextFileSuffix,int threadCount){
+        if(fromDir.charAt(fromDir.length()-1)==File.separatorChar) fromDir+=File.separator;
+        if(toDir.charAt(toDir.length()-1)==File.separatorChar) toDir+=File.separator;
+        //获取要迁移的所有文件
+        chgPackageStartWith = ArrayUtils.sortMapByValueLength(chgPackageStartWith,ArrayUtils.DESC);
+        Map chgPathStartWith = ArrayUtils.dot2separator(chgPackageStartWith,File.separatorChar+"");
+        chgPathStartWith=ArrayUtils.sortMapByKeyLength(chgPathStartWith,ArrayUtils.DESC);
+        subHeadDirsMappingBeforePackagePath = ArrayUtils.sortMapByKeyLength(subHeadDirsMappingBeforePackagePath,ArrayUtils.DESC);
+        //获取要迁移的所有文件
+        List<String> list = new ArrayList<String>();
+        FileUtils.getAllFilesWithOutDirs(new File(fromDir),ignorDirs,ignorFileSuffix,list);
+        int chcount=0;
+        int totalcount=list.size();
+        if(null != list){
+            //java需要变更pkg的文件
+            Map<String,String> chgPkgJavaFiles = new LinkedHashMap();
+            //非java需要变更pkg的文件
+            Map<String,String> chgPkgOthersFiles = new LinkedHashMap();
+            //不需要变更pkg的文件
+            Map<String,String> chgContentWithoutPkgFiles = new LinkedHashMap();
+            //提取变更java的package
+            HashMap<String,String> chgPkgs = new HashMap();
+            //提取变更目录的文件
+            HashMap<String,String> chgdirs = new HashMap();
+
+            for(String f:list){
+
+                String sub1 = f.substring(fromDir.length());
+                String chgDir=sub1;
+                String endwith = ArrayUtils.indexOfEndWith(sub1, needChgContextFileSuffix);
+                //迁移目录
+                if (null != subHeadDirsMappingBeforePackagePath) {
+                    int n = ArrayUtils.anyOneIndexOf(pkgParentDirNames,sub1);
+                    if(n>0) {
+                        String re = sub1.substring(0,n);
+                        String sub = sub1.substring(n);
+                        HashMap.Entry<String, String> v = ArrayUtils.getEntryLikeKey(re, subHeadDirsMappingBeforePackagePath);
+                        if (null != v) {
+                            String nre = StringUtils.replace(re, v.getKey(), v.getValue());
+                            chgDir = nre+sub;
+                        }
+                    }
+                }
+                //增加文件名称替换
+                ReplaceItem temp = null;
+                if(null!=chgFileNames && isFileNameLikes(chgDir,chgFileNames.keySet())){
+                    String name = getFileName(chgDir);
+                    HashMap.Entry<String, String> v = ArrayUtils.getEntryLikeKey(name, chgFileNames);
+                    if (null != v) {
+                        try {
+                            String nre = StringUtils.replace(name, v.getKey(), v.getValue());
+                            chgDir = chgDir.substring(0, chgDir.lastIndexOf(name)) + nre;
+                            if (null == reps) {
+                                reps = new ArrayList();
+                            }
+                            if (temp == null) {
+                                temp = new ReplaceItem();
+                                reps.add(temp);
+                            }
+
+                            if (null == temp.getReplaceInLine()) {
+                                temp.setReplaceInLine(new HashMap<String, String>());
+                            }
+                            if (name.contains(".") && nre.contains(".")) {
+                                temp.getReplaceInLine().put(name.substring(0, name.lastIndexOf(".")), nre.substring(0, nre.lastIndexOf(".")));
+                            } else {
+                                temp.getReplaceInLine().put(name, nre);
+                            }
+                        }catch (Exception e){
+                            log.error(chgDir,e);
+                            throw e;
+                        }
+                    }
+                }
+                if(null !=endwith){
+                    //需要处理内容的文件
+                    HashMap.Entry<String,String> v = ArrayUtils.getEntryLikeKey(chgDir,chgPathStartWith);
+                    if(null != v){
+                        //处理需要替换Package路径
+                        String subto1=StringUtils.replace(chgDir,v.getKey(),v.getValue());
+                        if("java".equals(endwith)) {
+                            try {
+                                chgPkgJavaFiles.put(sub1, subto1);
+                                String pk = StringUtils.replace(chgDir.substring(chgDir.indexOf(v.getKey()), chgDir.lastIndexOf("" + File.separatorChar)), File.separator + "", ".");
+                                String pv = StringUtils.replace(subto1.substring(subto1.indexOf(v.getValue()), subto1.lastIndexOf("" + File.separatorChar)), File.separator + "", ".");
+                                chgPkgs.put(pk, pv);
+
+                            }catch (Exception e){
+                                log.error("["+sub1+"] replace to ["+subto1+"] error",e);
+                                throw e;
+                            }
+                        }else {
+                            //非java文件，例如资源文件
+                            chgPkgOthersFiles.put(sub1, subto1);
+                            String pk = chgDir.substring(chgDir.indexOf(v.getKey()),chgDir.lastIndexOf(""+File.separatorChar));
+                            String pv = subto1.substring(subto1.indexOf(v.getValue()),subto1.lastIndexOf(""+File.separatorChar));
+                            if(File.separatorChar=='\\') {
+                                chgdirs.put(StringUtils.replace(pk,"\\","/"),StringUtils.replace(pv,"\\","/"));
+                                chgdirs.put(pk, pv);
+                            }else{
+                                chgdirs.put(StringUtils.replace(pk,"/","\\\\"),StringUtils.replace(pv,"/","\\\\"));
+                                chgdirs.put(pk, pv);
+                            }
+                        }
+                    }else{
+                        chgContentWithoutPkgFiles.put(sub1,chgDir);
+                    }
+                }else {
+                    try {
+                        FileUtils.copyFile(f, toDir + chgDir);
+                    } catch (Exception e) {
+                        log.error(f, e);
+                    }
+                }
+
+            }
+            /*if(1==1){
+                Iterator ites = chgPkgs.keySet().iterator();
+                while(((Iterator) ites).hasNext()){
+                    Object o = ites.next();
+                    System.out.println(o+"="+ chgPkgs.get(o));
+                }
+                return;
+            }*/
+            Map<String,String> chgs = new LinkedHashMap();
+            //Map m = ArrayUtils.sortMapByKeyLength(chgPkgs,ArrayUtils.DESC);
+            chgs.putAll(chgPkgs);
+            chgs.putAll(chgdirs);
+            chgs = ArrayUtils.sortMapByKeyLength(chgs,ArrayUtils.DESC);
+
+            ThreadPool tp = ExecutorUtils.getFixedThreadPool("copyFile",threadCount);
+            //变更所有文件
+            if(chgPkgJavaFiles.size()>0){
+                tp.setName("chgPkgJavaFiles");
+                tp.setTotalTaskSize(chgPkgJavaFiles.size());
+                Iterator its = chgPkgJavaFiles.keySet().iterator();
+                while(its.hasNext()){
+                    String k = (String)its.next();
+                    String v = chgPkgJavaFiles.get(k);
+                    tp.getExecutor().execute(new InvokeTask(FileUtils.class,"copyFile",new Class[]{String.class,String.class,Map.class,List.class,boolean.class,boolean.class}
+                    ,new Object[]{fromDir+k,toDir+v,chgs,reps,true,true}));
+                    //copyFile(fromDir+k,toDir+v,chgs,reps,true);
+
+                }
+            }
+            tp.waitfinished();
+            if(chgPkgOthersFiles.size()>0){
+                tp.setName("chgPkgOthersFiles");
+                tp.setTotalTaskSize(chgPkgOthersFiles.size());
+                Iterator its = chgPkgOthersFiles.keySet().iterator();
+                while(its.hasNext()){
+                    String k = (String)its.next();
+                    String v = chgPkgJavaFiles.get(k);
+                    tp.getExecutor().execute(new InvokeTask(FileUtils.class,"copyFile",new Class[]{String.class,String.class,Map.class,List.class,boolean.class,boolean.class}
+                            ,new Object[]{fromDir+k,toDir+v,chgs,reps,false,false}));
+                    //copyFile(fromDir+k,toDir+v,chgs,reps,false);
+                }
+            }
+            tp.waitfinished();
+            System.out.println("without pdk total:"+chgContentWithoutPkgFiles.size());
+            if(chgContentWithoutPkgFiles.size()>0){
+                tp.setName("chgContentWithoutPkgFiles");
+                tp.setTotalTaskSize(chgContentWithoutPkgFiles.size());
+                Iterator its = chgContentWithoutPkgFiles.keySet().iterator();
+                while(its.hasNext()){
+                    String k = (String)its.next();
+                    String v = chgContentWithoutPkgFiles.get(k);
+
+                    tp.getExecutor().execute(new InvokeTask(FileUtils.class,"copyFile",new Class[]{String.class,String.class,Map.class,List.class,boolean.class,boolean.class}
+                            ,new Object[]{fromDir+k,toDir+v,chgs,reps,false,false}));
+
+                    //copyFile(fromDir+s,toDir+s,chgs,reps,false);
+                }
+            }
+            tp.waitfinished();
+
+
+        }
+        log.error("changed files:"+chcount+" total:"+totalcount);
+
+    }
+    public static void copyFiles(File srcDir,File targetDir,String[] subfixs) throws Exception {
+        List<String> ls = getAllFileNames(srcDir.getPath(),subfixs);
+        if(null != ls) {
+            for (String s : ls) {
+                copyFile(s,targetDir+s.substring(srcDir.getPath().length()));
+            }
+        }
+    }
+
+
+    static Formatter javaFormatter = new Formatter();
+
+    /**
+     *
+     * @param fromPath  源文件路径
+     * @param toPath    目标文件路径
+     * @param chgContent  内容变换的map
+     * @param items     行内容变换的内容
+     * @param isformat  java代码是否格式化
+     */
+    public static void copyFile(String fromPath,String toPath,Map<String,String> chgContent,List<ReplaceItem> items,boolean isformat,boolean isDeleteComments){
+        try {
+            if(fromPath.contains("SecureServiceAccessPermission")){
+                System.out.println();
+            }
+            StringBuffer sb = getFileContentStringBuffer(fromPath);
+            if(isDeleteComments && fromPath.endsWith("java")){
+                sb = deleteComments(sb);
+            }
+            if(null != items){
+                for(ReplaceItem item:items) {
+                    if (null != item.getReplaceInLine()) {
+                        //先删除不需要的行
+                        String[] mm = sb.toString().split("\n");
+                        StringBuffer t = new StringBuffer();
+                        Map<String, String> cs = item.getReplaceInLine();
+                        for(String m:mm) {
+                            if(StringUtils.isNotEmpty(m)){
+                                String[] remotestartwith = item.getDeleteLineStartWith();
+                                if(null == remotestartwith || !ArrayUtils.isStartWithHeads(m,remotestartwith)) {
+                                    if (null == item.getExcludeForReplaceInLine() || m.indexOf(item.getExcludeForReplaceInLine()) < 0) {
+                                        m = StringUtils.replace(m, cs);
+                                    }
+
+                                    t.append(m).append("\n");
+                                }
+                            }
+                        }
+                        sb = t;
+                    }
+                    if (null != item.getStartMark() && null != item.getEndMark() && null != item.getReplaceContent()) {
+                        //再替换两个符合之间的内容
+                        String ss = StringUtils.replace(sb.toString(), item.getStartMark(), item.getEndMark(), item.getReplaceContent());
+                        sb = new StringBuffer(ss);
+                    }else if (null != item.getStartMark()  && null != item.getReplaceContent()) {
+                        //再替换只有startMark的内容
+                        String ss = StringUtils.replace(sb.toString(), item.getStartMark(), item.getReplaceContent());
+                        sb = new StringBuffer(ss);
+                    }
+                }
+            }
+            if(null !=chgContent){
+                Map<String,String> m = ArrayUtils.sortMapByKeyLength(chgContent, ArrayUtils.DESC);
+                Iterator<String> its = m.keySet().iterator();
+                String c = sb.toString();
+                while(its.hasNext()) {
+                    String k = its.next();
+                    if(null != m.get(k))
+                        c = StringUtils.replace(c,k,m.get(k));
+                }
+                sb = new StringBuffer(c);
+            }
+
+            if(isformat){
+                if(fromPath.endsWith("java")){
+                    try {
+                        sb = new StringBuffer(javaFormatter.formatSource(sb.toString()));
+                    }catch (Exception e){
+
+                    }
+                }
+            }
+            //System.out.println("==="+Thread.currentThread().getName()+" "+toPath);
+            saveFile(sb,toPath,true,false);
+        }catch (Exception e){
+            log.error("copyFile from ["+fromPath+"] to ["+toPath+"]",e);
+        }
+    }
+
+    /**
+     * 去除注释
+     * @param sb
+     * @return
+     */
+    public static StringBuffer deleteComments(StringBuffer sb){
+        String[] nn = sb.toString().split("\n");
+        StringBuffer ret = new StringBuffer();
+        boolean isstart=false;
+        for(String n:nn){
+            String str = n;
+            if(isstart && n.trim().indexOf("*/")>=0){
+                isstart=false;
+                str = n.substring(n.indexOf("*/")+2);
+            }else if(isstart){
+                continue;
+            }else if(n.trim().startsWith("/*")){
+                isstart=true;
+                if(n.trim().indexOf("*/")>0){
+                    isstart=false;
+                    str=n.substring(n.indexOf("*/")+2);
+                }
+                if(isstart)
+                    continue;
+            }
+            if(n.trim().startsWith("//")) continue;
+
+            ret.append(str).append("\n");
+        }
+        return ret;
+    }
+    public static int sumFilesLineCount(String dir,String[] suffixs){
+        List<String> fs = getAllFileNames(dir,suffixs);
+        int n=0;
+        if(null != fs){
+            for(String f:fs){
+                try {
+                    String[] ls = getFileLines(f);
+                    for(String s:ls){
+                        String m = s.trim();
+                        if(!(m.startsWith("*")||m.startsWith("/*")|| m.startsWith("//"))){
+                            n++;
+                        }
+                    }
+                }catch (Exception e){}
+            }
+        }
+        return n;
+    }
+
+
+    public static long getLineNumber(File file) {
+        if (file.exists()) {
+            try {
+                FileReader fileReader = new FileReader(file);
+                LineNumberReader lineNumberReader = new LineNumberReader(fileReader);
+                lineNumberReader.skip(Long.MAX_VALUE);
+                long lines = lineNumberReader.getLineNumber() + 1;
+                fileReader.close();
+                lineNumberReader.close();
+                return lines;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return 0;
+    }
 }

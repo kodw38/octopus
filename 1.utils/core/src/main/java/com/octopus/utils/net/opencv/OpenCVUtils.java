@@ -7,6 +7,10 @@ import org.bytedeco.opencv.opencv_core.Mat;
 
 import javax.swing.*;
 
+import org.bytedeco.opencv.opencv_core.MatExpr;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Scalar;
 /**
  * @ClassName OpenCV
  * @Description ToDo
@@ -36,7 +40,10 @@ public class OpenCVUtils {
     }
     public static void main(String[] args){
         try{
-            OpenCVUtils.saveRtsp("http://192.168.1.18:81/stream");
+            //OpenCVUtils.saveRtsp("http://192.168.1.18:81/stream");
+            System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
+            MatExpr mat = Mat.eye( 3, 3, CvType.CV_8UC1 );
+            System.out.println( "mat = " + mat.asMat().toString() );
         }catch (Exception e){
             e.printStackTrace();
         }

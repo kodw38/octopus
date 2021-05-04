@@ -6479,6 +6479,7 @@ public class StringUtils {
         return ret;
     }
 
+
     /**
      * 字符分割，排除特殊的字符，如""中的分割符将不处理
      * @param s
@@ -6612,11 +6613,31 @@ public class StringUtils {
             int endStart = xml.indexOf(endMark, beginEnd);
             if (endStart < 0) return xml;
             if(beginStart>0){
-                xml = xml.substring(0,beginStart)+ xml.substring(endStart+1);
+                xml = xml.substring(0,beginStart)+ xml.substring(endStart+endMark.length()+1);
             }else{
-                xml = xml.substring(endStart+1);
+                xml = xml.substring(endStart+endMark.length()+1);
             }
         }
+    }
+    public static String replace(String pxml,String beginMark,String endMark,String content){
+        StringBuffer sb = new StringBuffer();
+        sb.append(pxml);
+
+        String xml = sb.toString();
+        int beginStart = xml.indexOf(beginMark);
+        if (beginStart < 0) return xml;
+        int beginEnd = beginStart+beginMark.length();
+        int endStart = xml.indexOf(endMark, beginEnd);
+        int start = xml.indexOf(beginMark, beginEnd);
+        if (endStart < 0) return xml;
+
+        if(beginStart>=0 && endStart>=beginEnd){
+            xml = xml.substring(0,beginStart)+content+ xml.substring(endStart+endMark.length());
+            xml = replace(xml,beginMark,endMark,content);
+        }/*else{
+            xml = xml.substring(endStart+endMark.length()+1);
+        }*/
+        return xml;
     }
     public static String[] splitSimpleByChar(String s,char splitChar){
             StringBuffer sb = new StringBuffer();
@@ -7442,6 +7463,7 @@ public class StringUtils {
             e.printStackTrace();
         }
     }
+
     static class A{
         String type;
 
@@ -8176,6 +8198,22 @@ public class StringUtils {
                 return t+sub;
             }
         }
+    }
+
+    public static String replace(String sb,Map<String,String> chgValue){
+        if(null != sb && null != chgValue){
+            Iterator<String> its = chgValue.keySet().iterator();
+            while(its.hasNext()){
+                String k= its.next();
+                String v = chgValue.get(k);
+                if(log.isDebugEnabled())
+                    log.debug("change text:\n"+sb+"\nold Str:"+k+"\nnew Str"+v);
+                if(v==null)v="";
+                sb = replace(sb, k, v);
+
+            }
+        }
+        return sb;
     }
 
     /**

@@ -2388,7 +2388,7 @@ public class SystemAction2 extends XMLDoObject {
     }
 
     void combineJars(String rootpath,String lib,List extjars,String jarnamepath,String temppath,List<String> descjars,Map<String,Map<String,String>> parameters)throws Exception{
-        List<String> ls =FileUtils.getAllFileNames(lib,"jar");
+        List<String> ls =FileUtils.getAllFileNames(lib,new String[]{"jar"});
         ArrayUtils.sortByLen(ls,ArrayUtils.ABS);
         List<String> es = new LinkedList<String>();
         if(null != ls && ls.size()>0) {
@@ -2455,7 +2455,7 @@ public class SystemAction2 extends XMLDoObject {
                             if(null != l && l.size()>0) {
                                 String count = (String)l.get(0);
                                 if(StringUtils.isNotBlank(count)) {
-                                    GeneratorClass.appendMethodInClassPath(temppath, false, "com.octopus.tools.pubsub.ZkClientListen", new String[]{"connzk"}, null, null, "if(getServerCount(\"" + sv + "\")>" + count + "){System.out.println(\"Over the max server count[" + count + "] in this Host [" + sv + "]\");System.exit(1);}", temppath);
+                                    GeneratorClass.appendMethodInClassPath(temppath, false, "com.octopus.tools.pubsub.ZkClientObject", new String[]{"connzk"}, null, null, "if(getServerCount(\"" + sv + "\")>" + count + "){System.out.println(\"Over the max server count[" + count + "] in this Host [" + sv + "]\");System.exit(1);}", temppath);
                                 }
                             }
                         }

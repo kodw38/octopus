@@ -29,6 +29,7 @@ public class ThreadPool {
     static ThreadPool instance = new ThreadPool();
     ReentrantLock takeLock = new ReentrantLock();
     Condition lock = takeLock.newCondition();
+    int totalTaskSize;
 
     public static ThreadPool getInstance(){
         return instance;
@@ -53,8 +54,21 @@ public class ThreadPool {
         MAX_THREAD_NUMBER= new AtomicInteger(count);
 
     }
+
+    public int getTotalTaskSize() {
+        return totalTaskSize;
+    }
+
+    public void setTotalTaskSize(int totalTaskSize) {
+        this.totalTaskSize = totalTaskSize;
+        downCount.set(0);
+    }
+
     public String getName(){
         return name;
+    }
+    public void setName(String name){
+        this.name = name;
     }
     public void returnThreadPool(ThreadPool pool){
         if(log.isDebugEnabled()){
@@ -181,16 +195,20 @@ public class ThreadPool {
     public synchronized static ExecutorService getExecutorService(int count){
         return Executors.newFixedThreadPool(count);
     }
-
+    AtomicInteger downCount = new AtomicInteger(0);
+    int pre=0;
     public class MyExecutor implements Executor,Runnable{
         Thread thread;
         Runnable run;
         ThreadPool pool;
+        int percentRent = 0;
         public String getThreadName(){
             return thread.getName();
         }
         MyExecutor(ThreadPool p){
             this.pool=p;
+            if(pool.getTotalTaskSize()>0)
+                percentRent = pool.getTotalTaskSize()/100;
         }
         public void setThread(Thread t){
             this.thread=t;
@@ -222,6 +240,16 @@ public class ThreadPool {
             pool.threads.remove(thread);
             pool.lock.signal();
             pool.takeLock.unlock();
+
+            if(percentRent>0) {
+                int c = downCount.incrementAndGet() ;
+                int r = c/ percentRent;;
+                if(r!=pre){
+                    log.error(pool.getName()+" has done task :"+c+"/"+ pool.getTotalTaskSize()+" "+r+"%");
+                    pre =r;
+                }
+            }
+
         }
     }
 

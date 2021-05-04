@@ -3470,7 +3470,7 @@ return false;
     }
 
     void combineJars(String rootpath,String lib,List extjars,String jarnamepath,String temppath,List<String> descjars,Map<String,Map<String,String>> parameters)throws Exception{
-        List<String> ls =FileUtils.getAllFileNames(lib,"jar");
+        List<String> ls =FileUtils.getAllFileNames(lib,new String[]{"jar"});
         ArrayUtils.sortByLen(ls,ArrayUtils.ABS);
         List<String> es = new LinkedList<String>();
         if(null != ls && ls.size()>0) {

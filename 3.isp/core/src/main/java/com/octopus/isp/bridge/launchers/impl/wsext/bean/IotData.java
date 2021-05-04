@@ -3,6 +3,7 @@ package com.octopus.isp.bridge.launchers.impl.wsext.bean;/**
  */
 
 import com.octopus.isp.ds.RequestParameters;
+import com.octopus.utils.alone.StringUtils;
 
 import javax.servlet.AsyncContext;
 
@@ -27,6 +28,7 @@ import javax.servlet.AsyncContext;
                 if(null != rp.getResult()){
                     outputData=rp.getResult();
                 }
+                isWithLocal= StringUtils.isTrue((String)rp.getQueryStringMap().get("withLocal"));
             }
         }
         String requestId;
@@ -34,8 +36,17 @@ import javax.servlet.AsyncContext;
         String action;
         Object inputData;
         Object outputData;
+        boolean isWithLocal;
 
-        public Object getOutputData() {
+    public boolean isWithLocal() {
+        return isWithLocal;
+    }
+
+    public void setWithLocal(boolean withLocal) {
+        isWithLocal = withLocal;
+    }
+
+    public Object getOutputData() {
             return outputData;
         }
 

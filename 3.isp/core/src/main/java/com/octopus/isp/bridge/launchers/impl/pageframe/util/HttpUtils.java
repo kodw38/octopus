@@ -104,6 +104,7 @@ public class HttpUtils extends XMLObject {
             "xhtml=application/xhtml+xml",
             "xht=application/xhtml+xml",
             "zip=application/zip",
+            "gz=application/zip",
             "au=audio/basic",
             "snd=audio/basic",
             "mid=audio/midi",
@@ -469,6 +470,7 @@ public class HttpUtils extends XMLObject {
      */
     void redirectNoPageSource(XMLParameter env,HttpServletRequest request,HttpServletResponse response,String url)throws Exception{
         String type = getType(url.substring(url.lastIndexOf(".")+1).toLowerCase());
+        log.debug("file type:"+type);
         response.setContentType(type + ";charset=UTF-8");
 
         response.setCharacterEncoding("UTF-8");
@@ -504,7 +506,7 @@ public class HttpUtils extends XMLObject {
                 response.getOutputStream().write(cotent);
                 response.flushBuffer();
             }else
-            log.error("the resource[" + url + "] is not exist.");
+                log.error("the resource[" + url + "] is not exist.");
             if(null != in) {
                 in.close();
             }
@@ -590,12 +592,14 @@ public class HttpUtils extends XMLObject {
         setRedirect(env);
         //页面资源
         if(StringUtils.isNotBlank(pagecode) || (uri.contains(".") && ArrayUtils.isInStringArray(pagesuffix,uri.substring(uri.lastIndexOf(".")+1)))){
+            log.debug("request page resource");
             if("jsp".equals(uri.substring(uri.lastIndexOf(".")+1))){
                 redirectJspPageSource(request, response, pagecode, pageSeq, uri, append);
             }else {
                 redirectPageSource(env,request, response, pagecode, pageSeq, uri, append);
             }
         }else{//非页面资源
+            log.debug("request file resource:"+uri);
             if(uri.indexOf(".")>0) {
                 redirectNoPageSource(env, request, response, uri);
             }else{

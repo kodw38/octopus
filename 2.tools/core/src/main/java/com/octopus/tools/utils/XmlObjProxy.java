@@ -109,13 +109,7 @@ public class XmlObjProxy extends XMLDoObject {
                                     Object ret = ClassUtils.invokeStaticMethod(Class.forName(invokerClazz), "invoke", new Class[]{Map.class, String.class, String.class, Class[].class, Object[].class}, new Object[]{session, originalClazz, originalMethod, c_pars, pars});
                                     if (log.isInfoEnabled()) {
                                         if(null != ret) {
-                                            Object o = ClassUtils.getFieldValue(ret,"receiptOrderInformations",false);
-                                            if(null != o) {
-                                                if(o.getClass().isArray()) {
-                                                    Object ov = ClassUtils.getFieldValue(((Object[])o)[0],"eRechargeTrxNo",false);
-                                                    log.error("return eRechargeTrxNo:" + ov);
-                                                }
-                                            }
+
                                             log.info(originalMethod + " costTime:" + (System.currentTimeMillis() - l) + "\n" + ArrayUtils.toJoinString(new Object[]{POJOUtil.convertPOJO2USDL(ret, new AtomicLong(0))}));
                                         }
                                     }

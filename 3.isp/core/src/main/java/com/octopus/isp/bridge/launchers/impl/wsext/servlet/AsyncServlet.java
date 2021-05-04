@@ -3,6 +3,7 @@ package com.octopus.isp.bridge.launchers.impl.wsext.servlet;/**
  */
 
 import com.octopus.isp.bridge.launchers.impl.wsext.bean.IotData;
+import com.octopus.isp.ds.RequestParameters;
 import com.octopus.tools.dataclient.dataquery.redis.RedisClient;
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
@@ -37,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class AsyncServlet extends HttpServlet {
     transient static Log log = LogFactory.getLog(AsyncServlet.class);
     Map<String ,AsyncContext> asyncServletMap = new HashMap<>();
+    Map<String ,Object> localResponseMap = new HashMap<>();
     ExecutorService req_executor = Executors.newFixedThreadPool(10);
     ExecutorService res_executor = Executors.newFixedThreadPool(10);
     boolean isStartAsyncIot=false;
@@ -57,18 +59,35 @@ public class AsyncServlet extends HttpServlet {
     public void service(HttpServletRequest req, HttpServletResponse resp) {
         //1. 调用startAsync或者异步上下文
         final AsyncContext ctx = req.startAsync();
+
         //用线程池来执行耗时操作
         req_executor.execute(new Runnable() {
             @Override
             public void run() {
                 //在这里做耗时的操作
                 Jedis jedis=null;
+                String requestid=null;
                 try {
                     isStartAsyncIot=true;
                     redis = (RedisClient)manager.getObjectById("RedisClient");
                     //放入待处理队列，交由家庭服务处理
                     jedis = redis.getRedis(redisDB);
                     IotData id = new IotData(ctx);
+                    requestid=id.getRequestId();
+                    log.info("do local action isWithLocal :"+id.isWithLocal());
+                    //判断是否执行本地方法，结果合并到远程调用方法结果中
+                    if(id.isWithLocal()){
+                        Object localObj = manager.getObjectById(id.getAction());
+                        if(null != localObj && localObj instanceof XMLDoObject){
+                            Object ret = ((XMLDoObject)localObj).doSomeThing(((XMLDoObject)localObj).getXML().getId(),(RequestParameters)ctx.getRequest().getAttribute("RequestParameters"),(Map)id.getInputData(),null,null);
+                            log.info("do local action and response :"+ret);
+                            if(null != ret){
+                                localResponseMap.put(id.getRequestId(),ret);
+                            }
+                        }
+
+                    }
+
                     //HashMap<String,String> m = new HashMap<>();
                     //m.put(id.getRequestId(),ObjectUtils.toString(id));
                     Map m = POJOUtil.convertPojo2Map(id,new AtomicLong(0));
@@ -81,6 +100,8 @@ public class AsyncServlet extends HttpServlet {
                     startReceive();
                 } catch (Exception e) {
                     log.error("",e);
+                    if(null != requestid)
+                        localResponseMap.remove(requestid);
                     try {
                         ctx.getResponse().getWriter().write(e.getMessage());
                         ctx.complete();
@@ -119,6 +140,11 @@ public class AsyncServlet extends HttpServlet {
                                                     log.debug("Servlet Async resposne write :"+s);
                                                 }
                                             }else if(data.getOutputData() instanceof Collection){
+                                                Object localresp = localResponseMap.get(data.getRequestId());
+                                                if(null!= localresp && localresp instanceof Collection){
+                                                    ((Collection) data.getOutputData()).addAll((Collection) localresp);
+                                                }
+                                                localResponseMap.remove(data.getRequestId());
                                                 String s =ObjectUtils.convertList2String((List)data.getOutputData());
                                                 x.getResponse().getWriter().write(s);
                                                 if(log.isDebugEnabled()){

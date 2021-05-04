@@ -2,6 +2,7 @@ package com.octopus.tools.dataclient.dataquery.redis;
 
 import com.octopus.utils.alone.ObjectUtils;
 import com.octopus.utils.alone.StringUtils;
+import com.octopus.utils.cls.ClassUtils;
 import com.octopus.utils.xml.XMLMakeup;
 import com.octopus.utils.xml.XMLObject;
 import com.octopus.utils.xml.auto.ResultCheck;
@@ -9,6 +10,7 @@ import com.octopus.utils.xml.auto.XMLDoObject;
 import com.octopus.utils.xml.auto.XMLParameter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.pool.impl.GenericObjectPool;
 import redis.clients.jedis.*;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
@@ -25,7 +27,9 @@ public class RedisClient extends XMLDoObject{
     transient static Log log = LogFactory.getLog(RedisClient.class);
 
     static Map<String,List<JedisPool>> redises = new ConcurrentHashMap<String, List<JedisPool>>();
+    static Map<String,List<JedisPool>> prepareShareds = new ConcurrentHashMap<String, List<JedisPool>>();
     static Map<String,AtomicInteger> times = new HashMap();
+    static Map<Integer,XMLMakeup> rel = new HashMap<>();
 
     public RedisClient(XMLMakeup xml, XMLObject parent,Object[] containers) throws Exception {
         super(xml, parent,containers);
@@ -54,6 +58,7 @@ public class RedisClient extends XMLDoObject{
                         JedisPool p=null;
                         config.setTestOnBorrow(true);
                         config.setTestOnReturn(true);
+
                         if(timeout>0)
                             if(StringUtils.isNotBlank(password))
                                 p = new JedisPool(config,r.getProperties().getProperty("ip"),Integer.parseInt(r.getProperties().getProperty("port")),timeout,password);
@@ -62,6 +67,7 @@ public class RedisClient extends XMLDoObject{
                         else
                             p = new JedisPool(config,r.getProperties().getProperty("ip"),Integer.parseInt(r.getProperties().getProperty("port")));
                         if(null !=p) {
+                            rel.put(p.hashCode(),r);
                             ls.add(p);
                         }
 
@@ -73,6 +79,36 @@ public class RedisClient extends XMLDoObject{
                 }
             }
         }
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if(prepareShareds.size()>0){
+                    Iterator it = prepareShareds.keySet().iterator();
+                    while(it.hasNext()){
+                        String k = (String)it.next();
+                        List<JedisPool> ls = prepareShareds.get(k);
+                        if(null != ls && ls.size()>0){
+                            for(int i=ls.size()-1;i>=0;i--){
+                                Jedis d=null;
+                                try {
+                                    d = ls.get(i).getResource();
+                                    JedisPool jp = ls.get(i);
+                                    ls.remove(i);
+                                    synchronized (redises){
+                                        redises.get(k).add(jp);
+                                    }
+                                }catch (Exception e){
+
+                                }finally {
+                                    if(null != d)d.close();
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
+        },10000,10000);
     }
 
     Jedis getAnyRedis(String key,List<JedisPool> shards,int cyclecount)throws Exception{
@@ -88,27 +124,37 @@ public class RedisClient extends XMLDoObject{
                 times.get(key).set(0);
             }
             JedisPool j=shards.get(c);
-            Jedis d=null;
-            try{
-                d = j.getResource();
+            if(null!=j) {
+                Jedis d = null;
+                try {
+                    d = j.getResource();
+                    XMLMakeup xs = rel.get(j.hashCode());
+                    if (null != xs) {
+                        String db = xs.getProperties().getProperty("db");
+                        if (StringUtils.isNotBlank(db)) {
+                            d.select(Integer.parseInt(db));
+                        }
+                    }
 
-                XMLMakeup xs = getXML().getByTagProperty("cluster","key",key)[0].getChildren().get(c);
-                String db = xs.getProperties().getProperty("db");
-                if(StringUtils.isNotBlank(db)){
-                    d.select(Integer.parseInt(db));
+                    return d;
+                } catch (JedisConnectionException ex) {
+                    log.error("active:" + j.getNumActive() + " idle:" + j.getNumIdle() + " waiter:" + j.getNumWaiters(), ex);
+                    if (null != d) {
+                        d.close();
+                    }
+                    shards.remove(j);
+                    synchronized (prepareShareds) {
+                        if (null == prepareShareds.get(key)) prepareShareds.put(key, new ArrayList<JedisPool>());
+                        prepareShareds.get(key).add(j);
+                    }
+                    return getAnyRedis(key, shards, cyclecount);
                 }
-
-                return d;
-            }catch (JedisConnectionException ex){
-                log.error("active:"+j.getNumActive()+" idle:"+j.getNumIdle()+" waiter:"+j.getNumWaiters(),ex);
-                if(null!=d)
-                    d.close();
-                return getAnyRedis(key,shards,cyclecount);
             }
 
         }
-        return null;
+        throw new Exception("There are no JedisPool available ");
     }
+
     static AtomicInteger atomicInteger = new AtomicInteger(0);
     //Jedis jedis = new Jedis("127.0.0.1",6379);
     public Jedis getRedis(String key)throws Exception{
