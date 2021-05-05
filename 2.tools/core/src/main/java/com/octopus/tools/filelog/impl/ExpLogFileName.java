@@ -28,8 +28,10 @@ public class ExpLogFileName implements LogFileName {
     SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmm");
     AtomicLong point = new AtomicLong(0);
     String curyyyymmdd=null;
-    public ExpLogFileName(String curDir,String curKey, String hisKey){
+    String code;
+    public ExpLogFileName(String code, String curDir, String curKey, String hisKey){
         this.curKey=curKey;
+        this.code=code;
         this.hisKey=hisKey;
         curyyyymmdd = format.format(new Date());
         this.curDir=curDir;
@@ -55,7 +57,7 @@ public class ExpLogFileName implements LogFileName {
             point.set(0);
             curyyyymmdd=day;
         }
-        return "Bill_IDIDIDID_"+curyyyymmdd+"_"+ StringUtils.leftPad(""+point.addAndGet(1),8,"0") +".bill.tmp";
+        return code+"_"+curyyyymmdd+"_"+ StringUtils.leftPad(""+point.addAndGet(1),8,"0") +"."+curKey;
 
     }
     @Override

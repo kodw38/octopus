@@ -6,7 +6,7 @@ package com.octopus.tools.filelog;
  * Time: 下午10:15
  */
 
-import org.apache.commons.lang.StringUtils;
+import com.octopus.utils.alone.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.ConsoleAppender;
